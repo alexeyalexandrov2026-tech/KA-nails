@@ -1,0 +1,257 @@
+:root {
+  --canvas: #fdf8f2;
+  --ink: #261b15;
+  --muted: #655951;
+  --line: #d9cbc1;
+  --focus: #76503d;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+}
+a {
+  color: inherit;
+  text-underline-offset: 0.24em;
+}
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+a:focus-visible,
+iframe:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 5px;
+}
+.skip {
+  position: fixed;
+  top: -100px;
+  left: 16px;
+  z-index: 5;
+  background: white;
+  padding: 12px;
+}
+.skip:focus {
+  top: 12px;
+}
+.header,
+.footer {
+  max-width: 1440px;
+  margin: auto;
+  padding: 24px 5vw;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+.header {
+  border-bottom: 1px solid var(--line);
+}
+.wordmark {
+  text-decoration: none;
+  font-size: 24px;
+  letter-spacing: -0.025em;
+  min-height: 44px;
+}
+.wordmark span {
+  display: block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+}
+nav {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  text-decoration: none;
+}
+nav a:hover,
+.text-link:hover {
+  text-decoration: underline;
+}
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  background: var(--ink);
+  color: white;
+  border-radius: 999px;
+  padding: 14px 24px;
+  min-height: 48px;
+  text-decoration: none;
+  font-size: 14px;
+}
+.button:hover {
+  background: #443329;
+  text-decoration: none;
+}
+.hero {
+  max-width: 1440px;
+  margin: auto;
+  padding: 72px 5vw 88px;
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 3vw;
+  align-items: center;
+}
+.eyebrow {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+h1,
+h2 {
+  font-weight: 300;
+  letter-spacing: -0.045em;
+  line-height: 1.06;
+  margin: 24px 0;
+}
+h1 {
+  font-size: clamp(42px, 5.9vw, 88px);
+}
+h2 {
+  font-size: clamp(30px, 4vw, 54px);
+}
+.lead {
+  font-size: 18px;
+  color: var(--muted);
+  margin: 28px 0;
+  max-width: 48ch;
+}
+.logo-field {
+  width: 100%;
+}
+.logo-field img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.editorial {
+  max-width: 1280px;
+  margin: auto;
+  border-top: 1px solid var(--line);
+  padding: 72px 5vw 88px;
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 32px;
+}
+.editorial p:not(.eyebrow) {
+  max-width: 48ch;
+  color: var(--muted);
+}
+.text-link {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 32px;
+}
+.page {
+  max-width: 1280px;
+  margin: auto;
+  padding: 64px 5vw 88px;
+}
+.notice {
+  margin: 48px 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: clamp(24px, 4vw, 48px);
+  background: white;
+}
+.notice h2 {
+  font-size: clamp(26px, 3vw, 40px);
+}
+.notice p {
+  max-width: 60ch;
+  color: var(--muted);
+}
+.booking-panel {
+  margin-top: 40px;
+}
+.booking-help {
+  color: var(--muted);
+  font-size: 14px;
+  max-width: 70ch;
+}
+.booking-frame {
+  width: 100%;
+  height: 1250px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: white;
+}
+.footer {
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+  color: var(--muted);
+}
+.footer img {
+  flex: none;
+}
+.footer a {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+@media (max-width: 767px) {
+  .header {
+    flex-wrap: wrap;
+    padding: 16px 6vw;
+    gap: 12px;
+  }
+  nav {
+    gap: 20px;
+    width: 100%;
+    justify-content: space-between;
+    font-size: 14px;
+  }
+  nav .button {
+    padding: 12px 16px;
+    font-size: 12px;
+  }
+  .hero {
+    grid-template-columns: 1fr;
+    padding: 48px 6vw;
+    gap: 24px;
+  }
+  .logo-field {
+    max-width: 440px;
+    margin: auto;
+  }
+  .editorial {
+    grid-template-columns: 1fr;
+    padding: 48px 6vw;
+    gap: 12px;
+  }
+  .page {
+    padding: 48px 6vw;
+  }
+  .footer {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .footer img {
+    width: 88px;
+    height: 88px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+  }
+}
