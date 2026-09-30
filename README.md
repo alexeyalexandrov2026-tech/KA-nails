@@ -60,21 +60,29 @@ npm run build
 npm run test:e2e -- --grep "website|unsafe|unconfigured"
 ```
 
-Real integration requires the existing canonical platform checkout, its built
-`web/out`, PostgreSQL 18 and the platform Python environment. Supply
-`GORGONA_API_DIR` (the platform `api/` directory), `GBA_TEST_ADMIN_DSN` securely
-through the environment, and `GBA_REQUIRE_POSTGRES=1`. Run with that Python environment:
+Real integration uses only public configuration and HTTP/browser behaviour. This
+repository never imports platform code or connects to a database. The site's own
+suite reads:
+
+- `NEXT_PUBLIC_GORGONA_BOOKING_URL` (build time) and `KA_BOOKING_TEST_URL`: the
+  hosted `/book/` wizard of a disposable booking host with a FAKE tenant;
+- `KA_BOOKING_TEST_DAY`: an ISO date with open FAKE availability;
+- `KA_SITE_PORT`: the loopback port this site is previewed on. The booking host must
+  have approved `http://127.0.0.1:<KA_SITE_PORT>` in its embedding allowlist, or the
+  browser refuses to frame the wizard.
 
 ```sh
-python -m pytest /path/to/ka-nails/tools/test_gorgona_integration.py -q -s
+npm run build
+npm run test:e2e -- --grep-invert unconfigured
 ```
 
-The adapter imports the platform fixtures, creates a disposable test database,
-starts the real API, builds the independent site with a loopback booking origin,
-runs desktop/mobile Chromium, verifies confirmed booking rows and tenant isolation,
-then stops the API and removes only the disposable database. No primary booking
-API is mocked. The network failure test aborts a request only to check recovery.
-After that test, rebuild with the actual approved setting (or no setting for the
-unpublished candidate); the ephemeral test origin must never be deployed.
+The platform repository owns the fixture: its tenant-site harness
+(`api/tests/integration/test_tenant_site_embedding.py`, enabled with
+`GBA_REQUIRE_TENANT_SITE=1` and `GBA_TENANT_SITE_DIR=<this checkout>`) seeds FAKE
+tenants, approves the loopback origin, starts the real API, runs the two commands above
+with those variables, then verifies the confirmed rows and tenant isolation itself. No
+primary booking API is mocked. The network failure test aborts a request only to check
+recovery. The harness rebuilds this site without a booking URL afterwards; the
+ephemeral test origin must never be deployed.
 
 No push, Cloudflare deployment, DNS or production database change has been made.

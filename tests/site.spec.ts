@@ -77,7 +77,7 @@ test("salon → real platform service/availability → PostgreSQL confirmation",
 }) => {
   test.skip(
     !process.env.KA_BOOKING_TEST_URL,
-    "Requires real disposable GORGONA fixture",
+    "Requires KA_BOOKING_TEST_URL (a disposable booking host)",
   );
   await page.goto("/");
   await page.getByRole("link", { name: /Explore services/ }).click();
@@ -92,7 +92,7 @@ test("salon → real platform service/availability → PostgreSQL confirmation",
     .getByLabel("Service and variant")
     .selectOption({ label: "FAKE FAKE_BASE · 60 min" });
   await frame.getByRole("button", { name: "Continue to times" }).click();
-  await frame.getByLabel("Date").fill(process.env.GBA_BROWSER_DAY!);
+  await frame.getByLabel("Date").fill(process.env.KA_BOOKING_TEST_DAY!);
   await frame.getByRole("button", { name: /^\d/ }).first().click();
   await frame.getByRole("button", { name: "Continue to details" }).click();
   await frame.getByLabel("Full name").fill("FAKE KA Website Guest");
@@ -118,7 +118,7 @@ test("full-page fallback opens the hosted platform wizard at top level", async (
 }) => {
   test.skip(
     !process.env.KA_BOOKING_TEST_URL,
-    "Requires real disposable GORGONA fixture",
+    "Requires KA_BOOKING_TEST_URL (a disposable booking host)",
   );
   await page.goto("/book/");
   const fallback = page.getByRole("link", {
@@ -144,7 +144,7 @@ test("platform API network failure remains recoverable inside the site", async (
 }) => {
   test.skip(
     !process.env.KA_BOOKING_TEST_URL,
-    "Requires real disposable GORGONA fixture",
+    "Requires KA_BOOKING_TEST_URL (a disposable booking host)",
   );
   await page.route("**/v1/customer/bootstrap", (route) => route.abort());
   await page.goto("/book/");
