@@ -17,10 +17,10 @@ async function inspect() {
 
   console.log("Navigating to https://studio.design/ ...");
   await page.goto("https://studio.design/", {
-    waitUntil: "load",
+    waitUntil: "domcontentloaded",
     timeout: 30000,
   });
-  await page.waitForTimeout(3000);
+  await page.waitForTimeout(4000);
 
   // Capture desktop hero
   await page.screenshot({
@@ -151,10 +151,10 @@ async function inspect() {
   });
   const mobilePage = await mobileContext.newPage();
   await mobilePage.goto("https://studio.design/", {
-    waitUntil: "load",
+    waitUntil: "domcontentloaded",
     timeout: 30000,
   });
-  await mobilePage.waitForTimeout(3000);
+  await mobilePage.waitForTimeout(4000);
 
   await mobilePage.screenshot({
     path: path.join(outDir, "studio-design-mobile-hero.png"),
@@ -173,7 +173,7 @@ async function inspect() {
   try {
     await page.goto(
       "https://styles.refero.design/style/bb2e29c9-d20a-4b8d-8959-5b506f517ec4",
-      { waitUntil: "load", timeout: 30000 },
+      { waitUntil: "domcontentloaded", timeout: 30000 },
     );
     await page.screenshot({
       path: path.join(outDir, "refero-style-desktop.png"),

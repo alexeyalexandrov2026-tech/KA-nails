@@ -49,7 +49,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
           <div className="footer-links">
             <Link href="/services/">Services</Link>
-            <Link href="/gallery/">Gallery (36)</Link>
+            <Link href="/gallery/">Gallery</Link>
             <Link href="/book/">Book Appointment</Link>
             <Link href="/contact/">Studio information</Link>
           </div>

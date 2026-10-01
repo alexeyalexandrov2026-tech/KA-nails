@@ -159,7 +159,7 @@ export default function Home() {
               href="/gallery/"
               className="button-secondary final-btn-secondary"
             >
-              Explore the 36-piece gallery <span aria-hidden="true">→</span>
+              Explore the curated gallery <span aria-hidden="true">→</span>
             </Link>
           </div>
         </div>

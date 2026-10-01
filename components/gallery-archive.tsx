@@ -7,6 +7,7 @@ import {
   type GalleryCategory,
   GALLERY_ITEMS,
   GALLERY_CATEGORIES,
+  GALLERY_METRICS,
 } from "../lib/gallery-data";
 import { GalleryViewer } from "./gallery-viewer";
 
@@ -35,10 +36,7 @@ export function GalleryArchive() {
   }, []);
 
   const openLightbox = (indexInFiltered: number) => {
-    const item = filteredItems[indexInFiltered];
-    if (!item) return;
-    const globalIndex = GALLERY_ITEMS.findIndex((i) => i.id === item.id);
-    setViewerIndex(globalIndex >= 0 ? globalIndex : 0);
+    setViewerIndex(indexInFiltered);
   };
 
   return (
@@ -71,6 +69,16 @@ export function GalleryArchive() {
         })}
       </div>
 
+      {/* Honest Inventory & Status Banner */}
+      <div className="gallery-inventory-banner" role="status">
+        <span className="inventory-badge">Authentic Studio Archive</span>
+        <span className="inventory-text">
+          {GALLERY_METRICS.uniquePhotos} authentic salon works displayed •{" "}
+          {GALLERY_METRICS.additionalPhotosNeededForMinimum} additional works
+          pending client curation (Target: {GALLERY_METRICS.minimumTarget})
+        </span>
+      </div>
+
       {/* Results Announcement */}
       <p className="gallery-status-text" aria-live="polite">
         Showing {filteredItems.length}{" "}
@@ -93,10 +101,11 @@ export function GalleryArchive() {
           return (
             <article
               key={item.id}
+              id={item.id}
               className={`gallery-card ${gridSpanClass}`}
               tabIndex={0}
               role="button"
-              aria-label={`View ${item.title}, ${item.category} nail art. Press Enter or click to open full-screen.`}
+              aria-label={`View ${item.title}, ${item.category} pedicure. Press Enter or click to open full-screen.`}
               onClick={() => openLightbox(index)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
@@ -107,7 +116,7 @@ export function GalleryArchive() {
             >
               <div className="gallery-card-media">
                 <Image
-                  src={item.src}
+                  src={item.srcMed || item.src}
                   alt={item.alt}
                   width={item.width}
                   height={item.height}
@@ -125,10 +134,10 @@ export function GalleryArchive() {
               <div className="gallery-card-info">
                 <div className="card-header-row">
                   <span className="card-category">{item.category}</span>
-                  <span className="card-shape">{item.nailShape}</span>
+                  <span className="card-shape">{item.colorFamily}</span>
                 </div>
                 <h3 className="card-title">{item.title}</h3>
-                <p className="card-technique">{item.technique}</p>
+                <p className="card-technique">{item.notes}</p>
                 <div className="card-footer-row">
                   <span className="card-finish">{item.finish}</span>
                   <span className="card-view-link">View detail →</span>
@@ -148,20 +157,17 @@ export function GalleryArchive() {
             Every set in our gallery is customized to your natural nail health,
             skin tone, and personal aesthetic.
           </p>
-          <div className="cta-action-row">
+          <div className="cta-actions">
             <Link href="/book/" className="button">
-              Reserve your appointment <span aria-hidden="true">↗</span>
-            </Link>
-            <Link href="/services/" className="button-secondary">
-              View service menu <span aria-hidden="true">→</span>
+              Book your appointment <span aria-hidden="true">↗</span>
             </Link>
           </div>
         </div>
       </div>
 
-      {/* Fullscreen Lightbox Modal */}
+      {/* Lightbox Viewer */}
       <GalleryViewer
-        items={GALLERY_ITEMS}
+        items={filteredItems}
         currentIndex={viewerIndex}
         onClose={() => setViewerIndex(null)}
         onNavigate={(newIdx) => setViewerIndex(newIdx)}

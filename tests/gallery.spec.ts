@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
 test.describe("KA Nails Gallery & Motion Suite", () => {
-  test("gallery page loads 36 curated works, supports category filtering and meets WCAG AA", async ({
+  test("gallery page loads 19 authentic works, supports category filtering and meets WCAG AA", async ({
     page,
   }) => {
     await page.goto("/gallery/");
@@ -13,9 +13,9 @@ test.describe("KA Nails Gallery & Motion Suite", () => {
       "Curated Nail Artistry & Architectural Gel",
     );
 
-    // Verify all 36 cards exist
+    // Verify all 19 cards exist
     const cards = page.locator(".gallery-card");
-    await expect(cards).toHaveCount(36);
+    await expect(cards).toHaveCount(19);
 
     // Verify each card has an image with descriptive alt text
     const firstCardImage = cards.first().locator("img");
@@ -30,30 +30,44 @@ test.describe("KA Nails Gallery & Motion Suite", () => {
       .analyze();
     expect(axeResults.violations).toEqual([]);
 
-    // Test category filtering: Minimal (7 items in gallery data)
-    await page.getByRole("button", { name: /^Minimal/ }).click();
+    // Test category filtering: Classic (6 items)
+    await page.getByRole("button", { name: /^Classic/ }).click();
     await expect(page.locator(".gallery-status-text")).toContainText(
-      "Showing 7 Minimal designs",
-    );
-    await expect(cards).toHaveCount(7);
-
-    // Test category filtering: French (6 items in gallery data)
-    await page.getByRole("button", { name: /^French/ }).click();
-    await expect(page.locator(".gallery-status-text")).toContainText(
-      "Showing 6 French designs",
+      "Showing 6 Classic designs",
     );
     await expect(cards).toHaveCount(6);
 
-    // Test category filtering: Chrome (5 items in gallery data)
-    await page.getByRole("button", { name: /^Chrome/ }).click();
+    // Test category filtering: Color (6 items)
+    await page.getByRole("button", { name: /^Color/ }).click();
     await expect(page.locator(".gallery-status-text")).toContainText(
-      "Showing 5 Chrome designs",
+      "Showing 6 Color designs",
     );
-    await expect(cards).toHaveCount(5);
+    await expect(cards).toHaveCount(6);
+
+    // Test category filtering: French (3 items)
+    await page.getByRole("button", { name: /^French/ }).click();
+    await expect(page.locator(".gallery-status-text")).toContainText(
+      "Showing 3 French designs",
+    );
+    await expect(cards).toHaveCount(3);
+
+    // Test category filtering: Glitter / Detail (3 items)
+    await page.getByRole("button", { name: /^Glitter/ }).click();
+    await expect(page.locator(".gallery-status-text")).toContainText(
+      "Showing 3 Glitter / Detail designs",
+    );
+    await expect(cards).toHaveCount(3);
+
+    // Test category filtering: Restorative (1 item)
+    await page.getByRole("button", { name: /^Restorative/ }).click();
+    await expect(page.locator(".gallery-status-text")).toContainText(
+      "Showing 1 Restorative designs",
+    );
+    await expect(cards).toHaveCount(1);
 
     // Restore All
     await page.getByRole("button", { name: /^All/ }).click();
-    await expect(cards).toHaveCount(36);
+    await expect(cards).toHaveCount(19);
 
     // Test responsive viewport overflow on /gallery/
     for (const width of [320, 390, 768, 1280]) {
@@ -88,15 +102,15 @@ test.describe("KA Nails Gallery & Motion Suite", () => {
     );
     expect(lockedOverflow).toBe("hidden");
 
-    // Verify counter shows 1 / 36
+    // Verify counter shows 1 / 19
     await expect(dialog.locator(".current-num")).toHaveText("1");
-    await expect(dialog.locator(".total-num")).toHaveText("36");
+    await expect(dialog.locator(".total-num")).toHaveText("19");
 
-    // Keyboard ArrowRight -> Next artwork (2 / 36)
+    // Keyboard ArrowRight -> Next artwork (2 / 19)
     await page.keyboard.press("ArrowRight");
     await expect(dialog.locator(".current-num")).toHaveText("2");
 
-    // Keyboard ArrowLeft -> Back to 1 / 36
+    // Keyboard ArrowLeft -> Back to 1 / 19
     await page.keyboard.press("ArrowLeft");
     await expect(dialog.locator(".current-num")).toHaveText("1");
 

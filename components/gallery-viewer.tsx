@@ -80,7 +80,7 @@ export function GalleryViewer({
 
     window.addEventListener("keydown", handleKeyDown);
 
-    // Initial focus on dialog
+    // Initial focus on dialog close button
     const closeBtn = dialogRef.current?.querySelector<HTMLButtonElement>(
       ".lightbox-close-btn",
     );
@@ -216,10 +216,10 @@ export function GalleryViewer({
         <footer className="lightbox-footer">
           <div className="lightbox-meta">
             <p className="lightbox-eyebrow">
-              {currentItem.nailShape} Silhouette · {currentItem.finish}
+              {currentItem.colorFamily} · {currentItem.finish}
             </p>
             <h2 className="lightbox-title">{currentItem.title}</h2>
-            <p className="lightbox-technique">{currentItem.technique}</p>
+            <p className="lightbox-technique">{currentItem.notes}</p>
           </div>
 
           <div className="lightbox-booking-action">
@@ -229,7 +229,7 @@ export function GalleryViewer({
               className="lightbox-book-btn"
               aria-label={`Book an appointment for ${currentItem.title}`}
             >
-              Book this style <span aria-hidden="true">↗</span>
+              Book an appointment <span aria-hidden="true">↗</span>
             </Link>
           </div>
         </footer>

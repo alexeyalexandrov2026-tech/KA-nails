@@ -6,3 +6,5 @@ playwright-report/
 *.tsbuildinfo
 .env*
 !.env.example
+raw-photos/
+motion-study/
