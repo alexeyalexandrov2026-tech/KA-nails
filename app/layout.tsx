@@ -23,6 +23,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </Link>
           <nav aria-label="Main navigation">
             <Link href="/services/">Services</Link>
+            <Link href="/gallery/">Gallery</Link>
             <Link href="/contact/">Contact</Link>
             <Link href="/book/" className="button">
               Book an appointment
@@ -31,15 +32,27 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </header>
         <main id="main">{children}</main>
         <footer className="footer">
-          <Image
-            src="/assets/ka-nails-logo.png"
-            alt="KA Nails Nail Studio"
-            width={112}
-            height={112}
-            unoptimized
-          />
-          <span>KA Nails · Nail Studio</span>
-          <Link href="/contact/">Studio information</Link>
+          <div className="footer-brand">
+            <Image
+              src="/assets/ka-nails-logo.png"
+              alt="KA Nails Nail Studio"
+              width={112}
+              height={112}
+              unoptimized
+            />
+            <div className="footer-brand-text">
+              <span className="footer-title">KA Nails · Nail Studio</span>
+              <p className="footer-sub">
+                Private studio appointments &amp; bespoke nail art
+              </p>
+            </div>
+          </div>
+          <div className="footer-links">
+            <Link href="/services/">Services</Link>
+            <Link href="/gallery/">Gallery (36)</Link>
+            <Link href="/book/">Book Appointment</Link>
+            <Link href="/contact/">Studio information</Link>
+          </div>
         </footer>
       </body>
     </html>

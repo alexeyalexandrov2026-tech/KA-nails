@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" width="800" height="1000" fill="none">
+  <defs>
+    <!-- Background studio atmosphere -->
+    <radialGradient id="bg-work-006" cx="50%" cy="40%" r="65%">
+      <stop offset="0%" stop-color="#1d1917" />
+      <stop offset="100%" stop-color="#0f0d0c" />
+    </radialGradient>
+    
+    <!-- Nail bed 3D gradient -->
+    <linearGradient id="nail-base-work-006" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#faeee3" />
+      <stop offset="30%" stop-color="#edd5c3" />
+      <stop offset="70%" stop-color="#ddba9e" />
+      <stop offset="100%" stop-color="#caa080" />
+    </linearGradient>
+
+    <!-- Gloss highlight arc -->
+    <linearGradient id="gloss-work-006" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.65" />
+      <stop offset="25%" stop-color="#ffffff" stop-opacity="0.15" />
+      <stop offset="80%" stop-color="#ffffff" stop-opacity="0" />
+    </linearGradient>
+
+    <!-- Accent metallic gradient -->
+    <linearGradient id="accent-grad-work-006" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6b625b" />
+      <stop offset="45%" stop-color="#fff5eb" />
+      <stop offset="70%" stop-color="#6b625b" />
+      <stop offset="100%" stop-color="#0f0d0c" />
+    </linearGradient>
+
+    <!-- Drop shadow filter -->
+    <filter id="shadow-work-006" x="-20%" y="-10%" width="140%" height="130%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="18" stdDeviation="24" flood-color="#000000" flood-opacity="0.55" />
+    </filter>
+  </defs>
+
+  <!-- Canvas background -->
+  <rect width="800" height="1000" fill="url(#bg-work-006)" />
+
+  <!-- Subtle fine studio grid -->
+  <g stroke="#ffffff" stroke-opacity="0.04" stroke-width="1">
+    <line x1="40" y1="0" x2="40" y2="1000" />
+    <line x1="760" y1="0" x2="760" y2="1000" />
+    <line x1="0" y1="40" x2="800" y2="40" />
+    <line x1="0" y1="960" x2="800" y2="960" />
+  </g>
+
+  <!-- Central Manicured Nail Silhouette -->
+  <g transform="translate(400, 480)">
+    <!-- Main Center Nail -->
+    <g filter="url(#shadow-work-006)">
+      <!-- Nail Shape Path (Almond / Oval / Squoval / Coffin) -->
+      <path d="M -70 140 C -75 50 -70 -70 -45 -150 L 45 -150 C 70 -70 75 50 70 140 C 65 190 -65 190 -70 140 Z" fill="url(#nail-base-work-006)" />
+
+      <!-- Design Layer Accents based on accentType -->
+      <ellipse cx="0" cy="0" rx="45" ry="80" fill="url(#accent-grad-work-006)" opacity="0.3" />
+
+      <!-- Specular Gloss Highlight -->
+      <path d="M -55 130 C -60 40 -50 -40 -10 -140 C -5 -145 5 -145 0 -135 C -35 -40 -45 40 -40 130 Z" fill="url(#gloss-work-006)" />
+    </g>
+
+    <!-- Side companion silhouettes (hands in composition) -->
+    <g opacity="0.35" transform="translate(-115, 30) scale(0.75)" filter="url(#shadow-work-006)">
+      <path d="M -60 140 C -65 50 -65 -40 0 -150 C 65 -40 65 50 60 140 Z" fill="url(#nail-base-work-006)" />
+    </g>
+    <g opacity="0.35" transform="translate(115, 30) scale(0.75)" filter="url(#shadow-work-006)">
+      <path d="M -60 140 C -65 50 -65 -40 0 -150 C 65 -40 65 50 60 140 Z" fill="url(#nail-base-work-006)" />
+    </g>
+  </g>
+
+  <!-- Editorial Typography & Metadata Stamp -->
+  <g transform="translate(48, 952)">
+    <text font-family="'Inter', -apple-system, sans-serif" font-size="11" font-weight="600" letter-spacing="2.5" fill="#6b625b" text-transform="uppercase">KA NAILS · EDITORIAL</text>
+    <text y="-24" font-family="'Inter', -apple-system, sans-serif" font-size="22" font-weight="500" letter-spacing="-0.5" fill="#fdf8f2">Obsidian Velvet Cat-Eye</text>
+  </g>
+
+  <!-- Index number in corner -->
+  <g transform="translate(752, 56)" text-anchor="end">
+    <text font-family="'Inter', -apple-system, sans-serif" font-size="12" font-weight="600" letter-spacing="1.5" fill="#a0958c">006 / 36</text>
+  </g>
+</svg>
