@@ -102,7 +102,7 @@ test.describe("KA Nails Gallery & Motion Suite", () => {
 
     // Verify booking action inside lightbox — scroll footer into view for mobile
     const bookStyleBtn = dialog.getByRole("link", {
-      name: /Book this style/,
+      name: /Book an appointment/,
     });
     await bookStyleBtn.scrollIntoViewIfNeeded();
     await expect(bookStyleBtn).toBeVisible();
