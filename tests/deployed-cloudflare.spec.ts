@@ -63,7 +63,9 @@ test.describe("Cloudflare Deployed Production QA - KA Nails", () => {
 
     await page.goto(`${BASE_URL}/services/`);
     await expect(
-      page.getByRole("heading", { name: "Online booking is not available yet." }),
+      page.getByRole("heading", {
+        name: "Online booking is not available yet.",
+      }),
     ).toBeVisible();
     await expect(page.locator("iframe")).toHaveCount(0);
     expect(pageErrors).toEqual([]);
@@ -88,7 +90,9 @@ test.describe("Cloudflare Deployed Production QA - KA Nails", () => {
 
     await page.goto(`${BASE_URL}/book/`);
     await expect(
-      page.getByRole("heading", { name: "Online booking is not available yet." }),
+      page.getByRole("heading", {
+        name: "Online booking is not available yet.",
+      }),
     ).toBeVisible();
     expect(pageErrors).toEqual([]);
   });
