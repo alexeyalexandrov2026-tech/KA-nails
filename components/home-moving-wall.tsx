@@ -83,14 +83,10 @@ export function HomeMovingWall() {
   const primaryLoopWidthRef = useRef(2600);
   const fgLoopWidthRef = useRef(2200);
 
-  // Triple/Double duplicate sets ensure complete infinite continuity
-  const infiniteBg = [...BG_ITEMS, ...BG_ITEMS, ...BG_ITEMS];
-  const infinitePrimary = [
-    ...PRIMARY_ITEMS,
-    ...PRIMARY_ITEMS,
-    ...PRIMARY_ITEMS,
-  ];
-  const infiniteFg = [...FG_ITEMS, ...FG_ITEMS, ...FG_ITEMS, ...FG_ITEMS];
+  // Double duplicate sets ensure complete infinite continuity with minimal DOM/GPU footprint
+  const infiniteBg = [...BG_ITEMS, ...BG_ITEMS];
+  const infinitePrimary = [...PRIMARY_ITEMS, ...PRIMARY_ITEMS];
+  const infiniteFg = [...FG_ITEMS, ...FG_ITEMS, ...FG_ITEMS];
 
   // Measure loop widths accurately
   const measureLoopWidths = useCallback(() => {
@@ -220,11 +216,38 @@ export function HomeMovingWall() {
         if (fgXRef.current >= fgLoop) fgXRef.current -= fgLoop;
         else if (fgXRef.current < 0) fgXRef.current += fgLoop;
 
-        // Mouse pointer spring lerp
-        mouseLerpXRef.current +=
-          (targetMouseXRef.current - mouseLerpXRef.current) * 0.05;
-        mouseLerpYRef.current +=
-          (targetMouseYRef.current - mouseLerpYRef.current) * 0.05;
+        // Mouse pointer spring lerp & 3D tilt
+        const isMouseActive =
+          isHoveredRef.current ||
+          isDraggingRef.current ||
+          Math.abs(mouseLerpXRef.current) > 0.002 ||
+          Math.abs(mouseLerpYRef.current) > 0.002;
+
+        if (isMouseActive) {
+          mouseLerpXRef.current +=
+            (targetMouseXRef.current - mouseLerpXRef.current) * 0.08;
+          mouseLerpYRef.current +=
+            (targetMouseYRef.current - mouseLerpYRef.current) * 0.08;
+
+          if (viewportRef.current) {
+            const maxTiltY = isMobileRef.current ? 1.5 : 3.5;
+            const maxTiltX = isMobileRef.current ? 1.2 : 2.5;
+            const rotY = (mouseLerpXRef.current * maxTiltY).toFixed(2);
+            const rotX = (-mouseLerpYRef.current * maxTiltX).toFixed(2);
+            viewportRef.current.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
+          }
+
+          if (stageRef.current) {
+            stageRef.current.style.setProperty(
+              "--mouse-x",
+              mouseLerpXRef.current.toFixed(4),
+            );
+            stageRef.current.style.setProperty(
+              "--mouse-y",
+              mouseLerpYRef.current.toFixed(4),
+            );
+          }
+        }
 
         // Update GPU translate3d on all 3 tracks directly
         if (bgTrackRef.current) {
@@ -235,25 +258,6 @@ export function HomeMovingWall() {
         }
         if (fgTrackRef.current) {
           fgTrackRef.current.style.transform = `translate3d(${-fgXRef.current.toFixed(2)}px, 0, 0)`;
-        }
-
-        // Apply 3D perspective orientation to the stage
-        if (stageRef.current) {
-          const maxTiltY = isMobileRef.current ? 1.5 : 3.5;
-          const maxTiltX = isMobileRef.current ? 1.2 : 2.5;
-          const rotY = (mouseLerpXRef.current * maxTiltY).toFixed(2);
-          const rotX = (-mouseLerpYRef.current * maxTiltX).toFixed(2);
-
-          stageRef.current.style.setProperty(
-            "--mouse-x",
-            mouseLerpXRef.current.toFixed(4),
-          );
-          stageRef.current.style.setProperty(
-            "--mouse-y",
-            mouseLerpYRef.current.toFixed(4),
-          );
-          stageRef.current.style.setProperty("--stage-rot-y", `${rotY}deg`);
-          stageRef.current.style.setProperty("--stage-rot-x", `${rotX}deg`);
         }
       }
 
@@ -322,7 +326,8 @@ export function HomeMovingWall() {
     if (isDraggingRef.current) {
       setTimeout(() => {
         isDraggingRef.current = false;
-      }, 50);
+        dragDistanceRef.current = 0;
+      }, 60);
 
       if (Math.abs(dragVelocityRef.current) > 0.5) {
         velocityRef.current = Math.max(
@@ -330,6 +335,8 @@ export function HomeMovingWall() {
           Math.min(10, dragVelocityRef.current),
         );
       }
+    } else {
+      dragDistanceRef.current = 0;
     }
   };
 
@@ -344,7 +351,7 @@ export function HomeMovingWall() {
   };
 
   const handleCardClick = (item: GalleryItem) => {
-    if (isDraggingRef.current || dragDistanceRef.current > 6) return;
+    if (isDraggingRef.current) return;
     const globalIdx = GALLERY_ITEMS.findIndex((i) => i.id === item.id);
     setViewerIndex(globalIdx >= 0 ? globalIdx : 0);
   };
