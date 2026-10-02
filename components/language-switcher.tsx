@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { getEquivalentPath, type Locale } from "../lib/locales";
 
@@ -10,6 +9,10 @@ interface LanguageSwitcherProps {
   ariaLabel?: string;
 }
 
+// EN and RU are separate root layouts, so switching locale always requires a
+// full document load. Plain anchors navigate natively instead of letting the
+// client router fetch the RSC payload first and only then fall back to a hard
+// navigation, which left the old <html lang> in place in the meantime.
 export function LanguageSwitcher({
   currentLocale,
   ariaLabel = "Select language",
@@ -30,7 +33,7 @@ export function LanguageSwitcher({
           EN
         </span>
       ) : (
-        <Link
+        <a
           href={enHref}
           className="lang-switcher-item"
           aria-label="Switch to English"
@@ -38,7 +41,7 @@ export function LanguageSwitcher({
           hrefLang="en"
         >
           EN
-        </Link>
+        </a>
       )}
 
       <span className="lang-divider" aria-hidden="true">
@@ -54,7 +57,7 @@ export function LanguageSwitcher({
           RU
         </span>
       ) : (
-        <Link
+        <a
           href={ruHref}
           className="lang-switcher-item"
           aria-label="Переключить на русский язык"
@@ -62,7 +65,7 @@ export function LanguageSwitcher({
           hrefLang="ru"
         >
           RU
-        </Link>
+        </a>
       )}
     </nav>
   );
