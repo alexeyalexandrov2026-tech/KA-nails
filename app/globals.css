@@ -1910,7 +1910,8 @@ h2.section-title {
   }
 
   .moving-layer-bg,
-  .moving-layer-fg {
+  .moving-layer-fg,
+  .showcase-pause-btn {
     display: none !important;
   }
 

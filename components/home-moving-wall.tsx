@@ -396,6 +396,7 @@ export function HomeMovingWall({ locale = "en" }: HomeMovingWallProps) {
   };
 
   const togglePlayPause = () => {
+    if (isReducedMotionRef.current) return;
     setIsPaused((prev) => {
       const next = !prev;
       isUserPausedRef.current = next;

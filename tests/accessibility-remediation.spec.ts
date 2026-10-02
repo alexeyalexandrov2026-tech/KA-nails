@@ -224,4 +224,167 @@ test.describe("WCAG 2.2 Accessibility Remediation Gates", () => {
       );
     }
   });
+
+  test("reduced motion: pause control is hidden while manual navigation remains functional", async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+
+    for (const url of ["/", "/ru/"]) {
+      await page.goto(url);
+
+      // Pause/resume control must NOT be visible under reduced-motion
+      const pauseBtn = page.locator(".showcase-pause-btn");
+      await expect(pauseBtn).toBeHidden();
+
+      // Manual navigation buttons (left/right nudge) remain visible and functional
+      const navBtns = page.locator(
+        ".showcase-nav-btn:not(.showcase-pause-btn)",
+      );
+      await expect(navBtns).toHaveCount(2);
+      await expect(navBtns.first()).toBeVisible();
+      await expect(navBtns.last()).toBeVisible();
+
+      // Click manual nav button to verify operability
+      await navBtns.first().click();
+      await navBtns.last().click();
+    }
+  });
+
+  test("WCAG 1.4.12 Text Spacing override test on EN and RU (home, gallery, book)", async ({
+    page,
+  }) => {
+    const textSpacingCss = `
+      * {
+        line-height: 1.5 !important;
+        letter-spacing: 0.12em !important;
+        word-spacing: 0.16em !important;
+      }
+      p {
+        margin-bottom: 2em !important;
+      }
+    `;
+
+    const routes = [
+      "/",
+      "/ru/",
+      "/gallery/",
+      "/ru/gallery/",
+      "/book/",
+      "/ru/book/",
+    ];
+
+    for (const route of routes) {
+      await page.goto(route);
+      await page.addStyleTag({ content: textSpacingCss });
+
+      // Verify no horizontal overflow causing clipping
+      const hasOverflow = await page.evaluate(
+        () => document.documentElement.scrollWidth > window.innerWidth,
+      );
+      expect(hasOverflow, `Overflow on ${route} with text spacing`).toBe(false);
+
+      // Verify headings and key texts are visible (not clipped, not hidden)
+      const h1 = page.locator("h1");
+      await expect(h1).toBeVisible();
+
+      // Functional verification per route
+      if (route.includes("gallery")) {
+        // Filter pills still clickable
+        const classicPill = page
+          .locator(".gallery-filter-bar")
+          .getByRole("button", {
+            name: /Classic|Классика/,
+          });
+        await expect(classicPill).toBeVisible();
+        await classicPill.click();
+
+        // Lightbox trigger still operable under text spacing
+        const firstTrigger = page.locator(".gallery-card-trigger").first();
+        await expect(firstTrigger).toBeVisible();
+        await firstTrigger.click();
+
+        const lightbox = page.locator('div[role="dialog"]');
+        await expect(lightbox).toBeVisible();
+        await page.keyboard.press("Escape");
+        await expect(lightbox).toHaveCount(0);
+      } else if (route.includes("book")) {
+        // Honest status notice is visible and readable
+        const notice = page.locator(".notice");
+        await expect(notice).toBeVisible();
+      } else {
+        // Homepage main navigation and CTAs remain operable
+        const nav = page.locator("nav.main-nav");
+        await expect(nav).toBeVisible();
+      }
+    }
+  });
+
+  test("WCAG 2.5.8 Target Size geometry checks at 1440x900, 390x844, and 320x800", async ({
+    page,
+  }) => {
+    const viewports = [
+      { width: 1440, height: 900, label: "desktop 1440x900" },
+      { width: 390, height: 844, label: "mobile 390x844" },
+      { width: 320, height: 800, label: "mobile 320x800" },
+    ];
+
+    const routes = [
+      "/",
+      "/ru/",
+      "/gallery/",
+      "/ru/gallery/",
+      "/services/",
+      "/ru/services/",
+      "/book/",
+      "/ru/book/",
+      "/contact/",
+      "/ru/contact/",
+    ];
+
+    for (const vp of viewports) {
+      await page.setViewportSize({ width: vp.width, height: vp.height });
+
+      for (const route of routes) {
+        await page.goto(route);
+
+        // Find any interactive targets strictly smaller than 24x24 px
+        // Exclude inline text links (explicitly exempted in WCAG 2.5.8)
+        const violations = await page.$$eval(
+          "button, a, [role='button'], input",
+          (els) => {
+            return els
+              .map((el) => {
+                const rect = el.getBoundingClientRect();
+                const computed = window.getComputedStyle(el);
+                const isInline =
+                  computed.display === "inline" &&
+                  el.tagName.toLowerCase() === "a";
+                return {
+                  tag: el.tagName.toLowerCase(),
+                  text: (el.textContent || el.getAttribute("aria-label") || "")
+                    .trim()
+                    .slice(0, 30),
+                  width: Math.round(rect.width),
+                  height: Math.round(rect.height),
+                  isInline,
+                };
+              })
+              .filter(
+                (t) =>
+                  !t.isInline &&
+                  t.width > 0 &&
+                  t.height > 0 &&
+                  (t.width < 24 || t.height < 24),
+              );
+          },
+        );
+
+        expect(
+          violations,
+          `Found targets < 24px on ${route} at ${vp.label}: ${JSON.stringify(violations)}`,
+        ).toEqual([]);
+      }
+    }
+  });
 });
