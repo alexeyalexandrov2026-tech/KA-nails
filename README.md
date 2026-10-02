@@ -90,6 +90,5 @@ ephemeral test origin must never be deployed.
 Every push to `main` that passes CI is deployed to the Cloudflare Pages project
 `ka-nails` (https://ka-nails.pages.dev) by the `deploy` job in
 `.github/workflows/ci.yml`, and the `verify-live` job then runs
-`tests/deployed-cloudflare.spec.ts` against the live site. The job needs two
-repository secrets: `CLOUDFLARE_API_TOKEN` (Account → Cloudflare Pages → Edit) and
-`CLOUDFLARE_ACCOUNT_ID`.
+`tests/deployed-cloudflare.spec.ts` against the live site. The job needs one
+repository secret: `CLOUDFLARE_API_TOKEN` (Account → Cloudflare Pages → Edit).
