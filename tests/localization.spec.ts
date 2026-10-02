@@ -59,7 +59,7 @@ test.describe("KA Nails Bilingual English + Russian Test Suite", () => {
     const ruSwitchHome = page.locator(".lang-switcher a[lang='ru']");
     await expect(ruSwitchHome).toHaveAttribute("href", "/ru/");
     await ruSwitchHome.click();
-    await expect(page).toHaveURL(/\/ru\/?$/);
+    await expect(page).toHaveURL(/^https?:\/\/[^/]+\/ru\/?$/);
     expect(await page.locator("html").getAttribute("lang")).toBe("ru");
 
     // Russian Services -> English Services
@@ -67,7 +67,7 @@ test.describe("KA Nails Bilingual English + Russian Test Suite", () => {
     const enSwitchServices = page.locator(".lang-switcher a[lang='en']");
     await expect(enSwitchServices).toHaveAttribute("href", "/services/");
     await enSwitchServices.click();
-    await expect(page).toHaveURL(/\/services\/?$/);
+    await expect(page).toHaveURL(/^https?:\/\/[^/]+\/services\/?$/);
     expect(await page.locator("html").getAttribute("lang")).toBe("en");
 
     // English Gallery -> Russian Gallery
@@ -75,7 +75,7 @@ test.describe("KA Nails Bilingual English + Russian Test Suite", () => {
     const ruSwitchGallery = page.locator(".lang-switcher a[lang='ru']");
     await expect(ruSwitchGallery).toHaveAttribute("href", "/ru/gallery/");
     await ruSwitchGallery.click();
-    await expect(page).toHaveURL(/\/ru\/gallery\/?$/);
+    await expect(page).toHaveURL(/^https?:\/\/[^/]+\/ru\/gallery\/?$/);
     expect(await page.locator("html").getAttribute("lang")).toBe("ru");
 
     // Russian Book -> English Book
@@ -83,7 +83,7 @@ test.describe("KA Nails Bilingual English + Russian Test Suite", () => {
     const enSwitchBook = page.locator(".lang-switcher a[lang='en']");
     await expect(enSwitchBook).toHaveAttribute("href", "/book/");
     await enSwitchBook.click();
-    await expect(page).toHaveURL(/\/book\/?$/);
+    await expect(page).toHaveURL(/^https?:\/\/[^/]+\/book\/?$/);
     expect(await page.locator("html").getAttribute("lang")).toBe("en");
 
     // Russian Contact -> English Contact
@@ -91,7 +91,7 @@ test.describe("KA Nails Bilingual English + Russian Test Suite", () => {
     const enSwitchContact = page.locator(".lang-switcher a[lang='en']");
     await expect(enSwitchContact).toHaveAttribute("href", "/contact/");
     await enSwitchContact.click();
-    await expect(page).toHaveURL(/\/contact\/?$/);
+    await expect(page).toHaveURL(/^https?:\/\/[^/]+\/contact\/?$/);
     expect(await page.locator("html").getAttribute("lang")).toBe("en");
   });
 
