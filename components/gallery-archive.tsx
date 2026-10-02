@@ -101,6 +101,9 @@ export function GalleryArchive({ locale = "en" }: GalleryArchiveProps) {
         )}
       </p>
 
+      {/* Selected Works Portfolio Section Heading (Logical outline nesting: h1 -> h2 -> h3) */}
+      <h2 className="sr-only">{dict.sectionHeading}</h2>
+
       {/* Asymmetric Gallery Grid */}
       <div className="gallery-grid">
         {filteredItems.map((item, index) => {
@@ -117,19 +120,6 @@ export function GalleryArchive({ locale = "en" }: GalleryArchiveProps) {
               key={item.id}
               id={item.id}
               className={`gallery-card ${gridSpanClass}`}
-              tabIndex={0}
-              role="button"
-              aria-label={dict.cardAriaLabel(
-                item.title,
-                item.categoryLabel || item.category,
-              )}
-              onClick={() => openLightbox(index)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  openLightbox(index);
-                }
-              }}
             >
               <div className="gallery-card-media gallery-media-wrapper">
                 <Image
@@ -156,16 +146,28 @@ export function GalleryArchive({ locale = "en" }: GalleryArchiveProps) {
                   <span className="card-shape">{item.colorFamily}</span>
                 </div>
                 <h3 className="card-title">
-                  {locale === "ru" ? (
-                    <span lang="en">{item.title}</span>
-                  ) : (
-                    item.title
-                  )}
+                  <button
+                    type="button"
+                    className="gallery-card-trigger"
+                    onClick={() => openLightbox(index)}
+                    aria-label={dict.cardAriaLabel(
+                      item.title,
+                      item.categoryLabel || item.category,
+                    )}
+                  >
+                    {locale === "ru" ? (
+                      <span lang="en">{item.title}</span>
+                    ) : (
+                      item.title
+                    )}
+                  </button>
                 </h3>
                 <p className="card-technique">{item.notes}</p>
                 <div className="card-footer-row">
                   <span className="card-finish">{item.finish}</span>
-                  <span className="card-view-link">{dict.viewDetailLabel}</span>
+                  <span className="card-view-link" aria-hidden="true">
+                    {dict.viewDetailLabel}
+                  </span>
                 </div>
               </div>
             </article>

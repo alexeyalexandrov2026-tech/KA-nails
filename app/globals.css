@@ -608,6 +608,16 @@ h2.section-title {
   cursor: not-allowed;
 }
 
+.showcase-pause-btn {
+  font-size: 13px;
+}
+
+.showcase-pause-btn[aria-pressed="true"] {
+  background: var(--ink);
+  color: #ffffff;
+  border-color: var(--ink);
+}
+
 /* 3D Exhibition Stage */
 .moving-wall-stage {
   position: relative;
@@ -858,6 +868,9 @@ h2.section-title {
 }
 
 .moving-wall-footer-note a {
+  display: inline-block;
+  min-height: 24px;
+  line-height: 24px;
   color: var(--ink);
   font-weight: 600;
   text-decoration: underline;
@@ -1235,6 +1248,7 @@ h2.section-title {
 }
 
 .gallery-card {
+  position: relative;
   background: var(--surface);
   border: 1px solid var(--line-subtle);
   border-radius: 8px;
@@ -1249,10 +1263,49 @@ h2.section-title {
     border-color 0.25s ease;
 }
 
-.gallery-card:hover {
+.gallery-card:hover,
+.gallery-card:has(.gallery-card-trigger:hover) {
   transform: translateY(-6px);
   box-shadow: var(--shadow-md);
   border-color: var(--ink);
+}
+
+.gallery-card:has(.gallery-card-trigger:focus-visible) {
+  outline: 3px solid var(--focus);
+  outline-offset: 4px;
+}
+
+.gallery-card-trigger {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  display: inline-block;
+  min-height: 24px;
+  line-height: 1.35;
+}
+
+.gallery-card-trigger::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  border-radius: 8px;
+}
+
+.gallery-card-trigger:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 4px;
+}
+
+@supports selector(:has(*)) {
+  .gallery-card-trigger:focus-visible {
+    outline: none;
+  }
 }
 
 .gallery-card-media {

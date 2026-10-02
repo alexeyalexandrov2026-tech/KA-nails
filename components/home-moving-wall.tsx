@@ -65,6 +65,9 @@ export function HomeMovingWall({ locale = "en" }: HomeMovingWallProps) {
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const [hoveredCardId, setHoveredCardId] = useState<string | null>(null);
   const [focusedCardId, setFocusedCardId] = useState<string | null>(null);
+  const [isPaused, setIsPaused] = useState(false);
+  const isUserPausedRef = useRef(false);
+  const isFocusWithinRef = useRef(false);
 
   const sectionRef = useRef<HTMLElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -202,11 +205,17 @@ export function HomeMovingWall({ locale = "en" }: HomeMovingWallProps) {
 
     const tick = () => {
       if (isVisibleRef.current) {
+        const isMotionSuspended =
+          isUserPausedRef.current || isFocusWithinRef.current;
+
         // Recover to base drift velocity smoothly
         if (!isDraggingRef.current) {
           if (Math.abs(dragVelocityRef.current) > 0.05) {
             velocityRef.current = dragVelocityRef.current;
             dragVelocityRef.current *= 0.94; // Inertia decay
+          } else if (isMotionSuspended) {
+            velocityRef.current = 0;
+            dragVelocityRef.current = 0;
           } else {
             dragVelocityRef.current = 0;
             velocityRef.current +=
@@ -214,46 +223,50 @@ export function HomeMovingWall({ locale = "en" }: HomeMovingWallProps) {
           }
         }
 
-        const v = velocityRef.current;
+        const v =
+          isMotionSuspended && !isDraggingRef.current ? 0 : velocityRef.current;
 
-        // LAYER VELOCITY HIERARCHY:
-        // Foreground travels ~1.5x faster (closest to viewer)
-        // Primary travels ~1.0x (main focal rail)
-        // Background travels ~0.58x slower (deep in the background)
-        const fgSpeed = v * 1.5;
-        const primSpeed = v * 1.0;
-        const bgSpeed = v * 0.58;
+        if (v !== 0) {
+          // LAYER VELOCITY HIERARCHY:
+          // Foreground travels ~1.5x faster (closest to viewer)
+          // Primary travels ~1.0x (main focal rail)
+          // Background travels ~0.58x slower (deep in the background)
+          const fgSpeed = v * 1.5;
+          const primSpeed = v * 1.0;
+          const bgSpeed = v * 0.58;
 
-        fgXRef.current += fgSpeed;
-        primaryXRef.current += primSpeed;
-        bgXRef.current += bgSpeed;
+          fgXRef.current += fgSpeed;
+          primaryXRef.current += primSpeed;
+          bgXRef.current += bgSpeed;
 
-        // Seamless modular infinite loop wrap
-        const fgW = fgLoopWidthRef.current;
-        const primW = primaryLoopWidthRef.current;
-        const bgW = bgLoopWidthRef.current;
+          // Seamless modular infinite loop wrap
+          const fgW = fgLoopWidthRef.current;
+          const primW = primaryLoopWidthRef.current;
+          const bgW = bgLoopWidthRef.current;
 
-        if (fgXRef.current >= fgW) fgXRef.current %= fgW;
-        if (fgXRef.current < 0)
-          fgXRef.current = fgW - (Math.abs(fgXRef.current) % fgW);
+          if (fgXRef.current >= fgW) fgXRef.current %= fgW;
+          if (fgXRef.current < 0)
+            fgXRef.current = fgW - (Math.abs(fgXRef.current) % fgW);
 
-        if (primaryXRef.current >= primW) primaryXRef.current %= primW;
-        if (primaryXRef.current < 0)
-          primaryXRef.current = primW - (Math.abs(primaryXRef.current) % primW);
+          if (primaryXRef.current >= primW) primaryXRef.current %= primW;
+          if (primaryXRef.current < 0)
+            primaryXRef.current =
+              primW - (Math.abs(primaryXRef.current) % primW);
 
-        if (bgXRef.current >= bgW) bgXRef.current %= bgW;
-        if (bgXRef.current < 0)
-          bgXRef.current = bgW - (Math.abs(bgXRef.current) % bgW);
+          if (bgXRef.current >= bgW) bgXRef.current %= bgW;
+          if (bgXRef.current < 0)
+            bgXRef.current = bgW - (Math.abs(bgXRef.current) % bgW);
 
-        // Render hardware-accelerated transforms directly to GPU compositor layers
-        if (fgTrackRef.current) {
-          fgTrackRef.current.style.transform = `translate3d(${-fgXRef.current}px, 0, 0)`;
-        }
-        if (primaryTrackRef.current) {
-          primaryTrackRef.current.style.transform = `translate3d(${-primaryXRef.current}px, 0, 0)`;
-        }
-        if (bgTrackRef.current) {
-          bgTrackRef.current.style.transform = `translate3d(${-bgXRef.current}px, 0, 0)`;
+          // Render hardware-accelerated transforms directly to GPU compositor layers
+          if (fgTrackRef.current) {
+            fgTrackRef.current.style.transform = `translate3d(${-fgXRef.current}px, 0, 0)`;
+          }
+          if (primaryTrackRef.current) {
+            primaryTrackRef.current.style.transform = `translate3d(${-primaryXRef.current}px, 0, 0)`;
+          }
+          if (bgTrackRef.current) {
+            bgTrackRef.current.style.transform = `translate3d(${-bgXRef.current}px, 0, 0)`;
+          }
         }
 
         // Pointer-reactive 3D perspective stage tilt
@@ -382,6 +395,14 @@ export function HomeMovingWall({ locale = "en" }: HomeMovingWallProps) {
     velocityRef.current = deltaPx > 0 ? 2.5 : -2.5;
   };
 
+  const togglePlayPause = () => {
+    setIsPaused((prev) => {
+      const next = !prev;
+      isUserPausedRef.current = next;
+      return next;
+    });
+  };
+
   const galleryHref = getLocalizedPath("/gallery/", locale);
 
   return (
@@ -399,9 +420,7 @@ export function HomeMovingWall({ locale = "en" }: HomeMovingWallProps) {
           <div
             className="moving-wall-nav-btns"
             aria-label={
-              locale === "ru"
-                ? "Навигация по выставке"
-                : "Showcase carousel navigation"
+              locale === "ru" ? "Управление выставкой" : "Exhibition controls"
             }
           >
             <button
@@ -411,6 +430,25 @@ export function HomeMovingWall({ locale = "en" }: HomeMovingWallProps) {
               aria-label={dict.scrollLeftAria}
             >
               <span aria-hidden="true">‹</span>
+            </button>
+            <button
+              type="button"
+              className="showcase-nav-btn showcase-pause-btn"
+              onClick={togglePlayPause}
+              aria-label={
+                isPaused ? dict.resumeMotionAria : dict.pauseMotionAria
+              }
+              aria-pressed={isPaused}
+            >
+              <span
+                aria-hidden="true"
+                style={{
+                  fontSize: isPaused ? "13px" : "11px",
+                  display: "inline-block",
+                }}
+              >
+                {isPaused ? "▶" : "⏸"}
+              </span>
             </button>
             <button
               type="button"
@@ -433,8 +471,17 @@ export function HomeMovingWall({ locale = "en" }: HomeMovingWallProps) {
           hoveredCardId !== null ? "has-hovered-card" : ""
         }`}
         ref={stageRef}
-        tabIndex={0}
+        role="region"
         aria-label={dict.stageAriaLabel}
+        onFocus={() => {
+          isFocusWithinRef.current = true;
+        }}
+        onBlur={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+            isFocusWithinRef.current = false;
+            setFocusedCardId(null);
+          }
+        }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
@@ -451,6 +498,7 @@ export function HomeMovingWall({ locale = "en" }: HomeMovingWallProps) {
             >
               {infinitePrimary.map((item, index) => {
                 const uniqueKey = `prim-${item.id}-${index}`;
+                const isClone = index >= primaryItems.length;
                 const isHovered = hoveredCardId === uniqueKey;
                 const isFocused = focusedCardId === uniqueKey;
 
@@ -460,34 +508,52 @@ export function HomeMovingWall({ locale = "en" }: HomeMovingWallProps) {
                     className={`moving-wall-card moving-card-layer-mid ${
                       isHovered ? "is-hovered" : ""
                     } ${isFocused ? "is-focused" : ""}`}
-                    role="button"
-                    tabIndex={0}
-                    aria-label={dict.cardAriaLabel(
-                      item.title,
-                      item.categoryLabel || item.category,
-                    )}
+                    data-work-id={item.id}
+                    role={isClone ? undefined : "button"}
+                    tabIndex={isClone ? -1 : 0}
+                    aria-hidden={isClone ? "true" : undefined}
+                    aria-label={
+                      isClone
+                        ? undefined
+                        : dict.cardAriaLabel(
+                            item.title,
+                            item.categoryLabel || item.category,
+                          )
+                    }
                     onClick={() => handleCardClick(item)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        handleCardClick(item);
-                      }
-                    }}
+                    onKeyDown={
+                      isClone
+                        ? undefined
+                        : (e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              handleCardClick(item);
+                            }
+                          }
+                    }
                     onMouseEnter={() => setHoveredCardId(uniqueKey)}
                     onMouseLeave={() => setHoveredCardId(null)}
-                    onFocus={() => {
-                      setFocusedCardId(uniqueKey);
-                      setHoveredCardId(uniqueKey);
-                    }}
-                    onBlur={() => {
-                      setFocusedCardId(null);
-                      setHoveredCardId(null);
-                    }}
+                    onFocus={
+                      isClone
+                        ? undefined
+                        : () => {
+                            setFocusedCardId(uniqueKey);
+                            setHoveredCardId(uniqueKey);
+                          }
+                    }
+                    onBlur={
+                      isClone
+                        ? undefined
+                        : () => {
+                            setFocusedCardId(null);
+                            setHoveredCardId(null);
+                          }
+                    }
                   >
                     <div className="moving-card-media">
                       <Image
                         src={item.srcMed || item.src}
-                        alt={item.alt}
+                        alt={isClone ? "" : item.alt}
                         width={item.width}
                         height={item.height}
                         unoptimized
@@ -521,6 +587,7 @@ export function HomeMovingWall({ locale = "en" }: HomeMovingWallProps) {
             <div className="moving-wall-track moving-track-fg" ref={fgTrackRef}>
               {infiniteFg.map((item, index) => {
                 const uniqueKey = `fg-${item.id}-${index}`;
+                const isClone = index >= fgItems.length;
                 const isHovered = hoveredCardId === uniqueKey;
                 const isFocused = focusedCardId === uniqueKey;
 
@@ -530,34 +597,52 @@ export function HomeMovingWall({ locale = "en" }: HomeMovingWallProps) {
                     className={`moving-wall-card moving-card-layer-fg ${
                       isHovered ? "is-hovered" : ""
                     } ${isFocused ? "is-focused" : ""}`}
-                    role="button"
-                    tabIndex={0}
-                    aria-label={dict.cardAriaLabel(
-                      item.title,
-                      item.categoryLabel || item.category,
-                    )}
+                    data-work-id={item.id}
+                    role={isClone ? undefined : "button"}
+                    tabIndex={isClone ? -1 : 0}
+                    aria-hidden={isClone ? "true" : undefined}
+                    aria-label={
+                      isClone
+                        ? undefined
+                        : dict.cardAriaLabel(
+                            item.title,
+                            item.categoryLabel || item.category,
+                          )
+                    }
                     onClick={() => handleCardClick(item)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        handleCardClick(item);
-                      }
-                    }}
+                    onKeyDown={
+                      isClone
+                        ? undefined
+                        : (e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              handleCardClick(item);
+                            }
+                          }
+                    }
                     onMouseEnter={() => setHoveredCardId(uniqueKey)}
                     onMouseLeave={() => setHoveredCardId(null)}
-                    onFocus={() => {
-                      setFocusedCardId(uniqueKey);
-                      setHoveredCardId(uniqueKey);
-                    }}
-                    onBlur={() => {
-                      setFocusedCardId(null);
-                      setHoveredCardId(null);
-                    }}
+                    onFocus={
+                      isClone
+                        ? undefined
+                        : () => {
+                            setFocusedCardId(uniqueKey);
+                            setHoveredCardId(uniqueKey);
+                          }
+                    }
+                    onBlur={
+                      isClone
+                        ? undefined
+                        : () => {
+                            setFocusedCardId(null);
+                            setHoveredCardId(null);
+                          }
+                    }
                   >
                     <div className="moving-card-media">
                       <Image
                         src={item.srcMed || item.src}
-                        alt={item.alt}
+                        alt={isClone ? "" : item.alt}
                         width={item.width}
                         height={item.height}
                         unoptimized
@@ -592,21 +677,66 @@ export function HomeMovingWall({ locale = "en" }: HomeMovingWallProps) {
           </div>
 
           {/* LAYER 3: BACKGROUND ATMOSPHERIC (deeper in scene, smaller, slower) */}
-          <div className="moving-layer moving-layer-bg" aria-hidden="true">
+          <div className="moving-layer moving-layer-bg">
             <div className="moving-wall-track moving-track-bg" ref={bgTrackRef}>
               {infiniteBg.map((item, index) => {
                 const uniqueKey = `bg-${item.id}-${index}`;
+                const isClone = index >= bgItems.length;
+                const isHovered = hoveredCardId === uniqueKey;
+                const isFocused = focusedCardId === uniqueKey;
+
                 return (
                   <div
                     key={uniqueKey}
-                    className="moving-wall-card moving-card-layer-bg"
-                    tabIndex={-1}
+                    className={`moving-wall-card moving-card-layer-bg ${
+                      isHovered ? "is-hovered" : ""
+                    } ${isFocused ? "is-focused" : ""}`}
+                    data-work-id={item.id}
+                    role={isClone ? undefined : "button"}
+                    tabIndex={isClone ? -1 : 0}
+                    aria-hidden={isClone ? "true" : undefined}
+                    aria-label={
+                      isClone
+                        ? undefined
+                        : dict.cardAriaLabel(
+                            item.title,
+                            item.categoryLabel || item.category,
+                          )
+                    }
                     onClick={() => handleCardClick(item)}
+                    onKeyDown={
+                      isClone
+                        ? undefined
+                        : (e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              handleCardClick(item);
+                            }
+                          }
+                    }
+                    onMouseEnter={() => setHoveredCardId(uniqueKey)}
+                    onMouseLeave={() => setHoveredCardId(null)}
+                    onFocus={
+                      isClone
+                        ? undefined
+                        : () => {
+                            setFocusedCardId(uniqueKey);
+                            setHoveredCardId(uniqueKey);
+                          }
+                    }
+                    onBlur={
+                      isClone
+                        ? undefined
+                        : () => {
+                            setFocusedCardId(null);
+                            setHoveredCardId(null);
+                          }
+                    }
                   >
                     <div className="moving-card-media">
                       <Image
                         src={item.srcMed || item.src}
-                        alt=""
+                        alt={isClone ? "" : item.alt}
                         width={item.width}
                         height={item.height}
                         unoptimized

@@ -23,6 +23,7 @@ export function GalleryViewer({
 }: GalleryViewerProps) {
   const dict = getDictionary(locale).lightbox;
   const dialogRef = useRef<HTMLDivElement>(null);
+  const triggerElementRef = useRef<HTMLElement | null>(null);
   const touchStartXRef = useRef<number | null>(null);
   const touchDeltaXRef = useRef<number>(0);
   const [copiedNotification, setCopiedNotification] = useState(false);
@@ -30,6 +31,13 @@ export function GalleryViewer({
   const isOpen =
     currentIndex !== null && currentIndex >= 0 && currentIndex < items.length;
   const currentItem = isOpen ? items[currentIndex] : null;
+
+  // Capture invoking element on open
+  useEffect(() => {
+    if (isOpen) {
+      triggerElementRef.current = document.activeElement as HTMLElement | null;
+    }
+  }, [isOpen]);
 
   const handlePrev = useCallback(() => {
     if (currentIndex === null) return;
@@ -93,6 +101,16 @@ export function GalleryViewer({
     return () => {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", handleKeyDown);
+
+      // Restore focus to original invoking card/control if still in DOM
+      const trigger = triggerElementRef.current;
+      if (trigger && typeof trigger.focus === "function") {
+        setTimeout(() => {
+          if (document.contains(trigger)) {
+            trigger.focus();
+          }
+        }, 0);
+      }
     };
   }, [isOpen, onClose, handlePrev, handleNext]);
 

@@ -67,6 +67,8 @@ export const enLocale: LocaleDictionary = {
       "Interactive 3D multi-layer exhibition wall. Drag or swipe horizontally to navigate, select a photograph to expand.",
     cardAriaLabel: (title, category) =>
       `Open ${title}, ${category} pedicure. Press Enter to view high resolution.`,
+    pauseMotionAria: "Pause exhibition motion",
+    resumeMotionAria: "Resume exhibition motion",
   },
   pillars: {
     eyebrow: "03 / The Studio Standard",
@@ -132,6 +134,7 @@ export const enLocale: LocaleDictionary = {
   galleryPage: {
     eyebrow: "KA Nails / Studio Exhibition",
     title: "Curated Nail Artistry & Pedicure Portfolio",
+    sectionHeading: "Selected Works Portfolio",
     lead: "Explore our archive of authentic studio works. From refined French lines and deep bordeaux gloss to restorative aesthetic care and attentive salon detailing.",
     filterAriaLabel: "Filter gallery by technique",
     inventoryBadge: "Authentic Studio Archive",

@@ -58,6 +58,8 @@ export interface LocaleDictionary {
     viewFullGallery: string;
     stageAriaLabel: string;
     cardAriaLabel: (title: string, category: string) => string;
+    pauseMotionAria: string;
+    resumeMotionAria: string;
   };
   pillars: {
     eyebrow: string;
@@ -96,6 +98,7 @@ export interface LocaleDictionary {
   galleryPage: {
     eyebrow: string;
     title: string;
+    sectionHeading: string;
     lead: string;
     filterAriaLabel: string;
     inventoryBadge: string;

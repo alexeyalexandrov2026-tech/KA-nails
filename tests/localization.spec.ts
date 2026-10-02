@@ -209,7 +209,7 @@ test.describe("KA Nails Bilingual English + Russian Test Suite", () => {
     const cards = page.locator(".gallery-grid article");
     expect(await cards.count()).toBe(19);
 
-    await cards.first().locator(".gallery-media-wrapper").click();
+    await cards.first().locator(".gallery-card-trigger").click();
     const lightbox = page.locator('div[role="dialog"].lightbox-overlay');
     await expect(lightbox).toBeVisible();
 
