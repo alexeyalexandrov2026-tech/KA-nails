@@ -43,7 +43,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <div className="footer-brand-text">
               <span className="footer-title">KA Nails · Nail Studio</span>
               <p className="footer-sub">
-                Private studio appointments &amp; bespoke nail art
+                Authentic salon portfolio &amp; attentive care
               </p>
             </div>
           </div>

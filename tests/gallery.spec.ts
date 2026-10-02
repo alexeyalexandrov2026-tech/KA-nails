@@ -10,7 +10,7 @@ test.describe("KA Nails Gallery & Motion Suite", () => {
 
     // Verify H1
     await expect(page.getByRole("heading", { level: 1 })).toContainText(
-      "Curated Nail Artistry & Architectural Gel",
+      "Curated Nail Artistry & Pedicure Portfolio",
     );
 
     // Verify all 19 cards exist

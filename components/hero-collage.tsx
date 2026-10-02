@@ -90,9 +90,9 @@ export function HeroCollage() {
           <br />A moment of pure artistry.
         </h1>
         <p className="hero-description">
-          Bespoke nail architecture, precision Russian &amp; Japanese e-file
-          manicures, and hospital-grade hygiene. An intimate studio experience
-          tailored to the health and beauty of your natural nails.
+          Carefully crafted nail and pedicure artistry. Explore our verified
+          portfolio of authentic salon works while online booking preparation is
+          underway.
         </p>
 
         <div className="hero-action-group">
@@ -112,19 +112,19 @@ export function HeroCollage() {
             <span className="badge-bullet" aria-hidden="true">
               ✦
             </span>
-            <span>Russian E-File Precision</span>
+            <span>Curated Pedicure Artistry</span>
           </div>
           <div className="studio-badge-item">
             <span className="badge-bullet" aria-hidden="true">
               ✦
             </span>
-            <span>Japanese Structured BIAB</span>
+            <span>Authentic Salon Portfolio</span>
           </div>
           <div className="studio-badge-item">
             <span className="badge-bullet" aria-hidden="true">
               ✦
             </span>
-            <span>Hospital-Grade Autoclave</span>
+            <span>Attentive Care</span>
           </div>
         </div>
       </div>
@@ -274,11 +274,11 @@ export function HeroCollage() {
             </div>
           )}
 
-          {/* Studio.Design Style Compact Reservation Anchor */}
+          {/* Studio.Design Style Compact Status Badge */}
           <div className="hero-reservation-badge" aria-hidden="true">
             <span className="reservation-pulse" />
             <span className="reservation-text">
-              Private Studio Suite · Reservations Open
+              Studio Portfolio · 19 Verified Works
             </span>
           </div>
         </div>

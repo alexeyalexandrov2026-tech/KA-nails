@@ -19,13 +19,13 @@ export default function Home() {
         <div className="pillars-intro">
           <p className="eyebrow">03 / The Studio Standard</p>
           <h2 className="section-title">
-            Meticulous craft.
+            Attentive care.
             <br />
-            Uncompromised hygiene.
+            Curated presentation.
           </h2>
           <p className="lead">
-            Every appointment is an unhurried, private experience centered on
-            the integrity of your natural nails.
+            Every set in our portfolio reflects thoughtful craftsmanship, clean
+            application, and respect for natural nail health.
           </p>
         </div>
 
@@ -34,11 +34,10 @@ export default function Home() {
             <span className="pillar-num" aria-hidden="true">
               01
             </span>
-            <h3 className="pillar-title">Russian &amp; Japanese Precision</h3>
+            <h3 className="pillar-title">Curated Color &amp; Finish</h3>
             <p className="pillar-text">
-              Dry hardware cuticle detailing clears micro-dead skin gently
-              without soaking, allowing the gel base to seal seamlessly beneath
-              the proximal nail fold for up to 4+ weeks of clean regrowth.
+              Rich pigments, high-gloss lacquers, and refined finishes selected
+              to complement your skin tone and personal aesthetic.
             </p>
           </article>
 
@@ -46,11 +45,10 @@ export default function Home() {
             <span className="pillar-num" aria-hidden="true">
               02
             </span>
-            <h3 className="pillar-title">Structured BIAB Reinforcement</h3>
+            <h3 className="pillar-title">Clean Application</h3>
             <p className="pillar-text">
-              We engineer an anatomical apex using premium Japanese soak-off
-              builder gels (BIAB). Weak, brittle, or peeling natural nails grow
-              out strong and protected without harsh MMA or heavy acrylics.
+              Precise edging and seamless coats designed for elegant wear and
+              lasting aesthetic appeal.
             </p>
           </article>
 
@@ -58,11 +56,10 @@ export default function Home() {
             <span className="pillar-num" aria-hidden="true">
               03
             </span>
-            <h3 className="pillar-title">Hospital-Grade Sterilization</h3>
+            <h3 className="pillar-title">Professional Cleanliness</h3>
             <p className="pillar-text">
-              Every metal drill bit and implement undergoes medical-grade
-              ultrasonic bathing and class-B autoclave sterilization, sealed in
-              sterile indicator pouches opened exclusively in front of you.
+              Carefully sanitized implements and dedicated station care prepared
+              for every client visit.
             </p>
           </article>
         </div>
@@ -75,60 +72,57 @@ export default function Home() {
       >
         <div className="services-showcase-header">
           <div>
-            <p className="eyebrow">04 / Signature Care</p>
-            <h2 className="section-title">Services &amp; Rituals</h2>
+            <p className="eyebrow">04 / Studio Portfolio</p>
+            <h2 className="section-title">Styles &amp; Treatments</h2>
           </div>
           <Link href="/services/" className="button-secondary">
-            View full menu <span aria-hidden="true">→</span>
+            View service information <span aria-hidden="true">→</span>
           </Link>
         </div>
 
         <div className="services-preview-grid">
           <div className="service-preview-card">
             <div className="service-card-meta">
-              <span className="service-tag">Foundation</span>
-              <span className="service-duration">75 min</span>
+              <span className="service-tag">Classic</span>
+              <span className="service-duration">Curated</span>
             </div>
-            <h3 className="service-name">Structured BIAB Manicure</h3>
+            <h3 className="service-name">Classic Pedicure Artistry</h3>
             <p className="service-desc">
-              Precision dry e-file cuticle detailing, natural apex
-              reinforcement, and single or dual sheer nude coats sealed with
-              glass topcoat.
+              Timeless deep bordeaux, neutral porcelain tones, and clean
+              contours captured in our studio portfolio.
             </p>
-            <Link href="/book/" className="service-book-link">
-              Book this service <span aria-hidden="true">↗</span>
+            <Link href="/gallery/" className="service-book-link">
+              Explore in gallery <span aria-hidden="true">→</span>
             </Link>
           </div>
 
           <div className="service-preview-card featured">
             <div className="service-card-meta">
-              <span className="service-tag highlight">Signature Set</span>
-              <span className="service-duration">90 min</span>
+              <span className="service-tag highlight">Featured</span>
+              <span className="service-duration">Curated</span>
             </div>
-            <h3 className="service-name">Glazed Chrome &amp; Micro-French</h3>
+            <h3 className="service-name">French &amp; Accent Detailing</h3>
             <p className="service-desc">
-              Structured gel foundation paired with our iconic micro-fine French
-              smile lines, liquid metallic pigments, or pearl glazed donut
-              finish.
+              Refined smile lines, delicate bow motifs, and accent rings
+              showcased in authentic salon photography.
             </p>
-            <Link href="/book/" className="service-book-link">
-              Book this service <span aria-hidden="true">↗</span>
+            <Link href="/gallery/" className="service-book-link">
+              Explore in gallery <span aria-hidden="true">→</span>
             </Link>
           </div>
 
           <div className="service-preview-card">
             <div className="service-card-meta">
-              <span className="service-tag">Artistry</span>
-              <span className="service-duration">105 min</span>
+              <span className="service-tag">Color</span>
+              <span className="service-duration">Curated</span>
             </div>
-            <h3 className="service-name">Bespoke Tier Nail Art</h3>
+            <h3 className="service-name">Vibrant Color &amp; Shimmer</h3>
             <p className="service-desc">
-              Full custom set including hand-painted botanicals, organic
-              tortoiseshell, gemstone marble veining, or 3D sculpted dew drop
-              accents.
+              Royal cobalt gloss, cornflower drape, pastel lilac bliss, and rose
+              shimmer lacquer finishes.
             </p>
-            <Link href="/book/" className="service-book-link">
-              Book this service <span aria-hidden="true">↗</span>
+            <Link href="/gallery/" className="service-book-link">
+              Explore in gallery <span aria-hidden="true">→</span>
             </Link>
           </div>
         </div>
@@ -137,23 +131,23 @@ export default function Home() {
       {/* Final Booking Callout */}
       <section
         className="final-booking-band"
-        aria-label="Appointment Reservation"
+        aria-label="Studio Portfolio & Appointments"
       >
         <div className="final-booking-inner">
-          <p className="eyebrow">Online Reservations</p>
+          <p className="eyebrow">Studio Appointments</p>
           <h2 className="final-title">
-            Reserve your chair.
+            Crafted with care.
             <br />
-            Experience the difference.
+            Captured in detail.
           </h2>
           <p className="final-desc">
-            Appointments are scheduled in advance to ensure dedicated,
-            uninterrupted attention. Choose your service, find an available
-            time, and receive instant confirmation.
+            Explore our curated gallery of 19 verified salon works. Online
+            booking will open once scheduling details are finalized with the
+            studio.
           </p>
           <div className="final-actions">
-            <Link href="/book/" className="button final-btn">
-              Book an appointment <span aria-hidden="true">↗</span>
+            <Link href="/services/" className="button final-btn">
+              View booking status <span aria-hidden="true">↗</span>
             </Link>
             <Link
               href="/gallery/"
