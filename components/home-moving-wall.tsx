@@ -1,44 +1,67 @@
 "use client";
 
-import React, { useRef, useState, useEffect, useCallback } from "react";
+import React, {
+  useRef,
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+} from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { GALLERY_ITEMS, type GalleryItem } from "../lib/gallery-data";
+import { getGalleryItems, type GalleryItem } from "../lib/gallery-data";
 import { GalleryViewer } from "./gallery-viewer";
+import { getDictionary, getLocalizedPath, type Locale } from "../lib/locales";
 
-// Partition the 19 authentic salon works into 3 distinct spatial depth layers:
-// LAYER 2: Foreground heroes (closer to camera, larger, faster parallax)
-const FG_ITEMS: GalleryItem[] = [
-  GALLERY_ITEMS[0]!, // Bordeaux Wine
-  GALLERY_ITEMS[5]!, // Emerald Velvet
-  GALLERY_ITEMS[9]!, // Cherry Glaze
-  GALLERY_ITEMS[13]!, // Onyx Gloss
-  GALLERY_ITEMS[8]!, // Frosted Chrome
-];
+interface HomeMovingWallProps {
+  locale?: Locale;
+}
 
-// LAYER 1: Primary eye-level exhibition rail (center line, steady cadence)
-const PRIMARY_ITEMS: GalleryItem[] = [
-  GALLERY_ITEMS[1]!, // Royal Cobalt
-  GALLERY_ITEMS[3]!, // Pastel Lilac
-  GALLERY_ITEMS[6]!, // Crimson Luxe
-  GALLERY_ITEMS[11]!, // Mocha Silk
-  GALLERY_ITEMS[14]!, // Buttercup Soft
-  GALLERY_ITEMS[16]!, // Sage Linen
-  GALLERY_ITEMS[17]!, // Terracotta Warm
-  GALLERY_ITEMS[15]!, // Pearl Shimmer
-];
+export function HomeMovingWall({ locale = "en" }: HomeMovingWallProps) {
+  const dict = getDictionary(locale).section02;
+  const allItems = useMemo(() => getGalleryItems(locale), [locale]);
 
-// LAYER 3: Background atmospheric depth (deeper in scene, smaller, slower)
-const BG_ITEMS: GalleryItem[] = [
-  GALLERY_ITEMS[2]!, // French Pink
-  GALLERY_ITEMS[4]!, // Midnight Eclipse
-  GALLERY_ITEMS[7]!, // Nude Petal
-  GALLERY_ITEMS[10]!, // Amethyst Dream
-  GALLERY_ITEMS[12]!, // Rose Quartz
-  GALLERY_ITEMS[18]!, // Lavender Mist
-];
+  // Partition the 19 authentic salon works into 3 distinct spatial depth layers:
+  // LAYER 2: Foreground heroes (closer to camera, larger, faster parallax)
+  const fgItems = useMemo(
+    () => [
+      allItems[0]!, // Bordeaux Wine
+      allItems[5]!, // Emerald Velvet
+      allItems[9]!, // Cherry Glaze
+      allItems[13]!, // Onyx Gloss
+      allItems[8]!, // Frosted Chrome
+    ],
+    [allItems],
+  );
 
-export function HomeMovingWall() {
+  // LAYER 1: Primary eye-level exhibition rail (center line, steady cadence)
+  const primaryItems = useMemo(
+    () => [
+      allItems[1]!, // Royal Cobalt
+      allItems[3]!, // Pastel Lilac
+      allItems[6]!, // Crimson Luxe
+      allItems[11]!, // Mocha Silk
+      allItems[14]!, // Buttercup Soft
+      allItems[16]!, // Sage Linen
+      allItems[17]!, // Terracotta Warm
+      allItems[15]!, // Pearl Shimmer
+    ],
+    [allItems],
+  );
+
+  // LAYER 3: Background atmospheric depth (deeper in scene, smaller, slower)
+  const bgItems = useMemo(
+    () => [
+      allItems[2]!, // French Pink
+      allItems[4]!, // Midnight Eclipse
+      allItems[7]!, // Nude Petal
+      allItems[10]!, // Amethyst Dream
+      allItems[12]!, // Rose Quartz
+      allItems[18]!, // Lavender Mist
+    ],
+    [allItems],
+  );
+
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const [hoveredCardId, setHoveredCardId] = useState<string | null>(null);
   const [focusedCardId, setFocusedCardId] = useState<string | null>(null);
@@ -84,21 +107,27 @@ export function HomeMovingWall() {
   const fgLoopWidthRef = useRef(2200);
 
   // Double duplicate sets ensure complete infinite continuity with minimal DOM/GPU footprint
-  const infiniteBg = [...BG_ITEMS, ...BG_ITEMS];
-  const infinitePrimary = [...PRIMARY_ITEMS, ...PRIMARY_ITEMS];
-  const infiniteFg = [...FG_ITEMS, ...FG_ITEMS, ...FG_ITEMS];
+  const infiniteBg = useMemo(() => [...bgItems, ...bgItems], [bgItems]);
+  const infinitePrimary = useMemo(
+    () => [...primaryItems, ...primaryItems],
+    [primaryItems],
+  );
+  const infiniteFg = useMemo(
+    () => [...fgItems, ...fgItems, ...fgItems],
+    [fgItems],
+  );
 
   // Measure loop widths accurately
   const measureLoopWidths = useCallback(() => {
     if (bgTrackRef.current) {
       const cards =
         bgTrackRef.current.querySelectorAll<HTMLElement>(".moving-wall-card");
-      if (cards.length >= BG_ITEMS.length * 2) {
+      if (cards.length >= bgItems.length * 2) {
         const c0 = cards[0];
-        const cN = cards[BG_ITEMS.length];
+        const cN = cards[bgItems.length];
         if (c0 && cN) {
           const dist = cN.offsetLeft - c0.offsetLeft;
-          if (dist > 0) bgLoopWidthRef.current = dist;
+          if (dist > 100) bgLoopWidthRef.current = dist;
         }
       }
     }
@@ -107,157 +136,139 @@ export function HomeMovingWall() {
         primaryTrackRef.current.querySelectorAll<HTMLElement>(
           ".moving-wall-card",
         );
-      if (cards.length >= PRIMARY_ITEMS.length * 2) {
+      if (cards.length >= primaryItems.length * 2) {
         const c0 = cards[0];
-        const cN = cards[PRIMARY_ITEMS.length];
+        const cN = cards[primaryItems.length];
         if (c0 && cN) {
           const dist = cN.offsetLeft - c0.offsetLeft;
-          if (dist > 0) primaryLoopWidthRef.current = dist;
+          if (dist > 100) primaryLoopWidthRef.current = dist;
         }
       }
     }
     if (fgTrackRef.current) {
       const cards =
         fgTrackRef.current.querySelectorAll<HTMLElement>(".moving-wall-card");
-      if (cards.length >= FG_ITEMS.length * 2) {
+      if (cards.length >= fgItems.length * 2) {
         const c0 = cards[0];
-        const cN = cards[FG_ITEMS.length];
+        const cN = cards[fgItems.length];
         if (c0 && cN) {
           const dist = cN.offsetLeft - c0.offsetLeft;
-          if (dist > 0) fgLoopWidthRef.current = dist;
+          if (dist > 100) fgLoopWidthRef.current = dist;
         }
       }
     }
-  }, []);
+  }, [bgItems.length, primaryItems.length, fgItems.length]);
 
   useEffect(() => {
-    // Check prefers-reduced-motion
-    const mqlReduced = window.matchMedia("(prefers-reduced-motion: reduce)");
-    isReducedMotionRef.current = mqlReduced.matches;
-    const handleReducedChange = (e: MediaQueryListEvent) => {
-      isReducedMotionRef.current = e.matches;
-    };
-    mqlReduced.addEventListener("change", handleReducedChange);
+    measureLoopWidths();
+    window.addEventListener("resize", measureLoopWidths);
+    return () => window.removeEventListener("resize", measureLoopWidths);
+  }, [measureLoopWidths]);
 
-    // Responsive mobile check
-    const checkMobile = () => {
-      isMobileRef.current = window.innerWidth <= 768;
-      baseVelocityRef.current = isMobileRef.current ? 0.35 : 0.65;
-      measureLoopWidths();
-    };
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
+  // Main 3D multi-layer animation loop
+  useEffect(() => {
+    isMobileRef.current = window.innerWidth <= 768;
+    isReducedMotionRef.current = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
 
-    // IntersectionObserver to pause RAF loop when outside viewport
-    const section = sectionRef.current;
-    if (!section) return;
+    if (isReducedMotionRef.current) return;
+
+    let rafId: number;
 
     const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          isVisibleRef.current = entry.isIntersecting;
-        });
+      ([entry]) => {
+        isVisibleRef.current = entry?.isIntersecting ?? false;
       },
       { threshold: 0.05 },
     );
-    observer.observe(section);
 
-    // Scroll coupling: scrolling down imparts a gentle velocity surge
-    let lastScrollY = window.scrollY;
-    const handleScroll = () => {
-      if (!isVisibleRef.current || isReducedMotionRef.current) return;
-      const currentScrollY = window.scrollY;
-      const delta = currentScrollY - lastScrollY;
-      lastScrollY = currentScrollY;
+    if (sectionRef.current) {
+      observer.observe(sectionRef.current);
+    }
 
-      const impulse = Math.max(-5, Math.min(5, -delta * 0.06));
-      velocityRef.current += impulse;
+    const onScroll = () => {
+      if (!isVisibleRef.current) return;
+      const scrollDiff = Math.abs(window.scrollY - lastScrollY);
+      lastScrollY = window.scrollY;
+      velocityRef.current = Math.min(
+        3.5,
+        baseVelocityRef.current + scrollDiff * 0.035,
+      );
     };
-    window.addEventListener("scroll", handleScroll, { passive: true });
 
-    // Multi-layer 60fps RequestAnimationFrame Loop
-    let rafId: number;
-    let lastTime = performance.now();
+    let lastScrollY = window.scrollY;
+    window.addEventListener("scroll", onScroll, { passive: true });
 
-    const tick = (now: number) => {
-      const dt = Math.min(32, now - lastTime);
-      lastTime = now;
-
-      if (!isReducedMotionRef.current && isVisibleRef.current) {
-        const targetBaseVel = isHoveredRef.current
-          ? baseVelocityRef.current * 0.4
-          : baseVelocityRef.current;
-
-        // Physics step: spring velocity decay back to targetBaseVel
+    const tick = () => {
+      if (isVisibleRef.current) {
+        // Recover to base drift velocity smoothly
         if (!isDraggingRef.current) {
-          velocityRef.current += (targetBaseVel - velocityRef.current) * 0.04;
-
-          const step = velocityRef.current * (dt / 16.667);
-
-          // LAYER 3 (Background): moves at 0.52x speed
-          bgXRef.current += step * 0.52;
-          // LAYER 1 (Primary): moves at 0.90x speed
-          primaryXRef.current += step * 0.9;
-          // LAYER 2 (Foreground): moves at 1.35x speed
-          fgXRef.current += step * 1.35;
-        }
-
-        // Modulo wrap-arounds for each independent layer loop
-        const bgLoop = bgLoopWidthRef.current || 2000;
-        if (bgXRef.current >= bgLoop) bgXRef.current -= bgLoop;
-        else if (bgXRef.current < 0) bgXRef.current += bgLoop;
-
-        const primaryLoop = primaryLoopWidthRef.current || 2600;
-        if (primaryXRef.current >= primaryLoop)
-          primaryXRef.current -= primaryLoop;
-        else if (primaryXRef.current < 0) primaryXRef.current += primaryLoop;
-
-        const fgLoop = fgLoopWidthRef.current || 2200;
-        if (fgXRef.current >= fgLoop) fgXRef.current -= fgLoop;
-        else if (fgXRef.current < 0) fgXRef.current += fgLoop;
-
-        // Mouse pointer spring lerp & 3D tilt
-        const isMouseActive =
-          isHoveredRef.current ||
-          isDraggingRef.current ||
-          Math.abs(mouseLerpXRef.current) > 0.002 ||
-          Math.abs(mouseLerpYRef.current) > 0.002;
-
-        if (isMouseActive) {
-          mouseLerpXRef.current +=
-            (targetMouseXRef.current - mouseLerpXRef.current) * 0.08;
-          mouseLerpYRef.current +=
-            (targetMouseYRef.current - mouseLerpYRef.current) * 0.08;
-
-          if (viewportRef.current) {
-            const maxTiltY = isMobileRef.current ? 1.5 : 3.5;
-            const maxTiltX = isMobileRef.current ? 1.2 : 2.5;
-            const rotY = (mouseLerpXRef.current * maxTiltY).toFixed(2);
-            const rotX = (-mouseLerpYRef.current * maxTiltX).toFixed(2);
-            viewportRef.current.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
-          }
-
-          if (stageRef.current) {
-            stageRef.current.style.setProperty(
-              "--mouse-x",
-              mouseLerpXRef.current.toFixed(4),
-            );
-            stageRef.current.style.setProperty(
-              "--mouse-y",
-              mouseLerpYRef.current.toFixed(4),
-            );
+          if (Math.abs(dragVelocityRef.current) > 0.05) {
+            velocityRef.current = dragVelocityRef.current;
+            dragVelocityRef.current *= 0.94; // Inertia decay
+          } else {
+            dragVelocityRef.current = 0;
+            velocityRef.current +=
+              (baseVelocityRef.current - velocityRef.current) * 0.05;
           }
         }
 
-        // Update GPU translate3d on all 3 tracks directly
-        if (bgTrackRef.current) {
-          bgTrackRef.current.style.transform = `translate3d(${-bgXRef.current.toFixed(2)}px, 0, 0)`;
+        const v = velocityRef.current;
+
+        // LAYER VELOCITY HIERARCHY:
+        // Foreground travels ~1.5x faster (closest to viewer)
+        // Primary travels ~1.0x (main focal rail)
+        // Background travels ~0.58x slower (deep in the background)
+        const fgSpeed = v * 1.5;
+        const primSpeed = v * 1.0;
+        const bgSpeed = v * 0.58;
+
+        fgXRef.current += fgSpeed;
+        primaryXRef.current += primSpeed;
+        bgXRef.current += bgSpeed;
+
+        // Seamless modular infinite loop wrap
+        const fgW = fgLoopWidthRef.current;
+        const primW = primaryLoopWidthRef.current;
+        const bgW = bgLoopWidthRef.current;
+
+        if (fgXRef.current >= fgW) fgXRef.current %= fgW;
+        if (fgXRef.current < 0)
+          fgXRef.current = fgW - (Math.abs(fgXRef.current) % fgW);
+
+        if (primaryXRef.current >= primW) primaryXRef.current %= primW;
+        if (primaryXRef.current < 0)
+          primaryXRef.current = primW - (Math.abs(primaryXRef.current) % primW);
+
+        if (bgXRef.current >= bgW) bgXRef.current %= bgW;
+        if (bgXRef.current < 0)
+          bgXRef.current = bgW - (Math.abs(bgXRef.current) % bgW);
+
+        // Render hardware-accelerated transforms directly to GPU compositor layers
+        if (fgTrackRef.current) {
+          fgTrackRef.current.style.transform = `translate3d(${-fgXRef.current}px, 0, 0)`;
         }
         if (primaryTrackRef.current) {
-          primaryTrackRef.current.style.transform = `translate3d(${-primaryXRef.current.toFixed(2)}px, 0, 0)`;
+          primaryTrackRef.current.style.transform = `translate3d(${-primaryXRef.current}px, 0, 0)`;
         }
-        if (fgTrackRef.current) {
-          fgTrackRef.current.style.transform = `translate3d(${-fgXRef.current.toFixed(2)}px, 0, 0)`;
+        if (bgTrackRef.current) {
+          bgTrackRef.current.style.transform = `translate3d(${-bgXRef.current}px, 0, 0)`;
+        }
+
+        // Pointer-reactive 3D perspective stage tilt
+        if (!isMobileRef.current) {
+          mouseLerpXRef.current +=
+            (targetMouseXRef.current - mouseLerpXRef.current) * 0.07;
+          mouseLerpYRef.current +=
+            (targetMouseYRef.current - mouseLerpYRef.current) * 0.07;
+
+          const tiltX = -mouseLerpYRef.current * 4.5;
+          const tiltY = mouseLerpXRef.current * 5.5;
+
+          if (stageRef.current) {
+            stageRef.current.style.transform = `perspective(1200px) rotateX(${tiltX.toFixed(2)}deg) rotateY(${tiltY.toFixed(2)}deg)`;
+          }
         }
       }
 
@@ -269,14 +280,11 @@ export function HomeMovingWall() {
     return () => {
       cancelAnimationFrame(rafId);
       observer.disconnect();
-      window.removeEventListener("resize", checkMobile);
-      window.removeEventListener("scroll", handleScroll);
-      mqlReduced.removeEventListener("change", handleReducedChange);
+      window.removeEventListener("scroll", onScroll);
     };
-  }, [measureLoopWidths]);
+  }, []);
 
   const isPointerDownRef = useRef(false);
-
   const stageRectRef = useRef<DOMRect | null>(null);
 
   // Pointer interaction: drag & 3D tilt
@@ -288,7 +296,6 @@ export function HomeMovingWall() {
     isDraggingRef.current = false;
     dragStartXRef.current = e.clientX;
     dragDistanceRef.current = 0;
-    dragVelocityRef.current = 0;
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
@@ -299,16 +306,19 @@ export function HomeMovingWall() {
       const deltaX = e.clientX - dragStartXRef.current;
       dragDistanceRef.current += Math.abs(deltaX);
 
-      if (dragDistanceRef.current > 6) {
+      if (Math.abs(deltaX) > 4) {
+        if (!isDraggingRef.current) {
+          try {
+            (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+          } catch {}
+        }
         isDraggingRef.current = true;
-        dragVelocityRef.current = -deltaX * 0.8;
-        dragStartXRef.current = e.clientX;
-
-        // Drag moves all 3 layers with relative depth parallax
-        bgXRef.current -= deltaX * 0.6;
+        // Differentiated drag travel across depth layers
         primaryXRef.current -= deltaX * 1.0;
-        fgXRef.current -= deltaX * 1.4;
-        return;
+        fgXRef.current -= deltaX * 1.45;
+        bgXRef.current -= deltaX * 0.6;
+        dragVelocityRef.current = -deltaX * 0.35;
+        dragStartXRef.current = e.clientX;
       }
     }
 
@@ -327,23 +337,19 @@ export function HomeMovingWall() {
     );
   };
 
-  const handlePointerUp = () => {
+  const handlePointerUp = (e: React.PointerEvent) => {
     isPointerDownRef.current = false;
-    if (isDraggingRef.current) {
-      setTimeout(() => {
-        isDraggingRef.current = false;
-        dragDistanceRef.current = 0;
-      }, 60);
-
-      if (Math.abs(dragVelocityRef.current) > 0.5) {
-        velocityRef.current = Math.max(
-          -10,
-          Math.min(10, dragVelocityRef.current),
-        );
+    stageRectRef.current = null;
+    try {
+      if ((e.currentTarget as HTMLElement).hasPointerCapture(e.pointerId)) {
+        (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
       }
-    } else {
+    } catch {}
+
+    setTimeout(() => {
+      isDraggingRef.current = false;
       dragDistanceRef.current = 0;
-    }
+    }, 40);
   };
 
   const handleMouseEnter = () => {
@@ -359,37 +365,50 @@ export function HomeMovingWall() {
     targetMouseYRef.current = 0;
   };
 
+  // Card click opens full-resolution lightbox viewer
   const handleCardClick = (item: GalleryItem) => {
-    if (isDraggingRef.current) return;
-    const globalIdx = GALLERY_ITEMS.findIndex((i) => i.id === item.id);
-    setViewerIndex(globalIdx >= 0 ? globalIdx : 0);
+    if (isDraggingRef.current || dragDistanceRef.current > 8) return;
+    const idx = allItems.findIndex((x) => x.id === item.id);
+    if (idx !== -1) {
+      setViewerIndex(idx);
+    }
   };
 
-  const handleManualNudge = (offset: number) => {
-    velocityRef.current += offset > 0 ? 6 : -6;
+  // Manual arrow navigation nudges
+  const handleManualNudge = (deltaPx: number) => {
+    primaryXRef.current += deltaPx;
+    fgXRef.current += deltaPx * 1.45;
+    bgXRef.current += deltaPx * 0.6;
+    velocityRef.current = deltaPx > 0 ? 2.5 : -2.5;
   };
+
+  const galleryHref = getLocalizedPath("/gallery/", locale);
 
   return (
     <section
       className="moving-wall-section"
-      aria-label="Curated Studio Work Preview"
+      aria-label={dict.eyebrow}
       ref={sectionRef}
     >
       <div className="moving-wall-header">
         <div>
-          <p className="eyebrow">02 / The Studio Exhibition</p>
-          <h2 className="section-title">Selected Works</h2>
+          <p className="eyebrow">{dict.eyebrow}</p>
+          <h2 className="section-title">{dict.title}</h2>
         </div>
         <div className="moving-wall-controls">
           <div
             className="moving-wall-nav-btns"
-            aria-label="Showcase carousel navigation"
+            aria-label={
+              locale === "ru"
+                ? "Навигация по выставке"
+                : "Showcase carousel navigation"
+            }
           >
             <button
               type="button"
               className="showcase-nav-btn"
               onClick={() => handleManualNudge(-340)}
-              aria-label="Scroll gallery left"
+              aria-label={dict.scrollLeftAria}
             >
               <span aria-hidden="true">‹</span>
             </button>
@@ -397,13 +416,13 @@ export function HomeMovingWall() {
               type="button"
               className="showcase-nav-btn"
               onClick={() => handleManualNudge(340)}
-              aria-label="Scroll gallery right"
+              aria-label={dict.scrollRightAria}
             >
               <span aria-hidden="true">›</span>
             </button>
           </div>
-          <Link href="/gallery/" className="button-secondary">
-            View full gallery (19) <span aria-hidden="true">→</span>
+          <Link href={galleryHref} className="button-secondary">
+            {dict.viewFullGallery} <span aria-hidden="true">→</span>
           </Link>
         </div>
       </div>
@@ -415,7 +434,7 @@ export function HomeMovingWall() {
         }`}
         ref={stageRef}
         tabIndex={0}
-        aria-label="Interactive 3D multi-layer exhibition wall. Drag or swipe horizontally to navigate, select a photograph to expand."
+        aria-label={dict.stageAriaLabel}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
@@ -443,7 +462,10 @@ export function HomeMovingWall() {
                     } ${isFocused ? "is-focused" : ""}`}
                     role="button"
                     tabIndex={0}
-                    aria-label={`Open ${item.title}, ${item.category} pedicure. Press Enter to view high resolution.`}
+                    aria-label={dict.cardAriaLabel(
+                      item.title,
+                      item.categoryLabel || item.category,
+                    )}
                     onClick={() => handleCardClick(item)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") {
@@ -469,20 +491,18 @@ export function HomeMovingWall() {
                         width={item.width}
                         height={item.height}
                         unoptimized
+                        priority={index < 4}
+                        loading={index < 4 ? "eager" : "lazy"}
                         className="moving-card-image"
-                        sizes="(max-width: 767px) 210px, 285px"
+                        sizes="(max-width: 767px) 210px, 280px"
                       />
-                      <div className="moving-card-glare" aria-hidden="true" />
-                      <div className="moving-card-overlay">
-                        <span className="moving-card-expand">Expand ↗</span>
-                      </div>
+                      <div className="moving-card-glare" />
                     </div>
                     <div className="moving-card-caption">
                       <span className="moving-card-cat">
-                        {item.category} · {item.subCategory}
+                        {item.categoryLabel || item.category}
                       </span>
                       <span className="moving-card-title">{item.title}</span>
-                      <span className="moving-card-finish">{item.finish}</span>
                     </div>
                   </div>
                 );
@@ -490,7 +510,7 @@ export function HomeMovingWall() {
             </div>
           </div>
 
-          {/* LAYER 2: FOREGROUND HEROES (closer to camera, larger, faster parallax) */}
+          {/* LAYER 2: FOREGROUND HEROES (closest to camera, larger, faster parallax) */}
           <div className="moving-layer moving-layer-fg">
             <div className="moving-wall-track moving-track-fg" ref={fgTrackRef}>
               {infiniteFg.map((item, index) => {
@@ -506,7 +526,10 @@ export function HomeMovingWall() {
                     } ${isFocused ? "is-focused" : ""}`}
                     role="button"
                     tabIndex={0}
-                    aria-label={`Open ${item.title}, ${item.category} pedicure. Press Enter to view high resolution.`}
+                    aria-label={dict.cardAriaLabel(
+                      item.title,
+                      item.categoryLabel || item.category,
+                    )}
                     onClick={() => handleCardClick(item)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") {
@@ -532,22 +555,23 @@ export function HomeMovingWall() {
                         width={item.width}
                         height={item.height}
                         unoptimized
+                        priority={index < 2}
+                        loading={index < 2 ? "eager" : "lazy"}
                         className="moving-card-image"
-                        sizes="(max-width: 767px) 250px, 330px"
+                        sizes="(max-width: 767px) 260px, 340px"
                       />
-                      <div className="moving-card-glare" aria-hidden="true" />
-                      <div className="moving-card-overlay">
-                        <span className="moving-card-expand">Expand ↗</span>
+                      <div className="moving-card-glare" />
+                      <div className="moving-card-tag-badge">
+                        <span>
+                          {locale === "ru" ? "Избранное" : "Featured"}
+                        </span>
                       </div>
                     </div>
                     <div className="moving-card-caption">
                       <span className="moving-card-cat">
-                        Featured · {item.finish}
+                        {item.categoryLabel || item.category}
                       </span>
                       <span className="moving-card-title">{item.title}</span>
-                      <span className="moving-card-finish">
-                        {item.colorFamily}
-                      </span>
                     </div>
                   </div>
                 );
@@ -580,7 +604,9 @@ export function HomeMovingWall() {
                       <div className="moving-card-glare" />
                     </div>
                     <div className="moving-card-caption">
-                      <span className="moving-card-cat">{item.category}</span>
+                      <span className="moving-card-cat">
+                        {item.categoryLabel || item.category}
+                      </span>
                       <span className="moving-card-title">{item.title}</span>
                     </div>
                   </div>
@@ -593,18 +619,29 @@ export function HomeMovingWall() {
 
       <div className="moving-wall-footer-note">
         <p>
-          19 authentic salon works displayed · 11 additional works pending
-          client curation (Target: 30) ·{" "}
-          <Link href="/gallery/">Explore full gallery</Link>
+          {locale === "ru" ? (
+            <>
+              19 подлинных работ студии · 11 дополнительных работ на этапе
+              отбора (цель: 30) ·{" "}
+              <Link href={galleryHref}>Вся галерея работ</Link>
+            </>
+          ) : (
+            <>
+              19 authentic salon works displayed · 11 additional works pending
+              client curation (Target: 30) ·{" "}
+              <Link href={galleryHref}>Explore full gallery</Link>
+            </>
+          )}
         </p>
       </div>
 
       {/* Lightbox Viewer */}
       <GalleryViewer
-        items={GALLERY_ITEMS}
+        items={allItems}
         currentIndex={viewerIndex}
         onClose={() => setViewerIndex(null)}
         onNavigate={(newIdx) => setViewerIndex(newIdx)}
+        locale={locale}
       />
     </section>
   );

@@ -4,12 +4,14 @@ import React, { useEffect, useCallback, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { GalleryItem } from "../lib/gallery-data";
+import { getDictionary, getLocalizedPath, type Locale } from "../lib/locales";
 
 interface GalleryViewerProps {
   items: GalleryItem[];
   currentIndex: number | null;
   onClose: () => void;
   onNavigate: (index: number) => void;
+  locale?: Locale;
 }
 
 export function GalleryViewer({
@@ -17,7 +19,9 @@ export function GalleryViewer({
   currentIndex,
   onClose,
   onNavigate,
+  locale = "en",
 }: GalleryViewerProps) {
+  const dict = getDictionary(locale).lightbox;
   const dialogRef = useRef<HTMLDivElement>(null);
   const touchStartXRef = useRef<number | null>(null);
   const touchDeltaXRef = useRef<number>(0);
@@ -101,33 +105,46 @@ export function GalleryViewer({
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStartXRef.current === null) return;
     const touch = e.touches[0];
-    if (!touch || touchStartXRef.current === null) return;
+    if (!touch) return;
     touchDeltaXRef.current = touch.clientX - touchStartXRef.current;
   };
 
   const handleTouchEnd = () => {
     if (touchStartXRef.current === null) return;
-    const delta = touchDeltaXRef.current;
-    touchStartXRef.current = null;
-    touchDeltaXRef.current = 0;
-
-    const SWIPE_THRESHOLD = 45;
-    if (delta > SWIPE_THRESHOLD) {
+    const threshold = 50; // min swipe distance in px
+    if (touchDeltaXRef.current > threshold) {
       handlePrev();
-    } else if (delta < -SWIPE_THRESHOLD) {
+    } else if (touchDeltaXRef.current < -threshold) {
       handleNext();
     }
+    touchStartXRef.current = null;
+    touchDeltaXRef.current = 0;
   };
 
-  const handleShare = () => {
+  const handleShare = async () => {
     if (!currentItem) return;
-    if (typeof navigator !== "undefined" && navigator.clipboard) {
-      const shareUrl = `${window.location.origin}/gallery/#${currentItem.id}`;
-      navigator.clipboard.writeText(shareUrl).then(() => {
+    const url = window.location.href;
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: currentItem.title,
+          text: currentItem.notes,
+          url,
+        });
+      } else if (navigator.clipboard) {
+        await navigator.clipboard.writeText(url);
         setCopiedNotification(true);
         setTimeout(() => setCopiedNotification(false), 2000);
-      });
+      }
+    } catch {
+      // User cancelled or unsupported
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(url);
+        setCopiedNotification(true);
+        setTimeout(() => setCopiedNotification(false), 2000);
+      }
     }
   };
 
@@ -135,11 +152,18 @@ export function GalleryViewer({
     return null;
   }
 
+  const bookHref = getLocalizedPath("/book/", locale);
+  const categoryLabel = currentItem.categoryLabel || currentItem.category;
+
   return (
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={`${currentItem.title} — Artwork ${currentIndex + 1} of ${items.length}`}
+      aria-label={dict.dialogAriaLabel(
+        currentItem.title,
+        currentIndex + 1,
+        items.length,
+      )}
       ref={dialogRef}
       className="lightbox-overlay"
       onClick={(e) => {
@@ -156,7 +180,7 @@ export function GalleryViewer({
             <span className="current-num">{currentIndex + 1}</span>
             <span className="counter-sep">/</span>
             <span className="total-num">{items.length}</span>
-            <span className="counter-category">· {currentItem.category}</span>
+            <span className="counter-category">· {categoryLabel}</span>
           </div>
 
           <div className="lightbox-actions">
@@ -164,15 +188,15 @@ export function GalleryViewer({
               type="button"
               onClick={handleShare}
               className="lightbox-action-btn"
-              aria-label="Copy link to this artwork"
+              aria-label={dict.copyLinkAria}
             >
-              {copiedNotification ? "Link Copied" : "Share"}
+              {copiedNotification ? dict.linkCopied : dict.share}
             </button>
             <button
               type="button"
               onClick={onClose}
               className="lightbox-close-btn"
-              aria-label="Close gallery viewer (Escape)"
+              aria-label={dict.closeAria}
             >
               <span aria-hidden="true">✕</span>
             </button>
@@ -185,7 +209,7 @@ export function GalleryViewer({
             type="button"
             onClick={handlePrev}
             className="lightbox-nav-btn prev"
-            aria-label="Previous artwork (Left Arrow)"
+            aria-label={dict.prevAria}
           >
             <span aria-hidden="true">‹</span>
           </button>
@@ -206,7 +230,7 @@ export function GalleryViewer({
             type="button"
             onClick={handleNext}
             className="lightbox-nav-btn next"
-            aria-label="Next artwork (Right Arrow)"
+            aria-label={dict.nextAria}
           >
             <span aria-hidden="true">›</span>
           </button>
@@ -224,12 +248,12 @@ export function GalleryViewer({
 
           <div className="lightbox-booking-action">
             <Link
-              href="/book/"
+              href={bookHref}
               onClick={onClose}
               className="lightbox-book-btn"
-              aria-label={`Book an appointment for ${currentItem.title}`}
+              aria-label={dict.bookBtnAria(currentItem.title)}
             >
-              Book an appointment <span aria-hidden="true">↗</span>
+              {dict.bookBtn} <span aria-hidden="true">↗</span>
             </Link>
           </div>
         </footer>

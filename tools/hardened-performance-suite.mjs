@@ -271,7 +271,8 @@ async function runHardenedSuite() {
     });
 
     const page = await context.newPage();
-    await page.goto(BASE_URL + "/", { waitUntil: "domcontentloaded" });
+    const testPath = process.env.TEST_PATH || "/";
+    await page.goto(BASE_URL + testPath, { waitUntil: "domcontentloaded" });
     await page.waitForLoadState("load");
 
     const section = page.locator(".moving-wall-section");

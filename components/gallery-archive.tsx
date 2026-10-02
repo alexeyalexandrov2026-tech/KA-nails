@@ -5,64 +5,73 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   type GalleryCategory,
-  GALLERY_ITEMS,
   GALLERY_CATEGORIES,
   GALLERY_METRICS,
+  getGalleryItems,
+  getGalleryCategories,
 } from "../lib/gallery-data";
 import { GalleryViewer } from "./gallery-viewer";
+import { getDictionary, getLocalizedPath, type Locale } from "../lib/locales";
 
-export function GalleryArchive() {
+interface GalleryArchiveProps {
+  locale?: Locale;
+}
+
+export function GalleryArchive({ locale = "en" }: GalleryArchiveProps) {
+  const dict = getDictionary(locale).galleryPage;
   const [selectedCategory, setSelectedCategory] =
     useState<GalleryCategory>("All");
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
+  const items = useMemo(() => getGalleryItems(locale), [locale]);
+  const categories = useMemo(() => getGalleryCategories(locale), [locale]);
+
   const filteredItems = useMemo(() => {
     if (selectedCategory === "All") {
-      return GALLERY_ITEMS;
+      return items;
     }
-    return GALLERY_ITEMS.filter((item) => item.category === selectedCategory);
-  }, [selectedCategory]);
+    return items.filter((item) => item.category === selectedCategory);
+  }, [selectedCategory, items]);
 
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = {
-      All: GALLERY_ITEMS.length,
+      All: items.length,
     };
     for (const cat of GALLERY_CATEGORIES) {
       if (cat !== "All") {
-        counts[cat] = GALLERY_ITEMS.filter((i) => i.category === cat).length;
+        counts[cat] = items.filter((i) => i.category === cat).length;
       }
     }
     return counts;
-  }, []);
+  }, [items]);
 
   const openLightbox = (indexInFiltered: number) => {
     setViewerIndex(indexInFiltered);
   };
 
+  const bookHref = getLocalizedPath("/book/", locale);
+
   return (
-    <section
-      className="gallery-section"
-      aria-label="Nail Art Gallery Portfolio"
-    >
+    <section className="gallery-section" aria-label={dict.title}>
       {/* Category Filter Controls */}
       <div
         className="gallery-filter-bar"
         role="toolbar"
-        aria-label="Filter gallery by technique"
+        aria-label={dict.filterAriaLabel}
       >
-        {GALLERY_CATEGORIES.map((category) => {
-          const isSelected = selectedCategory === category;
+        {categories.map((category) => {
+          const isSelected = selectedCategory === category.key;
           return (
             <button
-              key={category}
+              key={category.key}
               type="button"
-              onClick={() => setSelectedCategory(category)}
+              onClick={() => setSelectedCategory(category.key)}
               className={`filter-pill ${isSelected ? "active" : ""}`}
               aria-pressed={isSelected}
             >
-              <span>{category}</span>
+              <span>{category.label}</span>
               <span className="pill-count">
-                {categoryCounts[category] ?? 0}
+                {categoryCounts[category.key] ?? 0}
               </span>
             </button>
           );
@@ -71,20 +80,25 @@ export function GalleryArchive() {
 
       {/* Honest Inventory & Status Banner */}
       <div className="gallery-inventory-banner" role="status">
-        <span className="inventory-badge">Authentic Studio Archive</span>
+        <span className="inventory-badge">{dict.inventoryBadge}</span>
         <span className="inventory-text">
-          {GALLERY_METRICS.uniquePhotos} authentic salon works displayed •{" "}
-          {GALLERY_METRICS.additionalPhotosNeededForMinimum} additional works
-          pending client curation (Target: {GALLERY_METRICS.minimumTarget})
+          {dict.inventoryText(
+            GALLERY_METRICS.uniquePhotos,
+            GALLERY_METRICS.additionalPhotosNeededForMinimum,
+            GALLERY_METRICS.minimumTarget,
+          )}
         </span>
       </div>
 
       {/* Results Announcement */}
       <p className="gallery-status-text" aria-live="polite">
-        Showing {filteredItems.length}{" "}
-        {selectedCategory === "All"
-          ? "curated styles"
-          : `${selectedCategory} designs`}
+        {dict.statusText(
+          filteredItems.length,
+          selectedCategory === "All"
+            ? "All"
+            : (categories.find((c) => c.key === selectedCategory)?.label ??
+                selectedCategory),
+        )}
       </p>
 
       {/* Asymmetric Gallery Grid */}
@@ -105,7 +119,10 @@ export function GalleryArchive() {
               className={`gallery-card ${gridSpanClass}`}
               tabIndex={0}
               role="button"
-              aria-label={`View ${item.title}, ${item.category} pedicure. Press Enter or click to open full-screen.`}
+              aria-label={dict.cardAriaLabel(
+                item.title,
+                item.categoryLabel || item.category,
+              )}
               onClick={() => openLightbox(index)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
@@ -114,7 +131,7 @@ export function GalleryArchive() {
                 }
               }}
             >
-              <div className="gallery-card-media">
+              <div className="gallery-card-media gallery-media-wrapper">
                 <Image
                   src={item.srcMed || item.src}
                   alt={item.alt}
@@ -126,21 +143,23 @@ export function GalleryArchive() {
                 />
                 <div className="gallery-card-overlay">
                   <span className="card-zoom-badge" aria-hidden="true">
-                    Expand ↗
+                    {dict.expandLabel}
                   </span>
                 </div>
               </div>
 
               <div className="gallery-card-info">
                 <div className="card-header-row">
-                  <span className="card-category">{item.category}</span>
+                  <span className="card-category">
+                    {item.categoryLabel || item.category}
+                  </span>
                   <span className="card-shape">{item.colorFamily}</span>
                 </div>
                 <h3 className="card-title">{item.title}</h3>
                 <p className="card-technique">{item.notes}</p>
                 <div className="card-footer-row">
                   <span className="card-finish">{item.finish}</span>
-                  <span className="card-view-link">View detail →</span>
+                  <span className="card-view-link">{dict.viewDetailLabel}</span>
                 </div>
               </div>
             </article>
@@ -151,15 +170,12 @@ export function GalleryArchive() {
       {/* Bottom Conversion Band */}
       <div className="gallery-cta-band">
         <div className="gallery-cta-content">
-          <p className="eyebrow">Studio Appointments</p>
-          <h2>Bring your inspiration to life.</h2>
-          <p className="lead">
-            Every set in our gallery is customized to your natural nail health,
-            skin tone, and personal aesthetic.
-          </p>
+          <p className="eyebrow">{dict.ctaEyebrow}</p>
+          <h2>{dict.ctaTitle}</h2>
+          <p className="lead">{dict.ctaLead}</p>
           <div className="cta-actions">
-            <Link href="/book/" className="button">
-              Book your appointment <span aria-hidden="true">↗</span>
+            <Link href={bookHref} className="button">
+              {dict.ctaBookBtn} <span aria-hidden="true">↗</span>
             </Link>
           </div>
         </div>
@@ -171,6 +187,7 @@ export function GalleryArchive() {
         currentIndex={viewerIndex}
         onClose={() => setViewerIndex(null)}
         onNavigate={(newIdx) => setViewerIndex(newIdx)}
+        locale={locale}
       />
     </section>
   );

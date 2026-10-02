@@ -3,10 +3,16 @@
 import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { HERO_ITEMS } from "../lib/gallery-data";
+import { getHeroGalleryTiles } from "../lib/gallery-data";
+import { getDictionary, getLocalizedPath, type Locale } from "../lib/locales";
 
-export function HeroCollage() {
-  const [tile1, tile2, tile4, tile3] = HERO_ITEMS; // Lead: work-01, work-02, work-04, work-03
+interface HeroCollageProps {
+  locale?: Locale;
+}
+
+export function HeroCollage({ locale = "en" }: HeroCollageProps) {
+  const dict = getDictionary(locale).hero;
+  const [tile1, tile2, tile4, tile3] = getHeroGalleryTiles(locale);
   const stageRef = useRef<HTMLDivElement>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [isHovered, setIsHovered] = useState(false);
@@ -80,30 +86,30 @@ export function HeroCollage() {
   const rotateX = -mousePos.y * 6; // Max 6 deg tilt
   const rotateY = mousePos.x * 6;
 
+  const bookHref = getLocalizedPath("/book/", locale);
+  const galleryHref = getLocalizedPath("/gallery/", locale);
+
   return (
-    <section className="hero-studio" aria-label="Welcome to KA Nails">
+    <section className="hero-studio" aria-label={dict.eyebrow}>
       {/* Editorial Text Column */}
       <div className="hero-text-col">
-        <p className="eyebrow">KA Nails · Nail Studio</p>
+        <p className="eyebrow">{dict.eyebrow}</p>
         <h1 className="hero-heading">
-          A little care.
-          <br />A moment of pure artistry.
+          {dict.headingLine1}
+          <br />
+          {dict.headingLine2}
         </h1>
-        <p className="hero-description">
-          Carefully crafted nail and pedicure artistry. Explore our verified
-          portfolio of authentic salon works while online booking preparation is
-          underway.
-        </p>
+        <p className="hero-description">{dict.description}</p>
 
         <div className="hero-action-group">
-          <Link href="/book/" className="button hero-btn-primary">
-            Book an appointment <span aria-hidden="true">↗</span>
+          <Link href={bookHref} className="button hero-btn-primary">
+            {dict.bookCta} <span aria-hidden="true">↗</span>
           </Link>
           <Link
-            href="/gallery/"
+            href={galleryHref}
             className="button-secondary hero-btn-secondary"
           >
-            Explore gallery (19) <span aria-hidden="true">→</span>
+            {dict.galleryCta} <span aria-hidden="true">→</span>
           </Link>
         </div>
 
@@ -112,19 +118,19 @@ export function HeroCollage() {
             <span className="badge-bullet" aria-hidden="true">
               ✦
             </span>
-            <span>Curated Pedicure Artistry</span>
+            <span>{dict.badge1}</span>
           </div>
           <div className="studio-badge-item">
             <span className="badge-bullet" aria-hidden="true">
               ✦
             </span>
-            <span>Authentic Salon Portfolio</span>
+            <span>{dict.badge2}</span>
           </div>
           <div className="studio-badge-item">
             <span className="badge-bullet" aria-hidden="true">
               ✦
             </span>
-            <span>Attentive Care</span>
+            <span>{dict.badge3}</span>
           </div>
         </div>
       </div>
@@ -132,7 +138,7 @@ export function HeroCollage() {
       {/* Asymmetric 3D Perspective Art-Board Collage */}
       <div
         className="hero-visual-col"
-        aria-label="Visual salon collage with authentic photography"
+        aria-label={dict.collageAriaLabel}
         ref={stageRef}
       >
         <div
@@ -158,7 +164,7 @@ export function HeroCollage() {
             />
           </div>
 
-          {/* Floating Tile 1: Top-Right Lead Editorial (Bordeaux Wine) */}
+          {/* Floating Tile 1: Top-Right Lead Editorial */}
           {tile1 && (
             <div
               className="collage-tile tile-drift-1"
@@ -168,7 +174,7 @@ export function HeroCollage() {
               }}
             >
               <Link
-                href={`/gallery/#${tile1.id}`}
+                href={`${galleryHref}#${tile1.id}`}
                 tabIndex={-1}
                 aria-label={`${tile1.title} — ${tile1.category}`}
               >
@@ -197,7 +203,7 @@ export function HeroCollage() {
               }}
             >
               <Link
-                href={`/gallery/#${tile2.id}`}
+                href={`${galleryHref}#${tile2.id}`}
                 tabIndex={-1}
                 aria-label={`${tile2.title} — ${tile2.category}`}
               >
@@ -226,7 +232,7 @@ export function HeroCollage() {
               }}
             >
               <Link
-                href={`/gallery/#${tile3.id}`}
+                href={`${galleryHref}#${tile3.id}`}
                 tabIndex={-1}
                 aria-label={`${tile3.title} — ${tile3.category}`}
               >
@@ -255,7 +261,7 @@ export function HeroCollage() {
               }}
             >
               <Link
-                href={`/gallery/#${tile4.id}`}
+                href={`${galleryHref}#${tile4.id}`}
                 tabIndex={-1}
                 aria-label={`${tile4.title} — ${tile4.category}`}
               >
@@ -277,9 +283,7 @@ export function HeroCollage() {
           {/* Studio.Design Style Compact Status Badge */}
           <div className="hero-reservation-badge" aria-hidden="true">
             <span className="reservation-pulse" />
-            <span className="reservation-text">
-              Studio Portfolio · 19 Verified Works
-            </span>
+            <span className="reservation-text">{dict.badgeText}</span>
           </div>
         </div>
       </div>
