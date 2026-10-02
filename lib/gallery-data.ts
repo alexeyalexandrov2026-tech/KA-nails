@@ -70,7 +70,7 @@ export const GALLERY_ITEMS: GalleryItem[] = SALON_PHOTOS.map((p) => ({
 }));
 
 export const HERO_ITEMS = GALLERY_ITEMS.filter((item) => item.heroEligible);
-export const WALL_ITEMS = GALLERY_ITEMS.slice(0, 12);
+export const WALL_ITEMS = GALLERY_ITEMS;
 export const GALLERY_METRICS = PHOTO_INVENTORY_METRICS;
 
 export function getHeroGalleryTiles(): GalleryItem[] {

@@ -494,7 +494,7 @@ h2.section-title {
 }
 
 /* ============================================================ */
-/* HOMEPAGE MOVING WALL SHOWCASE TRACK (STUDIO.DESIGN)         */
+/* HOMEPAGE MOVING WALL SHOWCASE (3-LAYER 3D SPATIAL EXHIBITION) */
 /* ============================================================ */
 .moving-wall-section {
   padding: 72px 0 88px;
@@ -502,6 +502,7 @@ h2.section-title {
   border-bottom: 1px solid var(--line-subtle);
   background: var(--canvas);
   overflow: hidden;
+  position: relative;
 }
 
 .moving-wall-header {
@@ -512,6 +513,8 @@ h2.section-title {
   align-items: flex-end;
   justify-content: space-between;
   gap: 24px;
+  position: relative;
+  z-index: 30;
 }
 
 .moving-wall-controls {
@@ -553,48 +556,162 @@ h2.section-title {
   cursor: not-allowed;
 }
 
-.moving-wall-track-container {
+/* 3D Exhibition Stage */
+.moving-wall-stage {
+  position: relative;
   width: 100%;
-  overflow-x: auto;
-  padding: 16px 5vw 24px;
+  height: 590px;
+  overflow: hidden;
+  user-select: none;
   cursor: grab;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  scroll-behavior: smooth;
+  touch-action: pan-y;
+  perspective: 1400px;
+  perspective-origin: 50% 45%;
+  outline: none;
 }
 
-.moving-wall-track-container::-webkit-scrollbar {
-  display: none;
-}
-
-.moving-wall-track-container:active {
+.moving-wall-stage:active {
   cursor: grabbing;
 }
 
-.moving-wall-track {
-  display: flex;
-  gap: 24px;
-  width: max-content;
+.moving-wall-viewport {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  transform: rotateX(var(--stage-rot-x, 0deg)) rotateY(var(--stage-rot-y, 0deg));
+  will-change: transform;
 }
 
+/* Base layer positioning inside the 3D viewport */
+.moving-layer {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+/* LAYER 3: BACKGROUND ATMOSPHERIC (deeper in scene, smaller, slower) */
+.moving-layer-bg {
+  top: 10px;
+  z-index: 2;
+  transform: translate3d(
+    calc(var(--mouse-x, 0) * 8px),
+    calc(var(--mouse-y, 0) * 6px),
+    -80px
+  );
+  opacity: 0.88;
+}
+
+.moving-track-bg {
+  gap: 36px;
+  padding: 10px 0;
+}
+
+.moving-card-layer-bg {
+  flex: 0 0 220px;
+  transform: scale(0.88) rotateY(1.8deg) rotateX(-1deg);
+  box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.08);
+  filter: contrast(0.94) brightness(0.92);
+}
+
+/* LAYER 1: PRIMARY EYE-LEVEL RAIL (center line, steady cadence) */
+.moving-layer-primary {
+  top: 80px;
+  z-index: 10;
+  transform: translate3d(
+    calc(var(--mouse-x, 0) * 16px),
+    calc(var(--mouse-y, 0) * 12px),
+    0px
+  );
+}
+
+.moving-track-primary {
+  gap: 30px;
+  padding: 16px 0;
+}
+
+.moving-card-layer-mid {
+  flex: 0 0 280px;
+  transform: scale(1) rotateY(-1.5deg) rotateX(1deg);
+  box-shadow:
+    0 14px 32px -6px rgba(0, 0, 0, 0.12),
+    0 3px 8px rgba(0, 0, 0, 0.04);
+}
+
+/* LAYER 2: FOREGROUND HEROES (larger, closer, faster) */
+.moving-layer-fg {
+  top: 155px;
+  z-index: 25;
+  transform: translate3d(
+    calc(var(--mouse-x, 0) * 32px),
+    calc(var(--mouse-y, 0) * 22px),
+    85px
+  );
+  pointer-events: none;
+}
+
+.moving-track-fg {
+  gap: 72px;
+  padding: 16px 0;
+}
+
+.moving-card-layer-fg {
+  flex: 0 0 330px;
+  pointer-events: auto;
+  transform: scale(1.12) rotateY(-2.5deg) rotateX(1.8deg) rotateZ(-0.6deg);
+  box-shadow:
+    0 28px 56px -12px rgba(0, 0, 0, 0.28),
+    0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+/* Common Moving Track */
+.moving-wall-track {
+  display: flex;
+  width: max-content;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+/* Common Moving Card */
 .moving-wall-card {
-  flex: 0 0 290px;
+  position: relative;
   background: var(--surface);
-  border-radius: 8px;
+  border-radius: 10px;
   overflow: hidden;
   border: 1px solid var(--line-subtle);
   cursor: pointer;
-  box-shadow: var(--shadow-subtle);
+  transform-style: preserve-3d;
+  will-change: transform, box-shadow, opacity;
   transition:
-    transform 0.25s ease,
-    box-shadow 0.25s ease,
-    border-color 0.25s ease;
+    transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.3s ease,
+    opacity 0.4s ease,
+    filter 0.4s ease;
 }
 
-.moving-wall-card:hover {
-  transform: translateY(-6px);
-  box-shadow: var(--shadow-md);
+/* Hover and Focus Forward Projection */
+.moving-wall-card:hover,
+.moving-wall-card.is-hovered,
+.moving-wall-card:focus-visible,
+.moving-wall-card.is-focused {
+  z-index: 50 !important;
+  transform: translateZ(120px) scale(1.16) rotateY(0deg) rotateX(0deg) !important;
+  box-shadow:
+    0 36px 72px -16px rgba(0, 0, 0, 0.36),
+    0 0 0 2px var(--ink) !important;
   border-color: var(--ink);
+  filter: none !important;
+  opacity: 1 !important;
+}
+
+/* When a card is hovered, non-hovered cards soften */
+.moving-wall-stage.has-hovered-card
+  .moving-wall-card:not(.is-hovered):not(:hover):not(:focus-visible) {
+  opacity: 0.72;
+  filter: contrast(0.94) brightness(0.92);
 }
 
 .moving-card-media {
@@ -610,25 +727,50 @@ h2.section-title {
   height: 100%;
   object-fit: cover;
   display: block;
-  transition: transform 0.4s ease;
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.moving-wall-card:hover .moving-card-image {
-  transform: scale(1.04);
+.moving-wall-card:hover .moving-card-image,
+.moving-wall-card.is-hovered .moving-card-image,
+.moving-wall-card:focus-visible .moving-card-image {
+  transform: scale(1.05);
+}
+
+/* Subtle physical glare overlay */
+.moving-card-glare {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.24) 0%,
+    rgba(255, 255, 255, 0.06) 40%,
+    rgba(255, 255, 255, 0) 70%
+  );
+  pointer-events: none;
+  opacity: 0.65;
+  mix-blend-mode: overlay;
+  transition: opacity 0.3s ease;
+}
+
+.moving-wall-card:hover .moving-card-glare,
+.moving-wall-card.is-hovered .moving-card-glare {
+  opacity: 1;
 }
 
 .moving-card-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(0, 0, 0, 0.32);
   display: flex;
   align-items: center;
   justify-content: center;
   opacity: 0;
-  transition: opacity 0.2s ease;
+  transition: opacity 0.25s ease;
 }
 
-.moving-wall-card:hover .moving-card-overlay {
+.moving-wall-card:hover .moving-card-overlay,
+.moving-wall-card.is-hovered .moving-card-overlay,
+.moving-wall-card:focus-visible .moving-card-overlay {
   opacity: 1;
 }
 
@@ -637,16 +779,17 @@ h2.section-title {
   color: var(--ink);
   font-size: 12px;
   font-weight: 600;
-  padding: 6px 14px;
+  padding: 7px 16px;
   border-radius: 4px;
   letter-spacing: 0.02em;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .moving-card-caption {
-  padding: 16px 18px;
+  padding: 14px 16px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
 .moving-card-cat {
@@ -658,30 +801,78 @@ h2.section-title {
 }
 
 .moving-card-title {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--ink);
   line-height: 1.3;
 }
 
 .moving-card-finish {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--muted);
 }
 
 .moving-wall-footer-note {
   max-width: 1440px;
-  margin: 24px auto 0;
+  margin: 32px auto 0;
   padding: 0 5vw;
   font-size: 13px;
   color: var(--muted);
   text-align: center;
+  position: relative;
+  z-index: 30;
 }
 
 .moving-wall-footer-note a {
   color: var(--ink);
   font-weight: 600;
   text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+  .moving-wall-stage {
+    height: 480px;
+    perspective: 800px;
+  }
+
+  .moving-layer-bg {
+    top: 6px;
+    transform: translateZ(-40px);
+  }
+
+  .moving-card-layer-bg {
+    flex: 0 0 160px;
+  }
+
+  .moving-layer-primary {
+    top: 55px;
+    transform: translateZ(0px);
+  }
+
+  .moving-card-layer-mid {
+    flex: 0 0 210px;
+  }
+
+  .moving-layer-fg {
+    top: 115px;
+    transform: translateZ(40px);
+  }
+
+  .moving-card-layer-fg {
+    flex: 0 0 240px;
+  }
+
+  .moving-track-bg {
+    gap: 20px;
+  }
+
+  .moving-track-primary {
+    gap: 18px;
+  }
+
+  .moving-track-fg {
+    gap: 40px;
+  }
 }
 
 /* ============================================================ */
@@ -1612,10 +1803,47 @@ h2.section-title {
     scroll-behavior: auto !important;
   }
 
+  .moving-wall-stage {
+    height: auto !important;
+    perspective: none !important;
+    overflow-x: auto !important;
+    cursor: default !important;
+  }
+
+  .moving-wall-viewport {
+    height: auto !important;
+    transform: none !important;
+  }
+
+  .moving-layer-bg,
+  .moving-layer-fg {
+    display: none !important;
+  }
+
+  .moving-layer-primary {
+    position: relative !important;
+    top: 0 !important;
+    transform: none !important;
+  }
+
   .moving-wall-track {
     animation: none !important;
     transform: none !important;
-    overflow-x: auto !important;
+    width: max-content !important;
+  }
+
+  .moving-wall-card {
+    transform: none !important;
+    transition:
+      box-shadow 0.2s ease,
+      border-color 0.2s ease !important;
+  }
+
+  .moving-wall-card:hover,
+  .moving-wall-card.is-hovered,
+  .moving-wall-card:focus-visible,
+  .moving-wall-card.is-focused {
+    transform: translateY(-4px) !important;
   }
 
   .collage-tile,
