@@ -154,7 +154,11 @@ export function HeroCollage({ locale = "en" }: HeroCollageProps) {
           <div className="collage-tile tile-logo" data-layer="base">
             <Image
               src="/assets/ka-nails-logo.png"
-              alt="KA Nails Nail Studio"
+              alt={
+                locale === "ru"
+                  ? "KA Nails Студия маникюра"
+                  : "KA Nails Nail Studio"
+              }
               width={1254}
               height={1254}
               priority
@@ -176,7 +180,10 @@ export function HeroCollage({ locale = "en" }: HeroCollageProps) {
               <Link
                 href={`${galleryHref}#${tile1.id}`}
                 tabIndex={-1}
-                aria-label={`${tile1.title} — ${tile1.category}`}
+                aria-label={dict.tileAriaLabel(
+                  tile1.title,
+                  tile1.categoryLabel || tile1.category,
+                )}
               >
                 <Image
                   src={tile1.src}
@@ -205,7 +212,10 @@ export function HeroCollage({ locale = "en" }: HeroCollageProps) {
               <Link
                 href={`${galleryHref}#${tile2.id}`}
                 tabIndex={-1}
-                aria-label={`${tile2.title} — ${tile2.category}`}
+                aria-label={dict.tileAriaLabel(
+                  tile2.title,
+                  tile2.categoryLabel || tile2.category,
+                )}
               >
                 <Image
                   src={tile2.src}
@@ -216,7 +226,12 @@ export function HeroCollage({ locale = "en" }: HeroCollageProps) {
                   className="collage-artwork-img"
                 />
                 <span className="tile-micro-label">
-                  {tile2.title} · {tile2.finish}
+                  {locale === "ru" ? (
+                    <span lang="en">{tile2.title}</span>
+                  ) : (
+                    tile2.title
+                  )}{" "}
+                  · {tile2.finish}
                 </span>
               </Link>
             </div>
@@ -234,7 +249,10 @@ export function HeroCollage({ locale = "en" }: HeroCollageProps) {
               <Link
                 href={`${galleryHref}#${tile3.id}`}
                 tabIndex={-1}
-                aria-label={`${tile3.title} — ${tile3.category}`}
+                aria-label={dict.tileAriaLabel(
+                  tile3.title,
+                  tile3.categoryLabel || tile3.category,
+                )}
               >
                 <Image
                   src={tile3.src}
@@ -245,7 +263,12 @@ export function HeroCollage({ locale = "en" }: HeroCollageProps) {
                   className="collage-artwork-img"
                 />
                 <span className="tile-micro-label">
-                  {tile3.title} · {tile3.category}
+                  {locale === "ru" ? (
+                    <span lang="en">{tile3.title}</span>
+                  ) : (
+                    tile3.title
+                  )}{" "}
+                  · {tile3.categoryLabel || tile3.category}
                 </span>
               </Link>
             </div>
@@ -263,7 +286,10 @@ export function HeroCollage({ locale = "en" }: HeroCollageProps) {
               <Link
                 href={`${galleryHref}#${tile4.id}`}
                 tabIndex={-1}
-                aria-label={`${tile4.title} — ${tile4.category}`}
+                aria-label={dict.tileAriaLabel(
+                  tile4.title,
+                  tile4.categoryLabel || tile4.category,
+                )}
               >
                 <Image
                   src={tile4.src}
@@ -274,7 +300,12 @@ export function HeroCollage({ locale = "en" }: HeroCollageProps) {
                   className="collage-artwork-img"
                 />
                 <span className="tile-micro-label">
-                  {tile4.title} · {tile4.finish}
+                  {locale === "ru" ? (
+                    <span lang="en">{tile4.title}</span>
+                  ) : (
+                    tile4.title
+                  )}{" "}
+                  · {tile4.finish}
                 </span>
               </Link>
             </div>

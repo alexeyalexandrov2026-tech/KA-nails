@@ -295,4 +295,77 @@ test.describe("KA Nails Bilingual English + Russian Test Suite", () => {
       await expect(bgTrack).toHaveCSS("display", "none");
     }
   });
+
+  // Gate 10: Hero collage link aria-labels and English artwork titles lang="en" on Russian routes
+  test("Hero collage and gallery use localized Russian aria-labels and lang='en' on English titles", async ({
+    page,
+  }) => {
+    await page.goto("/ru/");
+
+    // Check hero collage links on /ru/
+    const heroCollage = page.locator(".hero-collage-stage");
+    await expect(heroCollage).toBeVisible();
+
+    // Must NOT have old English-only aria-labels
+    const oldEnAriaLabels = [
+      "Bordeaux Luxury Editorial — Classic",
+      "Royal Cobalt Gloss — Color",
+      "Cornflower Sky Macro — Color",
+      "Pastel Lilac Bliss — Color",
+    ];
+    for (const oldLabel of oldEnAriaLabels) {
+      await expect(
+        heroCollage.locator(`a[aria-label="${oldLabel}"]`),
+      ).toHaveCount(0);
+    }
+
+    // Must have new Russian aria-labels
+    await expect(
+      heroCollage.locator(
+        'a[aria-label="Открыть работу Bordeaux Luxury Editorial, категория: Классика"]',
+      ),
+    ).toBeVisible();
+    await expect(
+      heroCollage.locator(
+        'a[aria-label="Открыть работу Royal Cobalt Gloss, категория: Цвет"]',
+      ),
+    ).toBeVisible();
+    await expect(
+      heroCollage.locator(
+        'a[aria-label="Открыть работу Cornflower Sky Macro, категория: Цвет"]',
+      ),
+    ).toBeVisible();
+    await expect(
+      heroCollage.locator(
+        'a[aria-label="Открыть работу Pastel Lilac Bliss, категория: Цвет"]',
+      ),
+    ).toBeVisible();
+
+    // Check logo image alt is localized
+    await expect(
+      heroCollage.locator('img[alt="KA Nails Студия маникюра"]'),
+    ).toBeVisible();
+
+    // Check visible English titles wrapped with lang="en" in micro-labels
+    const microLabelsEn = heroCollage.locator(
+      ".tile-micro-label span[lang='en']",
+    );
+    expect(await microLabelsEn.count()).toBeGreaterThanOrEqual(3);
+
+    // Check Section 02 Moving Wall cards on /ru/
+    const movingWallCards = page.locator(
+      ".moving-track-primary .moving-wall-card",
+    );
+    const movingCardTitleEn = movingWallCards
+      .first()
+      .locator(".moving-card-title span[lang='en']");
+    await expect(movingCardTitleEn).toBeVisible();
+
+    // Check Gallery cards on /ru/gallery/
+    await page.goto("/ru/gallery/");
+    const galleryCardTitleEn = page
+      .locator(".gallery-card .card-title span[lang='en']")
+      .first();
+    await expect(galleryCardTitleEn).toBeVisible();
+  });
 });

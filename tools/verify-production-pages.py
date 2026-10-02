@@ -116,6 +116,47 @@ for ep in ALL_ENDPOINTS:
                         print(f"  [FAIL] Missing RU hero badge: '{term}'")
                         all_clean = False
 
+                # Check that old English hero collage aria-labels are absent
+                old_en_aria = [
+                    "Bordeaux Luxury Editorial — Classic",
+                    "Royal Cobalt Gloss — Color",
+                    "Cornflower Sky Macro — Color",
+                    "Pastel Lilac Bliss — Color",
+                ]
+                for term in old_en_aria:
+                    if term in content:
+                        print(f"  [FAIL] Found old English hero aria-label on /ru/: '{term}'")
+                        all_clean = False
+                    else:
+                        print(f"  [PASS] 0 occurrences of old English hero aria-label: '{term}'")
+
+                # Check that new Russian hero collage aria-labels are present
+                new_ru_aria = [
+                    "Открыть работу Bordeaux Luxury Editorial, категория: Классика",
+                    "Открыть работу Royal Cobalt Gloss, категория: Цвет",
+                    "Открыть работу Cornflower Sky Macro, категория: Цвет",
+                    "Открыть работу Pastel Lilac Bliss, категория: Цвет",
+                ]
+                for term in new_ru_aria:
+                    if term in content:
+                        print(f"  [PASS] Found localized Russian hero aria-label: '{term}'")
+                    else:
+                        print(f"  [FAIL] Missing localized Russian hero aria-label: '{term}'")
+                        all_clean = False
+
+                # Check localized logo alt and lang="en" wrappers
+                if 'alt="KA Nails Студия маникюра"' in content:
+                    print(f"  [PASS] Found localized Russian logo alt: 'KA Nails Студия маникюра'")
+                else:
+                    print(f"  [FAIL] Missing localized Russian logo alt")
+                    all_clean = False
+
+                if 'lang="en"' in content:
+                    print(f"  [PASS] Found lang='en' span wrappers for English titles")
+                else:
+                    print(f"  [FAIL] Missing lang='en' span wrappers")
+                    all_clean = False
+
             # 6. Gallery 19 works check
             if ep in ("/gallery/", "/ru/gallery/"):
                 articles = content.count("<article")

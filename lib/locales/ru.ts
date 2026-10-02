@@ -53,6 +53,8 @@ export const ruLocale: LocaleDictionary = {
     badge2: "Подлинное портфолио студии",
     badge3: "Внимательный уход",
     badgeText: "Портфолио студии · 19 реальных работ",
+    tileAriaLabel: (title, category) =>
+      `Открыть работу ${title}, категория: ${category}`,
     collageAriaLabel:
       "Визуальный коллаж с подлинными фотографиями работ студии",
   },

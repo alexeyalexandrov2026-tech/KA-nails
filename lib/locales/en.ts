@@ -53,6 +53,8 @@ export const enLocale: LocaleDictionary = {
     badge2: "Authentic Salon Portfolio",
     badge3: "Attentive Care",
     badgeText: "Studio Portfolio · 19 Verified Works",
+    tileAriaLabel: (title, category) =>
+      `Open artwork ${title}, category: ${category}`,
     collageAriaLabel: "Visual salon collage with authentic photography",
   },
   section02: {

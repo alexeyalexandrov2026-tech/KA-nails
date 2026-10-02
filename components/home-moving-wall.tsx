@@ -502,7 +502,13 @@ export function HomeMovingWall({ locale = "en" }: HomeMovingWallProps) {
                       <span className="moving-card-cat">
                         {item.categoryLabel || item.category}
                       </span>
-                      <span className="moving-card-title">{item.title}</span>
+                      <span className="moving-card-title">
+                        {locale === "ru" ? (
+                          <span lang="en">{item.title}</span>
+                        ) : (
+                          item.title
+                        )}
+                      </span>
                     </div>
                   </div>
                 );
@@ -571,7 +577,13 @@ export function HomeMovingWall({ locale = "en" }: HomeMovingWallProps) {
                       <span className="moving-card-cat">
                         {item.categoryLabel || item.category}
                       </span>
-                      <span className="moving-card-title">{item.title}</span>
+                      <span className="moving-card-title">
+                        {locale === "ru" ? (
+                          <span lang="en">{item.title}</span>
+                        ) : (
+                          item.title
+                        )}
+                      </span>
                     </div>
                   </div>
                 );
@@ -607,7 +619,13 @@ export function HomeMovingWall({ locale = "en" }: HomeMovingWallProps) {
                       <span className="moving-card-cat">
                         {item.categoryLabel || item.category}
                       </span>
-                      <span className="moving-card-title">{item.title}</span>
+                      <span className="moving-card-title">
+                        {locale === "ru" ? (
+                          <span lang="en">{item.title}</span>
+                        ) : (
+                          item.title
+                        )}
+                      </span>
                     </div>
                   </div>
                 );

@@ -47,6 +47,7 @@ export interface LocaleDictionary {
     badge2: string;
     badge3: string;
     badgeText: string;
+    tileAriaLabel: (title: string, category: string) => string;
     collageAriaLabel: string;
   };
   section02: {

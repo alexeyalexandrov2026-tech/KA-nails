@@ -242,7 +242,13 @@ export function GalleryViewer({
             <p className="lightbox-eyebrow">
               {currentItem.colorFamily} · {currentItem.finish}
             </p>
-            <h2 className="lightbox-title">{currentItem.title}</h2>
+            <h2 className="lightbox-title">
+              {locale === "ru" ? (
+                <span lang="en">{currentItem.title}</span>
+              ) : (
+                currentItem.title
+              )}
+            </h2>
             <p className="lightbox-technique">{currentItem.notes}</p>
           </div>
 

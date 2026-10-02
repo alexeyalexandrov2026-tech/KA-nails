@@ -155,7 +155,13 @@ export function GalleryArchive({ locale = "en" }: GalleryArchiveProps) {
                   </span>
                   <span className="card-shape">{item.colorFamily}</span>
                 </div>
-                <h3 className="card-title">{item.title}</h3>
+                <h3 className="card-title">
+                  {locale === "ru" ? (
+                    <span lang="en">{item.title}</span>
+                  ) : (
+                    item.title
+                  )}
+                </h3>
                 <p className="card-technique">{item.notes}</p>
                 <div className="card-footer-row">
                   <span className="card-finish">{item.finish}</span>
