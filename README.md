@@ -85,4 +85,11 @@ primary booking API is mocked. The network failure test aborts a request only to
 recovery. The harness rebuilds this site without a booking URL afterwards; the
 ephemeral test origin must never be deployed.
 
-No push, Cloudflare deployment, DNS or production database change has been made.
+## Deployment
+
+Every push to `main` that passes CI is deployed to the Cloudflare Pages project
+`ka-nails` (https://ka-nails.pages.dev) by the `deploy` job in
+`.github/workflows/ci.yml`, and the `verify-live` job then runs
+`tests/deployed-cloudflare.spec.ts` against the live site. The job needs two
+repository secrets: `CLOUDFLARE_API_TOKEN` (Account → Cloudflare Pages → Edit) and
+`CLOUDFLARE_ACCOUNT_ID`.
