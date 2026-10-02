@@ -34,6 +34,7 @@ html {
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: clip;
 }
 
 body {
@@ -553,7 +554,7 @@ h2.section-title {
   border-top: 1px solid var(--line-subtle);
   border-bottom: 1px solid var(--line-subtle);
   background: var(--canvas);
-  overflow: hidden;
+  overflow: clip;
   position: relative;
 }
 
@@ -562,6 +563,7 @@ h2.section-title {
   margin: 0 auto 36px;
   padding: 0 5vw;
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-end;
   justify-content: space-between;
   gap: 24px;
@@ -571,8 +573,10 @@ h2.section-title {
 
 .moving-wall-controls {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 16px;
+  max-width: 100%;
 }
 
 .moving-wall-nav-btns {
@@ -1209,6 +1213,7 @@ h2.section-title {
   padding: 14px 20px;
   margin-bottom: 24px;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 14px;
   font-size: 13px;

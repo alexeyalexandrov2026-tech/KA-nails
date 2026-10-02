@@ -389,6 +389,19 @@ export function HomeMovingWall({ locale = "en" }: HomeMovingWallProps) {
 
   // Manual arrow navigation nudges
   const handleManualNudge = (deltaPx: number) => {
+    const isReduced =
+      isReducedMotionRef.current ||
+      (typeof window !== "undefined" &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+
+    if (isReduced) {
+      if (stageRef.current) {
+        // Direct one-shot user-triggered scroll on the static horizontal rail without rAF or continuous transforms
+        stageRef.current.scrollBy({ left: deltaPx, behavior: "auto" });
+      }
+      return;
+    }
+
     primaryXRef.current += deltaPx;
     fgXRef.current += deltaPx * 1.45;
     bgXRef.current += deltaPx * 0.6;

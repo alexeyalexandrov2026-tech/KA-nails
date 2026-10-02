@@ -225,7 +225,7 @@ test.describe("WCAG 2.2 Accessibility Remediation Gates", () => {
     }
   });
 
-  test("reduced motion: pause control is hidden while manual navigation remains functional", async ({
+  test("reduced motion: manual navigation ‹ and › arrows move the primary rail via click and keyboard", async ({
     page,
   }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
@@ -233,25 +233,67 @@ test.describe("WCAG 2.2 Accessibility Remediation Gates", () => {
     for (const url of ["/", "/ru/"]) {
       await page.goto(url);
 
+      const movingWall = page.locator(".moving-wall-section");
+      await expect(movingWall).toBeVisible();
+      await movingWall.scrollIntoViewIfNeeded();
+
       // Pause/resume control must NOT be visible under reduced-motion
       const pauseBtn = page.locator(".showcase-pause-btn");
       await expect(pauseBtn).toBeHidden();
 
-      // Manual navigation buttons (left/right nudge) remain visible and functional
-      const navBtns = page.locator(
-        ".showcase-nav-btn:not(.showcase-pause-btn)",
-      );
-      await expect(navBtns).toHaveCount(2);
-      await expect(navBtns.first()).toBeVisible();
-      await expect(navBtns.last()).toBeVisible();
+      // Manual navigation buttons (left/right nudge) remain visible
+      const leftBtn = page.locator(".showcase-nav-btn", { hasText: "‹" });
+      const rightBtn = page.locator(".showcase-nav-btn", { hasText: "›" });
+      await expect(leftBtn).toBeVisible();
+      await expect(rightBtn).toBeVisible();
 
-      // Click manual nav button to verify operability
-      await navBtns.first().click();
-      await navBtns.last().click();
+      const stage = page.locator(".moving-wall-stage");
+      await expect(stage).toBeVisible();
+
+      // 1. Verify autonomous motion does NOT advance position
+      const initialScrollLeft = await stage.evaluate((el) => el.scrollLeft);
+      expect(initialScrollLeft).toBe(0);
+
+      const initialTransform = await page
+        .locator(".moving-layer-primary .moving-wall-track")
+        .evaluate((el) => window.getComputedStyle(el).transform);
+      expect(initialTransform).toBe("none");
+
+      await page.waitForTimeout(500);
+      const afterWaitScrollLeft = await stage.evaluate((el) => el.scrollLeft);
+      expect(afterWaitScrollLeft).toBe(0);
+
+      // 2. Click › -> assert primary gallery container scrollLeft advances
+      await rightBtn.click();
+      await page.waitForTimeout(100);
+      const afterRightClick = await stage.evaluate((el) => el.scrollLeft);
+      expect(afterRightClick).toBeGreaterThanOrEqual(200);
+
+      // 3. Click ‹ -> assert position returns/decreases
+      await leftBtn.click();
+      await page.waitForTimeout(100);
+      const afterLeftClick = await stage.evaluate((el) => el.scrollLeft);
+      expect(afterLeftClick).toBeLessThan(afterRightClick);
+
+      // 4. Keyboard activation on › via Enter
+      await rightBtn.focus();
+      await expect(rightBtn).toBeFocused();
+      await page.keyboard.press("Enter");
+      await page.waitForTimeout(100);
+      const afterEnterScroll = await stage.evaluate((el) => el.scrollLeft);
+      expect(afterEnterScroll).toBeGreaterThan(afterLeftClick);
+
+      // 5. Keyboard activation on ‹ via Space
+      await leftBtn.focus();
+      await expect(leftBtn).toBeFocused();
+      await page.keyboard.press("Space");
+      await page.waitForTimeout(100);
+      const afterSpaceScroll = await stage.evaluate((el) => el.scrollLeft);
+      expect(afterSpaceScroll).toBeLessThan(afterEnterScroll);
     }
   });
 
-  test("WCAG 1.4.12 Text Spacing override test on EN and RU (home, gallery, book)", async ({
+  test("WCAG 1.4.12 Text Spacing override deep audit across viewports (1440, 390, 320)", async ({
     page,
   }) => {
     const textSpacingCss = `
@@ -265,6 +307,12 @@ test.describe("WCAG 2.2 Accessibility Remediation Gates", () => {
       }
     `;
 
+    const viewports = [
+      { width: 1440, height: 900, label: "desktop-1440x900" },
+      { width: 390, height: 844, label: "mobile-390x844" },
+      { width: 320, height: 800, label: "mobile-320x800" },
+    ];
+
     const routes = [
       "/",
       "/ru/",
@@ -274,48 +322,176 @@ test.describe("WCAG 2.2 Accessibility Remediation Gates", () => {
       "/ru/book/",
     ];
 
-    for (const route of routes) {
-      await page.goto(route);
-      await page.addStyleTag({ content: textSpacingCss });
+    for (const vp of viewports) {
+      await page.setViewportSize({ width: vp.width, height: vp.height });
 
-      // Verify no horizontal overflow causing clipping
-      const hasOverflow = await page.evaluate(
-        () => document.documentElement.scrollWidth > window.innerWidth,
-      );
-      expect(hasOverflow, `Overflow on ${route} with text spacing`).toBe(false);
+      for (const route of routes) {
+        await page.goto(route);
+        await page.addStyleTag({ content: textSpacingCss });
+        await page.waitForTimeout(100);
 
-      // Verify headings and key texts are visible (not clipped, not hidden)
-      const h1 = page.locator("h1");
-      await expect(h1).toBeVisible();
+        // 1. Verify no horizontal document overflow
+        const docOverflow = await page.evaluate(
+          () => document.documentElement.scrollWidth > window.innerWidth,
+        );
+        expect(
+          docOverflow,
+          `Document overflow on ${route} at ${vp.label}`,
+        ).toBe(false);
 
-      // Functional verification per route
-      if (route.includes("gallery")) {
-        // Filter pills still clickable
-        const classicPill = page
-          .locator(".gallery-filter-bar")
-          .getByRole("button", {
-            name: /Classic|Классика/,
+        // 2. Verify no clipped text in containers with overflow:hidden/clip or fixed height
+        const clippedText = await page.evaluate(() => {
+          const walker = document.createTreeWalker(
+            document.body,
+            NodeFilter.SHOW_TEXT,
+          );
+          const parents = new Set<HTMLElement>();
+          let n: Node | null;
+          while ((n = walker.nextNode())) {
+            if (n.textContent && n.textContent.trim().length > 0) {
+              const p = n.parentElement;
+              if (p && p.offsetParent !== null) {
+                parents.add(p);
+              }
+            }
+          }
+
+          const clipped: {
+            tag: string;
+            className: string;
+            text: string;
+            type: string;
+          }[] = [];
+
+          for (const el of parents) {
+            if (
+              el.classList.contains("sr-only") ||
+              el.classList.contains("moving-card-media") ||
+              el.classList.contains("gallery-card-media") ||
+              el.classList.contains("moving-wall-viewport")
+            ) {
+              continue;
+            }
+
+            const style = window.getComputedStyle(el);
+            const hiddenY =
+              style.overflowY === "hidden" || style.overflowY === "clip";
+            const hiddenX =
+              style.overflowX === "hidden" || style.overflowX === "clip";
+
+            if (hiddenY && el.scrollHeight > el.clientHeight + 2) {
+              clipped.push({
+                tag: el.tagName.toLowerCase(),
+                className: el.className,
+                text: (el.textContent || "").trim().slice(0, 30),
+                type: "vertical",
+              });
+            }
+
+            if (
+              hiddenX &&
+              el.scrollWidth > el.clientWidth + 2 &&
+              !el.className.includes("moving-wall")
+            ) {
+              clipped.push({
+                tag: el.tagName.toLowerCase(),
+                className: el.className,
+                text: (el.textContent || "").trim().slice(0, 30),
+                type: "horizontal",
+              });
+            }
+          }
+          return clipped;
+        });
+
+        expect(
+          clippedText,
+          `Clipped text found on ${route} at ${vp.label}: ${JSON.stringify(clippedText)}`,
+        ).toEqual([]);
+
+        // 3. Verify interactive controls do not collide/overlap (excluding intentional 3D hero collage layering)
+        const overlaps = await page.evaluate(() => {
+          const interactive = Array.from(
+            document.querySelectorAll(
+              "nav a, .filter-pill, .gallery-card-trigger, .button, .button-secondary, .service-book-cta",
+            ),
+          ) as HTMLElement[];
+          const visible = interactive.filter((el) => {
+            const r = el.getBoundingClientRect();
+            return (
+              r.width > 0 &&
+              r.height > 0 &&
+              window.getComputedStyle(el).display !== "none"
+            );
           });
-        await expect(classicPill).toBeVisible();
-        await classicPill.click();
 
-        // Lightbox trigger still operable under text spacing
-        const firstTrigger = page.locator(".gallery-card-trigger").first();
-        await expect(firstTrigger).toBeVisible();
-        await firstTrigger.click();
+          const colliding: string[] = [];
+          for (let i = 0; i < visible.length; i++) {
+            for (let j = i + 1; j < visible.length; j++) {
+              const a = visible[i];
+              const b = visible[j];
+              if (!a || !b) continue;
+              if (a.contains(b) || b.contains(a)) continue;
+              if (
+                a.closest(".gallery-card") &&
+                a.closest(".gallery-card") === b.closest(".gallery-card")
+              )
+                continue;
 
-        const lightbox = page.locator('div[role="dialog"]');
-        await expect(lightbox).toBeVisible();
-        await page.keyboard.press("Escape");
-        await expect(lightbox).toHaveCount(0);
-      } else if (route.includes("book")) {
-        // Honest status notice is visible and readable
-        const notice = page.locator(".notice");
-        await expect(notice).toBeVisible();
-      } else {
-        // Homepage main navigation and CTAs remain operable
-        const nav = page.locator("nav.main-nav");
-        await expect(nav).toBeVisible();
+              const ra = a.getBoundingClientRect();
+              const rb = b.getBoundingClientRect();
+              const ox = Math.max(
+                0,
+                Math.min(ra.right, rb.right) - Math.max(ra.left, rb.left),
+              );
+              const oy = Math.max(
+                0,
+                Math.min(ra.bottom, rb.bottom) - Math.max(ra.top, rb.top),
+              );
+
+              if (ox > 4 && oy > 4) {
+                colliding.push(
+                  `${a.tagName}.${a.className} overlaps ${b.tagName}.${b.className} by ${Math.round(ox)}x${Math.round(oy)}px`,
+                );
+              }
+            }
+          }
+          return colliding;
+        });
+
+        expect(
+          overlaps,
+          `Colliding controls on ${route} at ${vp.label}: ${JSON.stringify(overlaps)}`,
+        ).toEqual([]);
+
+        // 4. Verify route functional operability and readable headings
+        const h1 = page.locator("h1");
+        await expect(h1).toBeVisible();
+
+        if (route.includes("gallery")) {
+          const classicPill = page
+            .locator(".gallery-filter-bar")
+            .getByRole("button", {
+              name: /Classic|Классика/,
+            });
+          await expect(classicPill).toBeVisible();
+          await classicPill.click();
+
+          const firstTrigger = page.locator(".gallery-card-trigger").first();
+          await expect(firstTrigger).toBeVisible();
+          await firstTrigger.click();
+
+          const lightbox = page.locator('div[role="dialog"]');
+          await expect(lightbox).toBeVisible();
+          await page.keyboard.press("Escape");
+          await expect(lightbox).toHaveCount(0);
+        } else if (route.includes("book")) {
+          const notice = page.locator(".notice");
+          await expect(notice).toBeVisible();
+        } else {
+          const nav = page.locator("nav.main-nav");
+          await expect(nav).toBeVisible();
+        }
       }
     }
   });
