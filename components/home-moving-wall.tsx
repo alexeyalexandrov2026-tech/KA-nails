@@ -25,11 +25,11 @@ export function HomeMovingWall({ locale = "en" }: HomeMovingWallProps) {
   // LAYER 2: Foreground heroes (closer to camera, larger, faster parallax)
   const fgItems = useMemo(
     () => [
-      allItems[0]!, // Bordeaux Wine
-      allItems[5]!, // Emerald Velvet
-      allItems[9]!, // Cherry Glaze
-      allItems[13]!, // Onyx Gloss
-      allItems[8]!, // Frosted Chrome
+      allItems[0]!, // work-01: Bordeaux Luxury Editorial
+      allItems[5]!, // work-06: French Bow & Heart Art
+      allItems[9]!, // work-10: Midnight Onyx Gloss
+      allItems[13]!, // work-14: Indigo Denim Gloss
+      allItems[8]!, // work-09: Alabaster Pure White
     ],
     [allItems],
   );
@@ -37,14 +37,14 @@ export function HomeMovingWall({ locale = "en" }: HomeMovingWallProps) {
   // LAYER 1: Primary eye-level exhibition rail (center line, steady cadence)
   const primaryItems = useMemo(
     () => [
-      allItems[1]!, // Royal Cobalt
-      allItems[3]!, // Pastel Lilac
-      allItems[6]!, // Crimson Luxe
-      allItems[11]!, // Mocha Silk
-      allItems[14]!, // Buttercup Soft
-      allItems[16]!, // Sage Linen
-      allItems[17]!, // Terracotta Warm
-      allItems[15]!, // Pearl Shimmer
+      allItems[1]!, // work-02: Royal Cobalt Gloss
+      allItems[3]!, // work-04: Cornflower Sky Macro
+      allItems[6]!, // work-07: Rose Quartz Shimmer
+      allItems[11]!, // work-12: Porcelain Nude Natural
+      allItems[14]!, // work-15: Rose Shimmer French
+      allItems[16]!, // work-17: French Toe-Ring Accent
+      allItems[17]!, // work-18: Deep Bordeaux Studio Portrait
+      allItems[15]!, // work-16: Cornflower Blue Drape
     ],
     [allItems],
   );
@@ -52,12 +52,12 @@ export function HomeMovingWall({ locale = "en" }: HomeMovingWallProps) {
   // LAYER 3: Background atmospheric depth (deeper in scene, smaller, slower)
   const bgItems = useMemo(
     () => [
-      allItems[2]!, // French Pink
-      allItems[4]!, // Midnight Eclipse
-      allItems[7]!, // Nude Petal
-      allItems[10]!, // Amethyst Dream
-      allItems[12]!, // Rose Quartz
-      allItems[18]!, // Lavender Mist
+      allItems[2]!, // work-03: Pastel Lilac Bliss
+      allItems[4]!, // work-05: Minimal French Contrast
+      allItems[7]!, // work-08: Classic Scarlet Lacquer
+      allItems[10]!, // work-11: Champagne Platinum Glitter
+      allItems[12]!, // work-13: Peach Melon Cream
+      allItems[18]!, // work-19: Restorative Aesthetic Pedicure
     ],
     [allItems],
   );

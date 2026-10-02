@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import { SALON_PHOTOS } from "../lib/photo-inventory";
+import { RU_PHOTO_LOCALES } from "../lib/gallery-data";
 
 const EN_ROUTES = ["/", "/services/", "/gallery/", "/contact/", "/book/"];
 const RU_ROUTES = [
@@ -367,5 +369,150 @@ test.describe("KA Nails Bilingual English + Russian Test Suite", () => {
       .locator(".gallery-card .card-title span[lang='en']")
       .first();
     await expect(galleryCardTitleEn).toBeVisible();
+  });
+
+  // Gate 11: 19/19 Canonical Photo ID & Metadata Integrity
+  test("All 19 canonical photos map to valid Russian locale entries with matching slugs", () => {
+    expect(SALON_PHOTOS.length).toBe(19);
+
+    for (const photo of SALON_PHOTOS) {
+      const ruEntry = RU_PHOTO_LOCALES[photo.id]!;
+      expect(
+        ruEntry,
+        `Photo ${photo.id} (${photo.title}) must have a Russian locale entry`,
+      ).toBeDefined();
+      expect(ruEntry.id).toBe(photo.id);
+      expect(
+        ruEntry.slug,
+        `Photo ${photo.id} slug must match Russian entry slug`,
+      ).toBe(photo.slug);
+      expect(ruEntry.alt.length).toBeGreaterThan(15);
+      expect(ruEntry.finish.length).toBeGreaterThan(3);
+      expect(ruEntry.colorFamily.length).toBeGreaterThan(3);
+      expect(ruEntry.notes.length).toBeGreaterThan(15);
+    }
+  });
+
+  // Gate 12: Live Russian Gallery 19/19 DOM Card Mapping Integrity
+  test("Russian gallery DOM renders all 19 cards with canonical photo IDs, images, and localized metadata", async ({
+    page,
+  }) => {
+    await page.goto("/ru/gallery/");
+
+    const cards = page.locator(".gallery-grid article");
+    await expect(cards).toHaveCount(19);
+
+    for (const photo of SALON_PHOTOS) {
+      const card = page.locator(`.gallery-grid article#${photo.id}`);
+      await expect(
+        card,
+        `Article element with id #${photo.id} must exist in Russian gallery`,
+      ).toBeVisible();
+
+      // Verify image source matches canonical slug
+      const img = card.locator("img.gallery-card-image");
+      await expect(img).toBeVisible();
+      const src = await img.getAttribute("src");
+      expect(src).toContain(photo.slug);
+
+      // Verify image alt matches localized Russian alt
+      const expectedRu = RU_PHOTO_LOCALES[photo.id]!;
+      await expect(img).toHaveAttribute("alt", expectedRu.alt);
+
+      // Verify title is rendered
+      await expect(card.locator(".card-title")).toContainText(photo.title);
+
+      // Verify finish and colorFamily match localized Russian text
+      await expect(card.locator(".card-finish")).toHaveText(expectedRu.finish);
+      await expect(card.locator(".card-shape")).toHaveText(
+        expectedRu.colorFamily,
+      );
+      await expect(card.locator(".card-technique")).toHaveText(
+        expectedRu.notes,
+      );
+    }
+  });
+
+  // Gate 13: Semantic Invariants Regression Test (No cross-talk between photos)
+  test("Russian gallery preserves semantic invariants: Lilac, Cornflower, French, Rose Quartz", async ({
+    page,
+  }) => {
+    await page.goto("/ru/gallery/");
+
+    // 1. Pastel Lilac Bliss (work-03)
+    const lilacCard = page.locator("article#work-03");
+    const lilacText = await lilacCard.innerText();
+    const lilacAlt = (await lilacCard.locator("img").getAttribute("alt")) || "";
+    expect(lilacText).toMatch(/сирен|лаванд/i);
+    expect(lilacAlt).toMatch(/пастельно-сиреневый/i);
+    expect(lilacText).not.toContain("френч");
+    expect(lilacText).not.toContain("микро-френч");
+
+    // 2. Cornflower Sky Macro (work-04)
+    const cornflowerCard = page.locator("article#work-04");
+    const cornflowerText = await cornflowerCard.innerText();
+    const cornflowerAlt =
+      (await cornflowerCard.locator("img").getAttribute("alt")) || "";
+    expect(cornflowerText).toMatch(/голуб|васильк/i);
+    expect(cornflowerAlt).toMatch(/нежно-голубого/i);
+    expect(cornflowerText).not.toMatch(/лаванд|сирен/i);
+
+    // 3. Minimal French Contrast (work-05)
+    const frenchCard = page.locator("article#work-05");
+    const frenchText = await frenchCard.innerText();
+    const frenchAlt =
+      (await frenchCard.locator("img").getAttribute("alt")) || "";
+    expect(frenchText).toMatch(/френч/i);
+    expect(frenchAlt).toMatch(/френч/i);
+    expect(frenchText).not.toMatch(/индиго|морская волна/i);
+
+    // 4. Rose Quartz Shimmer (work-07)
+    const quartzCard = page.locator("article#work-07");
+    const quartzText = await quartzCard.innerText();
+    const quartzAlt =
+      (await quartzCard.locator("img").getAttribute("alt")) || "";
+    expect(quartzText).toMatch(/розов|кварц|шиммер/i);
+    expect(quartzAlt).toMatch(/розовый кварц/i);
+    expect(quartzText).not.toMatch(/алый|красный/i);
+  });
+
+  // Gate 14: Lightbox and Section 02 Moving Wall Metadata Integrity
+  test("Russian lightbox and Section 02 display correct canonical metadata for clicked works", async ({
+    page,
+  }) => {
+    await page.goto("/ru/gallery/");
+
+    // Click work-03 (Pastel Lilac Bliss)
+    const lilacCard = page.locator("article#work-03");
+    await lilacCard.click();
+
+    const lightbox = page.locator('div[role="dialog"].lightbox-overlay');
+    await expect(lightbox).toBeVisible();
+    await expect(lightbox.locator(".lightbox-title")).toContainText(
+      "Pastel Lilac Bliss",
+    );
+    const lightboxImgAlt =
+      (await lightbox.locator(".lightbox-image").getAttribute("alt")) || "";
+    expect(lightboxImgAlt).toBe(RU_PHOTO_LOCALES["work-03"]!.alt);
+    expect(lightboxImgAlt).not.toContain("френч");
+
+    // Close lightbox
+    await page.keyboard.press("Escape");
+    await expect(lightbox).not.toBeVisible();
+
+    // Click work-07 (Rose Quartz Shimmer)
+    const quartzCard = page.locator("article#work-07");
+    await quartzCard.click();
+    await expect(lightbox).toBeVisible();
+    await expect(lightbox.locator(".lightbox-title")).toContainText(
+      "Rose Quartz Shimmer",
+    );
+    const quartzLightboxAlt =
+      (await lightbox.locator(".lightbox-image").getAttribute("alt")) || "";
+    expect(quartzLightboxAlt).toBe(RU_PHOTO_LOCALES["work-07"]!.alt);
+    expect(quartzLightboxAlt).not.toMatch(/алый|красный/i);
+
+    await page.keyboard.press("Escape");
+    await expect(lightbox).not.toBeVisible();
   });
 });

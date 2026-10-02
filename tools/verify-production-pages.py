@@ -167,6 +167,40 @@ for ep in ALL_ENDPOINTS:
                     if articles < 19:
                         all_clean = False
 
+            if ep == "/ru/gallery/":
+                # Check semantic invariants for the 4 critical works
+                invariants = [
+                    ("work-03", "pastel-lilac-bliss", ["сирен", "лаванд"], ["френч", "ультратонким френчем"]),
+                    ("work-04", "cornflower-sky-closeup", ["голуб"], ["лаванд", "сирен"]),
+                    ("work-05", "french-yin-yang", ["френч"], ["индиго", "морская волна"]),
+                    ("work-07", "rose-quartz-shimmer", ["розов", "кварц", "шиммер"], ["алый", "красный"]),
+                ]
+                for art_id, slug, must_have_any, must_not_have_any in invariants:
+                    # Match article by ID
+                    art_m = re.search(rf'<article\s+id=[\'"]{art_id}[\'"][^>]*>(.*?)</article>', content, re.DOTALL)
+                    if not art_m:
+                        print(f"  [FAIL] Missing article #{art_id} on /ru/gallery/")
+                        all_clean = False
+                        continue
+                    art_text = art_m.group(1)
+                    if slug not in art_text:
+                        print(f"  [FAIL] Article #{art_id} does not contain slug {slug}")
+                        all_clean = False
+                    
+                    has_expected = any(w.lower() in art_text.lower() for w in must_have_any)
+                    if not has_expected:
+                        print(f"  [FAIL] Article #{art_id} missing expected Russian terms {must_have_any}")
+                        all_clean = False
+                    else:
+                        print(f"  [PASS] Article #{art_id} ({slug}) correctly contains {must_have_any}")
+
+                    has_forbidden = any(w.lower() in art_text.lower() for w in must_not_have_any)
+                    if has_forbidden:
+                        print(f"  [FAIL] Article #{art_id} contains forbidden mismatched terms {must_not_have_any}")
+                        all_clean = False
+                    else:
+                        print(f"  [PASS] Article #{art_id} ({slug}) 0 occurrences of {must_not_have_any}")
+
     except Exception as e:
         print(f"  [FAIL] Failed to fetch {ep}: {e}")
         all_clean = False
