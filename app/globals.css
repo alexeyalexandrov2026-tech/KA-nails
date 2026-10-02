@@ -608,7 +608,7 @@ h2.section-title {
   flex: 0 0 220px;
   transform: scale(0.88) rotateY(1.8deg) rotateX(-1deg);
   box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.08);
-  filter: contrast(0.94) brightness(0.92);
+  opacity: 0.86;
 }
 
 /* LAYER 1: PRIMARY EYE-LEVEL RAIL (center line, steady cadence) */
@@ -668,12 +668,12 @@ h2.section-title {
   border: 1px solid var(--line-subtle);
   cursor: pointer;
   transform-style: preserve-3d;
+  contain: layout paint;
   transition:
     transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
     box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1),
     border-color 0.3s ease,
-    opacity 0.4s ease,
-    filter 0.4s ease;
+    opacity 0.4s ease;
 }
 
 /* Hover and Focus Forward Projection */
@@ -688,15 +688,13 @@ h2.section-title {
     0 36px 72px -16px rgba(0, 0, 0, 0.36),
     0 0 0 2px var(--ink) !important;
   border-color: var(--ink);
-  filter: none !important;
   opacity: 1 !important;
 }
 
 /* When a card is hovered, non-hovered cards soften */
 .moving-wall-stage.has-hovered-card
   .moving-wall-card:not(.is-hovered):not(:hover):not(:focus-visible) {
-  opacity: 0.72;
-  filter: contrast(0.94) brightness(0.92);
+  opacity: 0.65;
 }
 
 .moving-card-media {
@@ -727,13 +725,12 @@ h2.section-title {
   inset: 0;
   background: linear-gradient(
     135deg,
-    rgba(255, 255, 255, 0.24) 0%,
-    rgba(255, 255, 255, 0.06) 40%,
-    rgba(255, 255, 255, 0) 70%
+    rgba(255, 255, 255, 0.22) 0%,
+    rgba(255, 255, 255, 0.05) 35%,
+    transparent 65%
   );
   pointer-events: none;
-  opacity: 0.65;
-  mix-blend-mode: overlay;
+  opacity: 0.7;
   transition: opacity 0.3s ease;
 }
 

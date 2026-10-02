@@ -277,9 +277,13 @@ export function HomeMovingWall() {
 
   const isPointerDownRef = useRef(false);
 
+  const stageRectRef = useRef<DOMRect | null>(null);
+
   // Pointer interaction: drag & 3D tilt
   const handlePointerDown = (e: React.PointerEvent) => {
     if (e.button !== 0) return;
+    if (stageRef.current)
+      stageRectRef.current = stageRef.current.getBoundingClientRect();
     isPointerDownRef.current = true;
     isDraggingRef.current = false;
     dragStartXRef.current = e.clientX;
@@ -308,7 +312,9 @@ export function HomeMovingWall() {
       }
     }
 
-    const rect = stage.getBoundingClientRect();
+    const rect =
+      stageRectRef.current ||
+      (stageRectRef.current = stage.getBoundingClientRect());
     const cx = rect.left + rect.width / 2;
     const cy = rect.top + rect.height / 2;
     targetMouseXRef.current = Math.max(
@@ -342,10 +348,13 @@ export function HomeMovingWall() {
 
   const handleMouseEnter = () => {
     isHoveredRef.current = true;
+    if (stageRef.current)
+      stageRectRef.current = stageRef.current.getBoundingClientRect();
   };
 
   const handleMouseLeave = () => {
     isHoveredRef.current = false;
+    stageRectRef.current = null;
     targetMouseXRef.current = 0;
     targetMouseYRef.current = 0;
   };
