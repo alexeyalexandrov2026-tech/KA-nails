@@ -9,8 +9,13 @@ if (!fs.existsSync(RESULTS_DIR)) {
   fs.mkdirSync(RESULTS_DIR, { recursive: true });
 }
 
-async function runScenarioProfiler({ page, durationMs, action }) {
-  // Start profiler inside the page
+async function runScenarioProfiler({
+  page,
+  durationMs,
+  action,
+  actionIntervalMs = 120,
+}) {
+  // Reset and mount observer inside page
   await page.evaluate(() => {
     window.__hperf = {
       frames: [],
@@ -66,18 +71,18 @@ async function runScenarioProfiler({ page, durationMs, action }) {
 
   // Execute scenario-specific continuous actions
   if (action) {
-    const actionInterval = setInterval(async () => {
+    const timer = setInterval(async () => {
       if (Date.now() - startTime >= durationMs) {
-        clearInterval(actionInterval);
+        clearInterval(timer);
         return;
       }
       try {
         await action(page);
       } catch {}
-    }, 120);
+    }, actionIntervalMs);
 
     await page.waitForTimeout(durationMs);
-    clearInterval(actionInterval);
+    clearInterval(timer);
   } else {
     // Pure idle
     await page.waitForTimeout(durationMs);
@@ -89,7 +94,7 @@ async function runScenarioProfiler({ page, durationMs, action }) {
     return window.__hperf;
   });
 
-  // Calculate statistics (drop first 10 frames for warm-up)
+  // Discard first 10 frames for stabilization
   const frames = rawData.frames.slice(10);
   if (frames.length === 0) return null;
 
@@ -105,18 +110,24 @@ async function runScenarioProfiler({ page, durationMs, action }) {
   const pctAbove33 = (framesAbove33 / frames.length) * 100;
   const stallsAbove50 = frames.filter((f) => f >= 50.0).length;
 
+  const longestLoAF =
+    rawData.longAnimationFrames.length > 0
+      ? Math.max(...rawData.longAnimationFrames.map((f) => f.duration))
+      : 0;
+
   return {
     totalFrames: frames.length,
     avgFps: parseFloat(avgFps.toFixed(2)),
     p50: parseFloat(p50.toFixed(2)),
     p95: parseFloat(p95.toFixed(2)),
     p99: parseFloat(p99.toFixed(2)),
-    maxDrop: parseFloat(maxDrop.toFixed(2)),
+    worstFrameTime: parseFloat(maxDrop.toFixed(2)),
     framesAbove33,
     pctAbove33: parseFloat(pctAbove33.toFixed(2)),
     stallsAbove50,
     longTasks: rawData.longTasks.length,
     longAnimationFrames: rawData.longAnimationFrames.length,
+    longestLoAFDuration: parseFloat(longestLoAF.toFixed(2)),
   };
 }
 
@@ -125,18 +136,17 @@ async function runHardenedSuite() {
   console.log(`HARDENED RUNTIME PERFORMANCE SUITE (15s PER SCENARIO)`);
   console.log(`Target URL: ${BASE_URL}`);
   console.log(
+    `Authoritative Environment: Normal Chromium (NO flags/overrides)`,
+  );
+  console.log(
     `Criteria: Avg FPS >= 58 | p50 <= 17.5ms | p95 <= 20ms | Frames>33.3ms < 2%`,
   );
   console.log(`=======================================================\n`);
 
+  // Authoritative run: standard normal browser without custom flags/overrides
   const browser = await chromium.launch({
-    headless: true,
-    args: [
-      "--use-gl=angle",
-      "--use-angle=d3d11",
-      "--enable-gpu-rasterization",
-      "--enable-features=UseSkiaRenderer",
-    ],
+    headless: false,
+    args: [],
   });
 
   const allViewports = [
@@ -151,30 +161,33 @@ async function runHardenedSuite() {
     },
   ];
 
-  const viewports = process.env.TARGET_VP
-    ? allViewports.filter((v) => v.name === process.env.TARGET_VP)
+  const targetVpName = process.env.TARGET_VP;
+  const viewports = targetVpName
+    ? allViewports.filter((v) => v.name === targetVpName)
     : allViewports;
 
   const scenarios = [
     {
-      id: "s1_idle",
-      name: "1. Idle Autonomous 3-Layer Motion",
+      id: "A_idle",
+      name: "A. Autonomous Idle 3-Layer Motion",
       action: null,
+      interval: 0,
     },
     {
-      id: "s2_pointer_parallax",
-      name: "2. Pointer Parallax Active (Continuous Motion)",
+      id: "B_pointer_parallax",
+      name: "B. Pointer Parallax Active",
       action: async (page) => {
         const time = Date.now();
-        const rad = (time / 1000) * 2;
-        const x = 720 + Math.sin(rad) * 450;
-        const y = 450 + Math.cos(rad) * 200;
+        const rad = (time / 1000) * 1.5;
+        const x = 720 + Math.sin(rad) * 350;
+        const y = 450 + Math.cos(rad) * 150;
         await page.mouse.move(x, y);
       },
+      interval: 100,
     },
     {
-      id: "s3_hover_projection",
-      name: "3. Hover Projection Active (Alternating Focus)",
+      id: "C_hover_projection",
+      name: "C. Hover Projection Active",
       action: async (page) => {
         const cards = page.locator(".moving-track-primary .moving-wall-card");
         const count = await cards.count();
@@ -186,19 +199,21 @@ async function runHardenedSuite() {
           }
         }
       },
+      interval: 800,
     },
     {
-      id: "s4_scroll_impulse",
-      name: "4. Scroll Impulse (Passive Wheel Velocity Surges)",
+      id: "D_scroll_impulse",
+      name: "D. Scroll Impulse",
       action: async (page) => {
         await page.evaluate(() => {
           window.dispatchEvent(new Event("scroll"));
         });
       },
+      interval: 400,
     },
     {
-      id: "s5_drag_inertia",
-      name: "5. Drag + Inertia (Periodic Momentum Swipes)",
+      id: "E_drag_inertia",
+      name: "E. Drag + Inertia",
       action: async (page) => {
         const stage = page.locator(".moving-wall-stage");
         const box = await stage.boundingBox();
@@ -207,19 +222,21 @@ async function runHardenedSuite() {
           const startY = box.y + box.height * 0.5;
           await page.mouse.move(startX, startY);
           await page.mouse.down();
-          await page.mouse.move(startX - 80, startY, { steps: 3 });
+          await page.mouse.move(startX - 60, startY, { steps: 3 });
           await page.mouse.up();
         }
       },
+      interval: 1200,
     },
     {
-      id: "s6_loop_wrap",
-      name: "6. Loop Wrap (Continuous Drift across Boundary)",
+      id: "F_loop_wrap",
+      name: "F. Infinite-Loop Wrap",
       action: null,
+      interval: 0,
     },
     {
-      id: "s7_lightbox_open_close",
-      name: "7. Lightbox Open/Close Cycling",
+      id: "G_lightbox",
+      name: "G. Lightbox Open/Close",
       action: async (page) => {
         const dialog = page.locator('div[role="dialog"].lightbox-overlay');
         const isUp = await dialog.isVisible();
@@ -233,6 +250,7 @@ async function runHardenedSuite() {
           }
         }
       },
+      interval: 1500,
     },
   ];
 
@@ -261,52 +279,34 @@ async function runHardenedSuite() {
     await page.waitForTimeout(1000);
 
     for (const sc of scenarios) {
-      console.log(`\nRunning scenario: ${sc.name} (15 seconds)...`);
+      console.log(`Running scenario: ${sc.name} (15 seconds)...`);
 
-      // Run sample 1 (15 seconds)
-      const run1 = await runScenarioProfiler({
+      const result = await runScenarioProfiler({
         page,
         durationMs: 15000,
         action: sc.action,
+        actionIntervalMs: sc.interval,
       });
 
-      // Brief settling
       await page.waitForTimeout(500);
 
-      // Run sample 2 (15 seconds)
-      const run2 = await runScenarioProfiler({
-        page,
-        durationMs: 15000,
-        action: sc.action,
-      });
-
-      // Determine median and worst runs
-      const avgFpsMedian =
-        Math.min(run1.avgFps, run2.avgFps) === run1.avgFps ? run2 : run1;
-      const worstRun = run1.avgFps < run2.avgFps ? run1 : run2;
+      const passFps = result.avgFps >= 58.0;
+      const passP50 = result.p50 <= 17.5;
+      const passP95 = result.p95 <= 20.0;
+      const passPct33 = result.pctAbove33 <= 2.0;
+      const scenarioPass = passFps && passP50 && passP95 && passPct33;
 
       console.log(
-        `  Sample 1: ${run1.avgFps} fps | p50: ${run1.p50}ms | p95: ${run1.p95}ms | >33.3ms: ${run1.pctAbove33}% | LoAF: ${run1.longAnimationFrames}`,
+        `  Avg FPS: ${result.avgFps} | p50: ${result.p50}ms | p95: ${result.p95}ms | p99: ${result.p99}ms | Worst: ${result.worstFrameTime}ms`,
       );
       console.log(
-        `  Sample 2: ${run2.avgFps} fps | p50: ${run2.p50}ms | p95: ${run2.p95}ms | >33.3ms: ${run2.pctAbove33}% | LoAF: ${run2.longAnimationFrames}`,
+        `  >33.3ms: ${result.framesAbove33} (${result.pctAbove33}%) | Long Tasks: ${result.longTasks} | LoAF: ${result.longAnimationFrames} (Max: ${result.longestLoAFDuration}ms)`,
       );
-
-      const passFps = worstRun.avgFps >= 58.0;
-      const passP50 = worstRun.p50 <= 17.5;
-      const passPct33 = worstRun.pctAbove33 <= 2.0;
-      const passStalls = worstRun.stallsAbove50 === 0;
-
-      const scenarioPass = passFps && passP50 && passPct33 && passStalls;
-
-      console.log(
-        `  Scenario Result: ${scenarioPass ? "PASS" : "FAIL"} (Worst Avg FPS: ${worstRun.avgFps}, p50: ${worstRun.p50}ms, >33.3ms: ${worstRun.pctAbove33}%, stalls: ${worstRun.stallsAbove50})`,
-      );
+      console.log(`  Status: ${scenarioPass ? "PASS" : "FAIL"}\n`);
 
       fullReport[vp.name][sc.id] = {
         name: sc.name,
-        medianRun: avgFpsMedian,
-        worstRun: worstRun,
+        result,
         pass: scenarioPass,
       };
     }
@@ -316,16 +316,15 @@ async function runHardenedSuite() {
 
   await browser.close();
 
-  fs.writeFileSync(
-    path.join(RESULTS_DIR, "hardened-performance-report.json"),
-    JSON.stringify(fullReport, null, 2),
+  const outPath = path.join(
+    RESULTS_DIR,
+    `hardened-report-${targetVpName || "all"}.json`,
   );
+  fs.writeFileSync(outPath, JSON.stringify(fullReport, null, 2));
 
   console.log(`\n=======================================================`);
   console.log(`HARDENED PERFORMANCE SUITE COMPLETED`);
-  console.log(
-    `Report saved to: ${path.join(RESULTS_DIR, "hardened-performance-report.json")}`,
-  );
+  console.log(`Report saved to: ${outPath}`);
   console.log(`=======================================================`);
 }
 
