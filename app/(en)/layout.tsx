@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { SiteLayout } from "../../components/site-layout";
+import "@fontsource-variable/inter";
+import "@fontsource-variable/inter-tight";
 import "../globals.css";
 
 export const metadata: Metadata = {

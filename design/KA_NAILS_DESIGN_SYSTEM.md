@@ -1,5 +1,7 @@
 # KA Nails — public salon website design system
 
+> **Status (October 2026):** the live site no longer follows the cream / Onest / rose-gold proposal below. It now uses the achromatic Studio.Design style reference in [`studio-design-reference.md`](studio-design-reference.md): `#eeeeee` canvas, `#222222` ink and controls, Inter (self-hosted, Latin + Cyrillic) for display and body, Inter Tight for navigation and labels, -0.04em display tracking, 8px buttons and cards, 4px compact controls and images, and a shadow only on prominent button hover. Implemented tokens live in `app/globals.css` `:root`. The KA Nails logo rules below still apply. The proposal is kept for history.
+
 **Version:** design proposal v1, 30 September 2026  
 **Scope:** public tenant website and customer booking journey  
 **Sources:** supplied `DESIGN (3).md` (Arsenijs Fabrica style reference) and the original [KA Nails logo](../public/assets/ka-nails-logo.png). The reference is a beauty editorial direction, not a salon content template.

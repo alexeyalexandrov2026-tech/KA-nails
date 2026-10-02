@@ -6,6 +6,25 @@
   --color-soft-ash: #555555;
   --color-absolute-black: #000000;
 
+  /* Studio.Design style reference (design/studio-design-reference.md) */
+  --font-inter: "Inter Variable", "Inter", Arial, "Helvetica Neue", sans-serif;
+  --font-inter-tight:
+    "Inter Tight Variable", "Inter Tight", "Inter Variable", "Arial Narrow",
+    sans-serif;
+  --text-hero-display: 80px;
+  --tracking-display: -0.04em;
+  --text-section-heading: 48px;
+  --text-nav: 15px;
+  --leading-nav: 1.4;
+  --text-legal: 11px;
+  --section-gap: 60px;
+  --radius-cards: 8px;
+  --radius-images: 4px;
+  --radius-buttons: 8px;
+  --radius-compactbuttons: 4px;
+  --radius-utilitysurfaces: 12px;
+  --panel-text: #f7f7f7;
+
   --canvas: var(--color-studio-canvas);
   --surface: var(--color-paper-white);
   --ink: var(--color-charcoal-ink);
@@ -15,13 +34,14 @@
   --accent-text: var(--color-charcoal-ink);
   --line: #d8d8d8;
   --line-subtle: #e2e2e2;
-  --rose: #b8937f;
-  --rose-light: #f0eae5;
+  --rose: var(--color-graphite);
+  --rose-light: var(--panel-text);
   --focus: #000000;
-  --shadow-subtle: 0 2px 10px rgba(0, 0, 0, 0.05);
-  --shadow-elevated: 0 4px 20px rgba(0, 0, 0, 0.08);
+  /* Only prominent button hovers are elevated; cards and tiles stay flat. */
+  --shadow-subtle: none;
+  --shadow-elevated: none;
   --shadow-md: 0px 2px 15px rgba(0, 0, 0, 0.1);
-  --shadow-lightbox: 0 24px 60px rgba(0, 0, 0, 0.65);
+  --shadow-lightbox: none;
 }
 
 * {
@@ -40,9 +60,8 @@ html {
 body {
   background: var(--canvas);
   color: var(--ink);
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
-    sans-serif;
+  font-family: var(--font-inter);
+  font-feature-settings: "palt";
   font-size: 16px;
   line-height: 1.6;
   overflow-x: hidden;
@@ -101,9 +120,9 @@ iframe:focus-visible,
 
 .wordmark {
   text-decoration: none;
-  font-size: 26px;
-  font-weight: 400;
-  letter-spacing: -0.03em;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: var(--tracking-display);
   min-height: 44px;
   display: inline-flex;
   flex-direction: column;
@@ -114,12 +133,12 @@ iframe:focus-visible,
 
 .wordmark span {
   display: block;
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.2em;
-  color: var(--accent-text);
-  margin-top: 3px;
+  font-family: var(--font-inter-tight);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--muted);
+  margin-top: 2px;
 }
 
 nav {
@@ -132,8 +151,10 @@ nav a {
   display: inline-flex;
   align-items: center;
   min-height: 44px;
-  font-size: 15px;
+  font-family: var(--font-inter-tight);
+  font-size: var(--text-nav);
   font-weight: 500;
+  line-height: var(--leading-nav);
   color: var(--ink);
   text-decoration: none;
   padding: 0 4px;
@@ -159,9 +180,8 @@ nav a:hover,
   gap: 2px;
   background: var(--surface);
   border: 1px solid var(--line-subtle);
-  border-radius: 999px;
-  padding: 3px 6px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  border-radius: var(--radius-compactbuttons);
+  padding: 3px;
 }
 
 .lang-switcher-item {
@@ -171,12 +191,13 @@ nav a:hover,
   min-width: 32px;
   min-height: 28px;
   padding: 0 6px;
-  font-size: 11px;
+  font-family: var(--font-inter-tight);
+  font-size: 13px;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   color: var(--muted);
   text-decoration: none;
-  border-radius: 999px;
+  border-radius: var(--radius-compactbuttons);
   transition:
     color 0.15s ease,
     background 0.15s ease;
@@ -188,8 +209,8 @@ nav a:hover,
 }
 
 .lang-switcher-item.is-active {
-  color: var(--ink);
-  background: var(--canvas);
+  color: var(--color-paper-white);
+  background: var(--color-charcoal-ink);
 }
 
 .lang-divider {
@@ -212,9 +233,10 @@ nav a:hover,
   min-height: 44px;
   min-width: 44px;
   text-decoration: none;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
-  letter-spacing: -0.04em;
+  line-height: 1.4;
+  letter-spacing: var(--tracking-display);
   cursor: pointer;
   transition:
     background 0.2s ease,
@@ -236,17 +258,18 @@ nav a:hover,
   align-items: center;
   justify-content: center;
   gap: 10px;
-  background: transparent;
-  color: var(--color-charcoal-ink);
+  background: var(--color-paper-white);
+  color: var(--color-graphite);
   border: 1px solid var(--color-charcoal-ink);
-  border-radius: 8px;
+  border-radius: var(--radius-buttons);
   padding: 12px 24px;
   min-height: 44px;
   min-width: 44px;
   text-decoration: none;
-  font-size: 15px;
-  font-weight: 500;
-  letter-spacing: -0.02em;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: var(--tracking-display);
   cursor: pointer;
   transition:
     border-color 0.2s ease,
@@ -256,7 +279,7 @@ nav a:hover,
 }
 
 .button-secondary:hover {
-  background: rgba(34, 34, 34, 0.06);
+  background: var(--color-paper-white);
   border-color: var(--color-charcoal-ink);
   box-shadow: var(--shadow-md);
   transform: translateY(-1px);
@@ -265,10 +288,10 @@ nav a:hover,
 
 /* Base Headings & Eyebrows */
 .eyebrow {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  font-family: var(--font-inter-tight);
+  font-size: var(--text-nav);
+  font-weight: 500;
+  line-height: var(--leading-nav);
   color: var(--accent-text);
   margin-bottom: 12px;
 }
@@ -277,17 +300,22 @@ h1,
 h2,
 h3 {
   color: var(--ink);
-  font-weight: 300;
-  letter-spacing: -0.04em;
-  line-height: 1.08;
+  font-weight: 600;
+  letter-spacing: var(--tracking-display);
+  line-height: 1.1;
 }
 
 h1 {
-  font-size: clamp(40px, 5.8vw, 84px);
+  font-size: clamp(40px, 5.6vw, var(--text-hero-display));
+  line-height: 1;
+}
+
+h2 {
+  font-weight: 700;
 }
 
 h2.section-title {
-  font-size: clamp(32px, 4vw, 56px);
+  font-size: clamp(32px, 4vw, var(--text-section-heading));
   margin: 12px 0 20px;
 }
 
@@ -345,10 +373,10 @@ h2.section-title {
   gap: 20px;
   padding-top: 24px;
   border-top: 1px solid var(--line-subtle);
-  font-size: 12px;
+  font-family: var(--font-inter-tight);
+  font-size: 14px;
   font-weight: 500;
   color: var(--muted);
-  letter-spacing: 0.02em;
 }
 
 .studio-badge-item {
@@ -386,9 +414,8 @@ h2.section-title {
 /* Collage Tiles */
 .collage-tile {
   position: absolute;
-  border-radius: 8px;
+  border-radius: var(--radius-images);
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.8);
   background: var(--surface);
   transform-style: preserve-3d;
@@ -399,7 +426,6 @@ h2.section-title {
 
 .collage-tile:hover {
   transform: translateY(-8px) scale(1.02);
-  box-shadow: var(--shadow-md);
   border-color: var(--color-charcoal-ink);
   z-index: 40 !important;
 }
@@ -414,10 +440,9 @@ h2.section-title {
   position: absolute;
   bottom: 8px;
   left: 10px;
-  font-size: 10px;
+  font-family: var(--font-inter-tight);
+  font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
   color: #ffffff;
   background: rgba(34, 34, 34, 0.85);
   padding: 4px 8px;
@@ -499,10 +524,10 @@ h2.section-title {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
-  font-weight: 600;
+  font-family: var(--font-inter-tight);
+  font-size: 13px;
+  font-weight: 500;
   color: var(--color-charcoal-ink);
-  box-shadow: var(--shadow-md);
   transform: translateZ(60px);
 }
 
@@ -510,8 +535,8 @@ h2.section-title {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #22c55e;
-  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.25);
+  background: var(--color-charcoal-ink);
+  box-shadow: 0 0 0 2px rgba(34, 34, 34, 0.2);
   display: inline-block;
   animation: pulse-green 2s infinite ease-in-out;
 }
@@ -550,7 +575,7 @@ h2.section-title {
 /* HOMEPAGE MOVING WALL SHOWCASE (3-LAYER 3D SPATIAL EXHIBITION) */
 /* ============================================================ */
 .moving-wall-section {
-  padding: 72px 0 88px;
+  padding: var(--section-gap) 0 calc(var(--section-gap) + 28px);
   border-top: 1px solid var(--line-subtle);
   border-bottom: 1px solid var(--line-subtle);
   background: var(--canvas);
@@ -673,7 +698,6 @@ h2.section-title {
 .moving-card-layer-bg {
   flex: 0 0 220px;
   transform: scale(0.88) rotateY(1.8deg) rotateX(-1deg);
-  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.08);
   opacity: 0.86;
 }
 
@@ -692,7 +716,6 @@ h2.section-title {
 .moving-card-layer-mid {
   flex: 0 0 280px;
   transform: scale(1) rotateY(-1.5deg) rotateX(1deg);
-  box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.12);
 }
 
 /* LAYER 2: FOREGROUND HEROES (larger, closer, faster) */
@@ -712,9 +735,6 @@ h2.section-title {
   flex: 0 0 330px;
   pointer-events: auto;
   transform: scale(1.12) rotateY(-2.5deg) rotateX(1.8deg) rotateZ(-0.6deg);
-  box-shadow:
-    0 16px 32px -8px rgba(0, 0, 0, 0.22),
-    0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
 /* Common Moving Track */
@@ -729,7 +749,7 @@ h2.section-title {
 .moving-wall-card {
   position: relative;
   background: var(--surface);
-  border-radius: 10px;
+  border-radius: var(--radius-cards);
   overflow: hidden;
   border: 1px solid var(--line-subtle);
   cursor: pointer;
@@ -750,9 +770,7 @@ h2.section-title {
   z-index: 50 !important;
   will-change: transform, box-shadow;
   transform: translateZ(120px) scale(1.16) rotateY(0deg) rotateX(0deg) !important;
-  box-shadow:
-    0 36px 72px -16px rgba(0, 0, 0, 0.36),
-    0 0 0 2px var(--ink) !important;
+  box-shadow: 0 0 0 2px var(--ink) !important;
   border-color: var(--ink);
   opacity: 1 !important;
 }
@@ -767,7 +785,7 @@ h2.section-title {
   position: relative;
   width: 100%;
   aspect-ratio: 4 / 5;
-  background: #111111;
+  background: var(--color-absolute-black);
   overflow: hidden;
 }
 
@@ -828,9 +846,7 @@ h2.section-title {
   font-size: 12px;
   font-weight: 600;
   padding: 7px 16px;
-  border-radius: 4px;
-  letter-spacing: 0.02em;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-radius: var(--radius-compactbuttons);
 }
 
 .moving-card-caption {
@@ -841,16 +857,16 @@ h2.section-title {
 }
 
 .moving-card-cat {
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
+  font-family: var(--font-inter-tight);
+  font-size: 12px;
+  font-weight: 500;
   color: var(--muted);
 }
 
 .moving-card-title {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
+  letter-spacing: var(--tracking-display);
   color: var(--ink);
   line-height: 1.3;
 }
@@ -932,7 +948,7 @@ h2.section-title {
 .editorial-pillars {
   max-width: 1440px;
   margin: auto;
-  padding: 88px 5vw;
+  padding: calc(var(--section-gap) + 28px) 5vw;
 }
 
 .pillars-intro {
@@ -948,25 +964,24 @@ h2.section-title {
 .pillar-card {
   background: var(--surface);
   border: 1px solid var(--line-subtle);
-  border-radius: 12px;
-  padding: 36px 32px;
+  border-radius: var(--radius-cards);
+  padding: 32px 28px;
   display: flex;
   flex-direction: column;
-  box-shadow: var(--shadow-subtle);
 }
 
 .pillar-num {
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.16em;
-  color: var(--accent-text);
+  font-family: var(--font-inter-tight);
+  font-size: var(--text-nav);
+  font-weight: 500;
+  color: var(--muted);
   margin-bottom: 20px;
 }
 
 .pillar-title {
-  font-size: 22px;
-  font-weight: 400;
-  letter-spacing: -0.02em;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: var(--tracking-display);
   margin-bottom: 14px;
   line-height: 1.25;
 }
@@ -1003,11 +1018,10 @@ h2.section-title {
 .service-preview-card {
   background: var(--surface);
   border: 1px solid var(--line-subtle);
-  border-radius: 12px;
-  padding: 36px 32px;
+  border-radius: var(--radius-cards);
+  padding: 32px 28px;
   display: flex;
   flex-direction: column;
-  box-shadow: var(--shadow-subtle);
   position: relative;
   transition:
     transform 0.2s ease,
@@ -1027,10 +1041,9 @@ h2.section-title {
 }
 
 .service-tag {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font-family: var(--font-inter-tight);
+  font-size: 13px;
+  font-weight: 500;
   color: var(--muted);
 }
 
@@ -1045,9 +1058,9 @@ h2.section-title {
 }
 
 .service-name {
-  font-size: 24px;
-  font-weight: 400;
-  letter-spacing: -0.02em;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: var(--tracking-display);
   margin-bottom: 12px;
   line-height: 1.2;
 }
@@ -1099,14 +1112,14 @@ h2.section-title {
 
 .final-title {
   color: #ffffff;
-  font-size: clamp(34px, 4.5vw, 60px);
+  font-size: clamp(32px, 4vw, var(--text-section-heading));
   margin: 12px 0 20px;
 }
 
 .final-desc {
   font-size: 17px;
   line-height: 1.6;
-  color: #dcd6cd;
+  color: var(--panel-text);
   max-width: 58ch;
   margin-bottom: 36px;
 }
@@ -1125,10 +1138,13 @@ h2.section-title {
 }
 
 .final-btn:hover {
-  background: #f0e9e1;
+  background: var(--color-paper-white);
+  color: var(--color-graphite);
+  border-color: var(--color-paper-white);
 }
 
 .final-btn-secondary {
+  background: transparent;
   border-color: rgba(255, 255, 255, 0.4);
   color: #ffffff;
 }
@@ -1179,9 +1195,10 @@ h2.section-title {
   background: var(--surface);
   border: 1px solid var(--line);
   color: var(--ink);
-  border-radius: 8px;
+  border-radius: var(--radius-compactbuttons);
   padding: 8px 18px;
-  font-size: 14px;
+  font-family: var(--font-inter-tight);
+  font-size: var(--text-nav);
   font-weight: 500;
   cursor: pointer;
   min-height: 44px;
@@ -1197,7 +1214,6 @@ h2.section-title {
   background: var(--ink);
   color: #ffffff;
   border-color: var(--ink);
-  box-shadow: var(--shadow-md);
 }
 
 .pill-count {
@@ -1224,10 +1240,9 @@ h2.section-title {
 .inventory-badge {
   background: var(--color-charcoal-ink);
   color: #ffffff;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-family: var(--font-inter-tight);
+  font-size: 13px;
+  font-weight: 600;
   padding: 4px 10px;
   border-radius: 4px;
   white-space: nowrap;
@@ -1271,7 +1286,6 @@ h2.section-title {
 .gallery-card:hover,
 .gallery-card:has(.gallery-card-trigger:hover) {
   transform: translateY(-6px);
-  box-shadow: var(--shadow-md);
   border-color: var(--ink);
 }
 
@@ -1316,7 +1330,7 @@ h2.section-title {
 .gallery-card-media {
   position: relative;
   width: 100%;
-  background: #111111;
+  background: var(--color-absolute-black);
   overflow: hidden;
 }
 
@@ -1384,10 +1398,9 @@ h2.section-title {
 }
 
 .card-category {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-family: var(--font-inter-tight);
+  font-size: 13px;
+  font-weight: 500;
   color: var(--accent-text);
 }
 
@@ -1398,8 +1411,8 @@ h2.section-title {
 
 .card-title {
   font-size: 18px;
-  font-weight: 400;
-  letter-spacing: -0.015em;
+  font-weight: 600;
+  letter-spacing: var(--tracking-display);
   line-height: 1.25;
 }
 
@@ -1432,7 +1445,7 @@ h2.section-title {
 .gallery-cta-band {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: var(--radius-utilitysurfaces);
   padding: clamp(36px, 5vw, 64px);
   box-shadow: var(--shadow-subtle);
 }
@@ -1442,7 +1455,7 @@ h2.section-title {
 }
 
 .gallery-cta-content h2 {
-  font-size: clamp(28px, 3.5vw, 44px);
+  font-size: clamp(28px, 3.5vw, var(--text-section-heading));
   margin: 12px 0 16px;
 }
 
@@ -1460,7 +1473,7 @@ h2.section-title {
   position: fixed;
   inset: 0;
   z-index: 2000;
-  background: rgba(18, 14, 12, 0.94);
+  background: rgba(34, 34, 34, 0.96);
   backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
@@ -1513,9 +1526,9 @@ h2.section-title {
   background: rgba(255, 255, 255, 0.15);
   color: #ffffff;
   border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 999px;
+  border-radius: var(--radius-buttons);
   padding: 8px 16px;
-  font-size: 13px;
+  font-size: 14px;
   min-height: 44px;
   cursor: pointer;
   transition: background 0.2s ease;
@@ -1571,8 +1584,7 @@ h2.section-title {
   width: auto;
   max-width: 100%;
   object-fit: contain;
-  border-radius: 8px;
-  box-shadow: var(--shadow-lightbox);
+  border-radius: var(--radius-images);
 }
 
 .lightbox-nav-btn {
@@ -1624,9 +1636,9 @@ h2.section-title {
 }
 
 .lightbox-eyebrow {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
+  font-family: var(--font-inter-tight);
+  font-size: 13px;
+  font-weight: 500;
   color: var(--rose-light);
   margin-bottom: 4px;
 }
@@ -1634,14 +1646,14 @@ h2.section-title {
 .lightbox-title {
   color: #ffffff;
   font-size: 22px;
-  font-weight: 400;
-  letter-spacing: -0.02em;
+  font-weight: 600;
+  letter-spacing: var(--tracking-display);
   line-height: 1.25;
 }
 
 .lightbox-technique {
   font-size: 13px;
-  color: #c8bebe;
+  color: var(--panel-text);
   margin-top: 4px;
 }
 
@@ -1652,9 +1664,10 @@ h2.section-title {
   background: #ffffff;
   color: var(--ink);
   padding: 12px 24px;
-  border-radius: 999px;
-  font-size: 14px;
+  border-radius: var(--radius-buttons);
+  font-size: 16px;
   font-weight: 600;
+  letter-spacing: var(--tracking-display);
   text-decoration: none;
   min-height: 44px;
   min-width: 44px;
@@ -1663,7 +1676,8 @@ h2.section-title {
 }
 
 .lightbox-book-btn:hover {
-  background: #ecdcd2;
+  background: var(--color-paper-white);
+  box-shadow: var(--shadow-md);
 }
 
 /* ============================================================ */
@@ -1678,10 +1692,9 @@ h2.section-title {
 .notice {
   margin: 48px 0;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--radius-cards);
   padding: clamp(24px, 4vw, 48px);
   background: var(--surface);
-  box-shadow: var(--shadow-subtle);
 }
 
 .notice h2 {
@@ -1725,7 +1738,8 @@ h2.section-title {
   justify-content: space-between;
   gap: 32px;
   border-top: 1px solid var(--line);
-  font-size: 14px;
+  font-family: var(--font-inter-tight);
+  font-size: var(--text-nav);
   color: var(--muted);
 }
 
@@ -1741,8 +1755,10 @@ h2.section-title {
 
 .footer-title {
   display: block;
-  font-size: 15px;
-  font-weight: 600;
+  font-family: var(--font-inter);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: var(--tracking-display);
   color: var(--ink);
 }
 
@@ -1765,7 +1781,9 @@ h2.section-title {
   align-items: center;
   color: var(--ink);
   text-decoration: none;
-  font-size: 14px;
+  font-size: var(--text-nav);
+  font-weight: 500;
+  line-height: var(--leading-nav);
 }
 
 .footer-links a:hover {
