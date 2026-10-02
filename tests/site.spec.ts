@@ -15,7 +15,7 @@ test("salon website preserves original logo, noindex and responsive navigation",
       .digest("hex"),
   ).toBe("bb2fe1c05eb7183b8b8f55eee861b06d80256cf5349b2958e1432fa3b83fbf53");
   await page.goto("/");
-  await expect(page).toHaveTitle("KA Nails — Nail Studio");
+  await expect(page).toHaveTitle("KA Nails");
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
     "content",
     /noindex/,

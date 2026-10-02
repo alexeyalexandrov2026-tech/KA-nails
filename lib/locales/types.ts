@@ -17,7 +17,6 @@ export interface LocaleDictionary {
   };
   nav: {
     brandName: string;
-    brandSubtitle: string;
     brandHomeAria: string;
     skipToContent: string;
     services: string;

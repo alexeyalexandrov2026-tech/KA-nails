@@ -4,7 +4,7 @@ import { BookContent } from "../../../components/book-content";
 export const metadata: Metadata = {
   title: "Запись на процедуру",
   description:
-    "Запись на услуги маникюра и педикюра в студию KA Nails после запуска онлайн-бронирования.",
+    "Запись на педикюр в студию KA Nails после запуска онлайн-бронирования.",
   alternates: {
     canonical: "https://ka-nails.pages.dev/ru/book/",
     languages: {

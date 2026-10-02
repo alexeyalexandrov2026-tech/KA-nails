@@ -6,11 +6,11 @@ import "../globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "KA Nails — Студия маникюра и педикюра",
+    default: "KA Nails",
     template: "%s | KA Nails",
   },
   description:
-    "Студия ногтевой эстетики KA Nails. Познакомьтесь с услугами студии и запишитесь на процедуру после открытия онлайн-записи.",
+    "Педикюр в студии KA Nails. Познакомьтесь с услугами студии и запишитесь на процедуру после открытия онлайн-записи.",
   robots: { index: false, follow: false },
   alternates: {
     canonical: "https://ka-nails.pages.dev/ru/",

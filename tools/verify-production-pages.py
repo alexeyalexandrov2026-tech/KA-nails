@@ -145,8 +145,8 @@ for ep in ALL_ENDPOINTS:
                         all_clean = False
 
                 # Check localized logo alt and lang="en" wrappers
-                if 'alt="KA Nails Студия маникюра"' in content:
-                    print(f"  [PASS] Found localized Russian logo alt: 'KA Nails Студия маникюра'")
+                if 'alt="KA Nails"' in content:
+                    print(f"  [PASS] Found logo alt: 'KA Nails'")
                 else:
                     print(f"  [FAIL] Missing localized Russian logo alt")
                     all_clean = False

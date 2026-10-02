@@ -4,7 +4,7 @@ import { BookContent } from "../../../components/book-content";
 export const metadata: Metadata = {
   title: "Book an appointment",
   description:
-    "Explore services and check appointment availability for KA Nails Nail Studio.",
+    "Explore services and check appointment availability for KA Nails.",
   alternates: {
     canonical: "https://ka-nails.pages.dev/book/",
     languages: {

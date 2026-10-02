@@ -4,7 +4,7 @@ import { ContactContent } from "../../../components/contact-content";
 export const metadata: Metadata = {
   title: "Studio information",
   description:
-    "Studio address, contact details and opening hours for KA Nails Nail Studio.",
+    "Studio address, contact details and opening hours for KA Nails.",
   alternates: {
     canonical: "https://ka-nails.pages.dev/contact/",
     languages: {

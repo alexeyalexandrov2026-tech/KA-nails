@@ -3,10 +3,10 @@ import type { LocaleDictionary } from "./types";
 export const enLocale: LocaleDictionary = {
   locale: "en",
   meta: {
-    siteTitle: "KA Nails — Nail Studio",
+    siteTitle: "KA Nails",
     siteTitleTemplate: "%s | KA Nails",
     siteDescription:
-      "KA Nails Nail Studio. Explore services and reserve an appointment when online booking becomes available.",
+      "Pedicure at KA Nails. Explore services and reserve an appointment when online booking becomes available.",
     servicesTitle: "Services — KA Nails",
     servicesDescription:
       "Published studio services, prices and durations will appear in the booking portal when online booking opens.",
@@ -15,14 +15,13 @@ export const enLocale: LocaleDictionary = {
       "Explore authentic salon pedicure artistry, deep bordeaux gloss, royal cobalt, pastel lilac, and attentive care by KA Nails.",
     contactTitle: "Studio Information — KA Nails",
     contactDescription:
-      "Studio address, contact details and opening hours for KA Nails Nail Studio.",
+      "Studio address, contact details and opening hours for KA Nails.",
     bookTitle: "Book an Appointment — KA Nails",
     bookDescription:
-      "Explore services and check appointment availability for KA Nails Nail Studio.",
+      "Explore services and check appointment availability for KA Nails.",
   },
   nav: {
     brandName: "KA Nails",
-    brandSubtitle: "Nail Studio",
     brandHomeAria: "KA Nails home",
     skipToContent: "Skip to content",
     services: "Services",
@@ -33,20 +32,20 @@ export const enLocale: LocaleDictionary = {
     langSwitchAriaLabel: "Select language",
   },
   footer: {
-    brandTitle: "KA Nails · Nail Studio",
+    brandTitle: "KA Nails",
     brandSub: "Authentic salon portfolio & attentive care",
     services: "Services",
     gallery: "Gallery",
     book: "Book Appointment",
     contact: "Studio information",
-    logoAlt: "KA Nails Nail Studio",
+    logoAlt: "KA Nails",
   },
   hero: {
-    eyebrow: "KA Nails · Nail Studio",
+    eyebrow: "KA Nails",
     headingLine1: "A little care.",
     headingLine2: "A moment of pure artistry.",
     description:
-      "Carefully crafted nail and pedicure artistry. Explore our verified portfolio of authentic salon works while online booking preparation is underway.",
+      "Carefully crafted pedicure artistry. Explore our verified portfolio of authentic salon works while online booking preparation is underway.",
     bookCta: "Book an appointment",
     galleryCta: "Explore gallery (19)",
     badge1: "Curated Pedicure Artistry",
@@ -133,7 +132,7 @@ export const enLocale: LocaleDictionary = {
   },
   galleryPage: {
     eyebrow: "KA Nails / Studio Exhibition",
-    title: "Curated Nail Artistry & Pedicure Portfolio",
+    title: "Curated Pedicure Portfolio",
     sectionHeading: "Selected Works Portfolio",
     lead: "Explore our archive of authentic studio works. From refined French lines and deep bordeaux gloss to restorative aesthetic care and attentive salon detailing.",
     filterAriaLabel: "Filter gallery by technique",

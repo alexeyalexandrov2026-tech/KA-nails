@@ -22,7 +22,7 @@ test.describe("Cloudflare Deployed Production QA - KA Nails", () => {
     );
 
     await page.goto(`${BASE_URL}/`);
-    await expect(page).toHaveTitle("KA Nails — Nail Studio");
+    await expect(page).toHaveTitle("KA Nails");
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
       "content",
       /noindex/,

@@ -50,6 +50,15 @@ test.describe("KA Nails Bilingual English + Russian Test Suite", () => {
     });
   }
 
+  // Gate 1b: Pedicure-only studio — no manicure wording on any route
+  for (const route of [...EN_ROUTES, ...RU_ROUTES]) {
+    test(`Route ${route} does not mention manicure`, async ({ page }) => {
+      await page.goto(route);
+      const html = await page.content();
+      expect(html).not.toMatch(/manicur|маникюр/i);
+    });
+  }
+
   // Gate 2: Route-preserving Language Switcher
   test("Language switcher preserves equivalent routes in both directions", async ({
     page,
@@ -102,7 +111,8 @@ test.describe("KA Nails Bilingual English + Russian Test Suite", () => {
     await page.goto("/ru/");
 
     // Header & Nav
-    await expect(page.locator(".wordmark span")).toHaveText("Студия маникюра");
+    await expect(page.locator(".wordmark")).toHaveText("KA Nails");
+    await expect(page.locator(".wordmark span")).toHaveCount(0);
     const nav = page.locator("nav.main-nav");
     await expect(nav.getByRole("link", { name: "Услуги" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Галерея" })).toBeVisible();
@@ -114,7 +124,7 @@ test.describe("KA Nails Bilingual English + Russian Test Suite", () => {
       "Деликатный уход.",
     );
     await expect(page.locator(".hero-description")).toContainText(
-      "Эстетика педикюра и маникюра, созданная со вниманием к деталям.",
+      "Эстетика педикюра, созданная со вниманием к деталям.",
     );
     await expect(page.locator(".hero-studio-badges")).toContainText(
       "Авторский педикюр",
@@ -155,7 +165,7 @@ test.describe("KA Nails Bilingual English + Russian Test Suite", () => {
 
     // Footer
     await expect(page.locator(".footer-brand-text .footer-title")).toHaveText(
-      "KA Nails · Студия маникюра",
+      "KA Nails",
     );
     await expect(page.locator(".footer-brand-text .footer-sub")).toHaveText(
       "Подлинное портфолио студии и внимательный уход",
@@ -343,10 +353,8 @@ test.describe("KA Nails Bilingual English + Russian Test Suite", () => {
       ),
     ).toBeVisible();
 
-    // Check logo image alt is localized
-    await expect(
-      heroCollage.locator('img[alt="KA Nails Студия маникюра"]'),
-    ).toBeVisible();
+    // Check logo image alt names the studio
+    await expect(heroCollage.locator('img[alt="KA Nails"]')).toBeVisible();
 
     // Check visible English titles wrapped with lang="en" in micro-labels
     const microLabelsEn = heroCollage.locator(

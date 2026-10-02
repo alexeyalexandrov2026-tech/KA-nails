@@ -32,7 +32,6 @@ export function SiteLayout({ locale, children }: SiteLayoutProps) {
             className="wordmark"
           >
             {dict.nav.brandName}
-            <span>{dict.nav.brandSubtitle}</span>
           </Link>
 
           <nav aria-label={dict.nav.navAriaLabel} className="main-nav">

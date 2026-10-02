@@ -154,11 +154,7 @@ export function HeroCollage({ locale = "en" }: HeroCollageProps) {
           <div className="collage-tile tile-logo" data-layer="base">
             <Image
               src="/assets/ka-nails-logo.png"
-              alt={
-                locale === "ru"
-                  ? "KA Nails Студия маникюра"
-                  : "KA Nails Nail Studio"
-              }
+              alt="KA Nails"
               width={1254}
               height={1254}
               priority
