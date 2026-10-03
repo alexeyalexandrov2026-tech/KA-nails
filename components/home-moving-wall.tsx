@@ -571,8 +571,7 @@ export function HomeMovingWall({ locale = "en" }: HomeMovingWallProps) {
                         width={item.width}
                         height={item.height}
                         unoptimized
-                        priority={index < 4}
-                        loading={index < 4 ? "eager" : "lazy"}
+                        loading="lazy"
                         className="moving-card-image"
                         sizes="(max-width: 767px) 210px, 280px"
                       />
@@ -660,8 +659,7 @@ export function HomeMovingWall({ locale = "en" }: HomeMovingWallProps) {
                         width={item.width}
                         height={item.height}
                         unoptimized
-                        priority={index < 2}
-                        loading={index < 2 ? "eager" : "lazy"}
+                        loading="lazy"
                         className="moving-card-image"
                         sizes="(max-width: 767px) 260px, 340px"
                       />
@@ -749,11 +747,12 @@ export function HomeMovingWall({ locale = "en" }: HomeMovingWallProps) {
                   >
                     <div className="moving-card-media">
                       <Image
-                        src={item.srcMed || item.src}
+                        src={item.srcThumb || item.srcMed || item.src}
                         alt={isClone ? "" : item.alt}
                         width={item.width}
                         height={item.height}
                         unoptimized
+                        loading="lazy"
                         className="moving-card-image"
                         sizes="(max-width: 767px) 170px, 230px"
                       />

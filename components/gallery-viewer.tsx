@@ -143,7 +143,11 @@ export function GalleryViewer({
 
   const handleShare = async () => {
     if (!currentItem) return;
-    const url = window.location.href;
+    // Link straight to this artwork in the gallery of the current language.
+    const url = new URL(
+      `${getLocalizedPath("/gallery/", locale)}#${currentItem.id}`,
+      window.location.origin,
+    ).toString();
     try {
       if (navigator.share) {
         await navigator.share({

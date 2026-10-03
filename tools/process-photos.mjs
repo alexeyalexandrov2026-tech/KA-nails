@@ -323,7 +323,7 @@ const PHOTO_DEFINITIONS = [
 
 async function main() {
   const publicPhotosDir = path.resolve("public/photos");
-  const originalsDir = path.resolve("public/photos/originals");
+  const originalsDir = path.resolve("source-assets/photos/originals");
 
   await fs.mkdir(publicPhotosDir, { recursive: true });
   await fs.mkdir(originalsDir, { recursive: true });

@@ -181,7 +181,7 @@ export function GalleryArchive({ locale = "en" }: GalleryArchiveProps) {
           <p className="eyebrow">{dict.ctaEyebrow}</p>
           <h2>{dict.ctaTitle}</h2>
           <p className="lead">{dict.ctaLead}</p>
-          <div className="cta-actions">
+          <div className="cta-action-row">
             <Link href={bookHref} className="button">
               {dict.ctaBookBtn} <span aria-hidden="true">↗</span>
             </Link>

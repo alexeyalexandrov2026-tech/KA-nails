@@ -13,6 +13,7 @@ export function HomePageContent({ locale = "en" }: HomePageContentProps) {
 
   const servicesHref = getLocalizedPath("/services/", locale);
   const galleryHref = getLocalizedPath("/gallery/", locale);
+  const bookHref = getLocalizedPath("/book/", locale);
 
   return (
     <>
@@ -148,7 +149,7 @@ export function HomePageContent({ locale = "en" }: HomePageContentProps) {
           </h2>
           <p className="final-desc">{dict.finalBooking.desc}</p>
           <div className="final-actions">
-            <Link href={servicesHref} className="button final-btn">
+            <Link href={bookHref} className="button final-btn">
               {dict.finalBooking.viewStatusBtn}{" "}
               <span aria-hidden="true">↗</span>
             </Link>

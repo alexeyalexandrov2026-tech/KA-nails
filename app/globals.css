@@ -1,46 +1,79 @@
-:root {
-  --color-studio-canvas: #eeeeee;
-  --color-paper-white: #ffffff;
-  --color-charcoal-ink: #222222;
-  --color-graphite: #333333;
-  --color-soft-ash: #555555;
-  --color-absolute-black: #000000;
+/* Metric-matched fallback for the display serif: while Cormorant loads, text
+   is set in Times/Liberation scaled to Cormorant's width and vertical metrics,
+   so the swap does not shift the layout (CLS). Measured in Chromium. */
+@font-face {
+  font-family: "Cormorant Fallback";
+  src:
+    local("Times New Roman"), local("TimesNewRomanPSMT"),
+    local("Liberation Serif"), local("Tinos");
+  size-adjust: 96.25%;
+  ascent-override: 95.6%;
+  descent-override: 30.1%;
+  line-gap-override: 0%;
+}
 
-  /* Studio.Design style reference (design/studio-design-reference.md) */
+:root {
+  /* KA Nails brand primitives, sampled from the original logo */
+  --ka-cream: #fdf8f2; /* logo ground: the logo PNG sits seamlessly on it */
+  --ka-cream-deep: #f4ece2; /* alternate bands, panels */
+  --ka-paper: #fffcf7; /* raised light surfaces */
+  --ka-espresso: #261b15; /* ink and dark bands */
+  --ka-espresso-raised: #3a2a21;
+  --ka-espresso-deep: #1b130f;
+  --ka-soft-ink: #655951; /* secondary text on light (6.4:1) */
+  --ka-rose: #b8937f; /* decoration only on light (2.65:1); text-safe on espresso (6:1) */
+  --ka-rose-ink: #7e5f4e; /* small accent text on light (>= 4.9:1) */
+  --ka-cream-muted: #d9ccc0; /* secondary text on espresso (10.7:1) */
+  --ka-hairline: #e3d5c8; /* decorative rules */
+  --ka-control: #756459; /* control borders (5.3:1) */
+
+  --font-display:
+    "Cormorant Garamond Variable", "Cormorant Fallback", Georgia,
+    "Times New Roman", serif;
   --font-inter: "Inter Variable", "Inter", Arial, "Helvetica Neue", sans-serif;
-  --font-inter-tight:
-    "Inter Tight Variable", "Inter Tight", "Inter Variable", "Arial Narrow",
-    sans-serif;
-  --text-hero-display: 80px;
-  --tracking-display: -0.04em;
-  --text-section-heading: 48px;
+  --font-inter-tight: var(--font-inter); /* one sans family keeps fonts lean */
+  --text-hero-display: 96px;
+  --text-section-heading: 64px;
+  --tracking-heading: -0.01em;
+  --tracking-display: 0.01em; /* UI text (buttons) */
+  --tracking-eyebrow: 0.16em;
   --text-nav: 15px;
   --leading-nav: 1.4;
   --text-legal: 11px;
   --section-gap: 60px;
-  --radius-cards: 8px;
+  --radius-cards: 4px;
   --radius-images: 4px;
-  --radius-buttons: 8px;
-  --radius-compactbuttons: 4px;
-  --radius-utilitysurfaces: 12px;
-  --panel-text: #f7f7f7;
+  --radius-buttons: 999px;
+  --radius-compactbuttons: 999px;
+  --radius-utilitysurfaces: 8px;
 
-  --canvas: var(--color-studio-canvas);
-  --surface: var(--color-paper-white);
-  --ink: var(--color-charcoal-ink);
-  --ink-secondary: var(--color-graphite);
-  --muted: var(--color-soft-ash);
-  --muted-light: #777777;
-  --accent-text: var(--color-charcoal-ink);
-  --line: #d8d8d8;
-  --line-subtle: #e2e2e2;
-  --rose: var(--color-graphite);
-  --rose-light: var(--panel-text);
-  --focus: #000000;
+  /* Semantic roles */
+  --canvas: var(--ka-cream);
+  --surface: var(--ka-paper);
+  --ink: var(--ka-espresso);
+  --ink-secondary: var(--ka-espresso);
+  --muted: var(--ka-soft-ink);
+  --muted-light: var(--ka-soft-ink);
+  --accent-text: var(--ka-rose-ink);
+  --line: var(--ka-hairline);
+  --line-subtle: var(--ka-hairline);
+  --rose: var(--ka-rose);
+  --rose-light: var(--ka-rose); /* only used on espresso surfaces */
+  --panel-text: var(--ka-cream-muted); /* text on espresso */
+  --focus: var(--ka-espresso);
+
+  /* Legacy Studio.Design names, repointed to the brand palette */
+  --color-studio-canvas: var(--ka-cream);
+  --color-paper-white: var(--ka-cream);
+  --color-charcoal-ink: var(--ka-espresso);
+  --color-graphite: var(--ka-espresso);
+  --color-soft-ash: var(--ka-soft-ink);
+  --color-absolute-black: var(--ka-espresso-deep);
+
   /* Only prominent button hovers are elevated; cards and tiles stay flat. */
   --shadow-subtle: none;
   --shadow-elevated: none;
-  --shadow-md: 0px 2px 15px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 6px 20px rgba(38, 27, 21, 0.12);
   --shadow-lightbox: none;
 }
 
@@ -61,7 +94,6 @@ body {
   background: var(--canvas);
   color: var(--ink);
   font-family: var(--font-inter);
-  font-feature-settings: "palt";
   font-size: 16px;
   line-height: 1.6;
   overflow-x: hidden;
@@ -105,6 +137,19 @@ iframe:focus-visible,
   top: 16px;
 }
 
+/* Visually hidden, still announced by screen readers */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* Header & Navigation */
 .header {
   max-width: 1440px;
@@ -120,9 +165,10 @@ iframe:focus-visible,
 
 .wordmark {
   text-decoration: none;
-  font-size: 24px;
+  font-family: var(--font-display);
+  font-size: 30px;
   font-weight: 600;
-  letter-spacing: var(--tracking-display);
+  letter-spacing: 0.005em;
   min-height: 44px;
   display: inline-flex;
   flex-direction: column;
@@ -228,12 +274,12 @@ nav a:hover,
   background: var(--color-charcoal-ink);
   color: var(--color-paper-white);
   border: 1px solid var(--color-charcoal-ink);
-  border-radius: 8px;
-  padding: 12px 24px;
+  border-radius: var(--radius-buttons);
+  padding: 12px 26px;
   min-height: 44px;
   min-width: 44px;
   text-decoration: none;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   line-height: 1.4;
   letter-spacing: var(--tracking-display);
@@ -258,15 +304,15 @@ nav a:hover,
   align-items: center;
   justify-content: center;
   gap: 10px;
-  background: var(--color-paper-white);
-  color: var(--color-graphite);
-  border: 1px solid var(--color-charcoal-ink);
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--ka-control);
   border-radius: var(--radius-buttons);
-  padding: 12px 24px;
+  padding: 12px 26px;
   min-height: 44px;
   min-width: 44px;
   text-decoration: none;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   line-height: 1.4;
   letter-spacing: var(--tracking-display);
@@ -279,8 +325,8 @@ nav a:hover,
 }
 
 .button-secondary:hover {
-  background: var(--color-paper-white);
-  border-color: var(--color-charcoal-ink);
+  background: rgba(38, 27, 21, 0.05);
+  border-color: var(--ink);
   box-shadow: var(--shadow-md);
   transform: translateY(-1px);
   text-decoration: none;
@@ -289,9 +335,11 @@ nav a:hover,
 /* Base Headings & Eyebrows */
 .eyebrow {
   font-family: var(--font-inter-tight);
-  font-size: var(--text-nav);
-  font-weight: 500;
-  line-height: var(--leading-nav);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
   color: var(--accent-text);
   margin-bottom: 12px;
 }
@@ -300,22 +348,21 @@ h1,
 h2,
 h3 {
   color: var(--ink);
-  font-weight: 600;
-  letter-spacing: var(--tracking-display);
-  line-height: 1.1;
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: var(--tracking-heading);
+  line-height: 1.05;
+  text-wrap: balance;
+  overflow-wrap: break-word;
 }
 
 h1 {
-  font-size: clamp(40px, 5.6vw, var(--text-hero-display));
-  line-height: 1;
-}
-
-h2 {
-  font-weight: 700;
+  font-size: clamp(44px, 6.4vw, var(--text-hero-display));
+  line-height: 0.98;
 }
 
 h2.section-title {
-  font-size: clamp(32px, 4vw, var(--text-section-heading));
+  font-size: clamp(36px, 4.6vw, var(--text-section-heading));
   margin: 12px 0 20px;
 }
 
@@ -408,7 +455,9 @@ h2.section-title {
   max-width: 540px;
   height: 520px;
   transform-style: preserve-3d;
-  will-change: transform;
+  /* --px/--py (-1..1) are written by HeroCollage only while the pointer moves */
+  transform: perspective(1200px) rotateX(calc(var(--py, 0) * -6deg))
+    rotateY(calc(var(--px, 0) * 6deg));
 }
 
 /* Collage Tiles */
@@ -416,16 +465,25 @@ h2.section-title {
   position: absolute;
   border-radius: var(--radius-images);
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(253, 248, 242, 0.8);
   background: var(--surface);
   transform-style: preserve-3d;
+  /* Depth parallax; the drift animations use the independent translate/rotate
+     properties so they compose with this transform instead of replacing it. */
+  transform: translateZ(var(--z, 0px))
+    translate3d(
+      calc(var(--px, 0) * var(--depth, 0) * 1px),
+      calc(var(--py, 0) * var(--depth, 0) * 1px),
+      0
+    );
   transition:
     box-shadow 0.3s ease,
-    border-color 0.3s ease;
+    border-color 0.3s ease,
+    scale 0.3s ease;
 }
 
 .collage-tile:hover {
-  transform: translateY(-8px) scale(1.02);
+  scale: 1.02;
   border-color: var(--color-charcoal-ink);
   z-index: 40 !important;
 }
@@ -443,8 +501,8 @@ h2.section-title {
   font-family: var(--font-inter-tight);
   font-size: 11px;
   font-weight: 600;
-  color: #ffffff;
-  background: rgba(34, 34, 34, 0.85);
+  color: var(--ka-cream);
+  background: rgba(38, 27, 21, 0.85);
   padding: 4px 8px;
   border-radius: 4px;
   backdrop-filter: blur(6px);
@@ -457,7 +515,8 @@ h2.section-title {
   width: 54%;
   aspect-ratio: 1 / 1;
   z-index: 10;
-  background: var(--canvas);
+  background: transparent;
+  border: 0;
 }
 
 .collage-logo-img {
@@ -469,6 +528,8 @@ h2.section-title {
 
 /* Floating Staggered Visuals */
 .tile-drift-1 {
+  --z: 35px;
+  --depth: 12;
   top: 0;
   right: 2%;
   width: 44%;
@@ -478,6 +539,8 @@ h2.section-title {
 }
 
 .tile-drift-2 {
+  --z: 55px;
+  --depth: 20;
   top: 40%;
   right: 0;
   width: 40%;
@@ -487,6 +550,8 @@ h2.section-title {
 }
 
 .tile-drift-3 {
+  --z: 25px;
+  --depth: -10;
   bottom: 4%;
   left: 2%;
   width: 40%;
@@ -496,6 +561,8 @@ h2.section-title {
 }
 
 .tile-drift-4 {
+  --z: 45px;
+  --depth: 16;
   bottom: 0;
   right: 20%;
   width: 44%;
@@ -517,7 +584,7 @@ h2.section-title {
   bottom: -12px;
   right: 0;
   z-index: 35;
-  background: #ffffff;
+  background: var(--ka-cream);
   border: 1px solid var(--color-charcoal-ink);
   border-radius: 8px;
   padding: 8px 14px;
@@ -536,7 +603,7 @@ h2.section-title {
   height: 8px;
   border-radius: 50%;
   background: var(--color-charcoal-ink);
-  box-shadow: 0 0 0 2px rgba(34, 34, 34, 0.2);
+  box-shadow: 0 0 0 2px rgba(38, 27, 21, 0.2);
   display: inline-block;
   animation: pulse-green 2s infinite ease-in-out;
 }
@@ -555,19 +622,23 @@ h2.section-title {
 
 @keyframes driftSlow {
   0% {
-    transform: translateY(0) rotate(0deg);
+    translate: 0 0;
+    rotate: 0deg;
   }
   100% {
-    transform: translateY(-8px) rotate(0.6deg);
+    translate: 0 -8px;
+    rotate: 0.6deg;
   }
 }
 
 @keyframes driftReverse {
   0% {
-    transform: translateY(0) rotate(0deg);
+    translate: 0 0;
+    rotate: 0deg;
   }
   100% {
-    transform: translateY(8px) rotate(-0.6deg);
+    translate: 0 8px;
+    rotate: -0.6deg;
   }
 }
 
@@ -628,7 +699,7 @@ h2.section-title {
 
 .showcase-nav-btn:hover:not(:disabled) {
   background: var(--ink);
-  color: #ffffff;
+  color: var(--ka-cream);
   border-color: var(--ink);
 }
 
@@ -643,7 +714,7 @@ h2.section-title {
 
 .showcase-pause-btn[aria-pressed="true"] {
   background: var(--ink);
-  color: #ffffff;
+  color: var(--ka-cream);
   border-color: var(--ink);
 }
 
@@ -803,14 +874,31 @@ h2.section-title {
   transform: scale(1.05);
 }
 
+/* "Featured" chip on foreground cards */
+.moving-card-tag-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--color-paper-white);
+  color: var(--color-charcoal-ink);
+  font-family: var(--font-inter-tight);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  pointer-events: none;
+}
+
 /* Subtle physical glare overlay */
 .moving-card-glare {
   position: absolute;
   inset: 0;
   background: linear-gradient(
     135deg,
-    rgba(255, 255, 255, 0.22) 0%,
-    rgba(255, 255, 255, 0.05) 35%,
+    rgba(253, 248, 242, 0.22) 0%,
+    rgba(253, 248, 242, 0.05) 35%,
     transparent 65%
   );
   pointer-events: none;
@@ -841,7 +929,7 @@ h2.section-title {
 }
 
 .moving-card-expand {
-  background: #ffffff;
+  background: var(--ka-cream);
   color: var(--ink);
   font-size: 12px;
   font-weight: 600;
@@ -1030,7 +1118,7 @@ h2.section-title {
 
 .service-preview-card.featured {
   border-color: var(--accent-text);
-  background: #ffffff;
+  background: var(--ka-cream);
 }
 
 .service-card-meta {
@@ -1093,7 +1181,7 @@ h2.section-title {
 /* ============================================================ */
 .final-booking-band {
   background: var(--ink);
-  color: #ffffff;
+  color: var(--ka-cream);
   padding: 88px 5vw;
 }
 
@@ -1111,7 +1199,7 @@ h2.section-title {
 }
 
 .final-title {
-  color: #ffffff;
+  color: var(--ka-cream);
   font-size: clamp(32px, 4vw, var(--text-section-heading));
   margin: 12px 0 20px;
 }
@@ -1132,9 +1220,9 @@ h2.section-title {
 }
 
 .final-btn {
-  background: #ffffff;
+  background: var(--ka-cream);
   color: var(--ink);
-  border-color: #ffffff;
+  border-color: var(--ka-cream);
 }
 
 .final-btn:hover {
@@ -1145,13 +1233,13 @@ h2.section-title {
 
 .final-btn-secondary {
   background: transparent;
-  border-color: rgba(255, 255, 255, 0.4);
-  color: #ffffff;
+  border-color: rgba(253, 248, 242, 0.4);
+  color: var(--ka-cream);
 }
 
 .final-btn-secondary:hover {
-  border-color: #ffffff;
-  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--ka-cream);
+  background: rgba(253, 248, 242, 0.1);
 }
 
 /* ============================================================ */
@@ -1207,12 +1295,12 @@ h2.section-title {
 
 .filter-pill:hover {
   border-color: var(--ink);
-  background: rgba(34, 34, 34, 0.04);
+  background: rgba(38, 27, 21, 0.04);
 }
 
 .filter-pill.active {
   background: var(--ink);
-  color: #ffffff;
+  color: var(--ka-cream);
   border-color: var(--ink);
 }
 
@@ -1239,7 +1327,7 @@ h2.section-title {
 
 .inventory-badge {
   background: var(--color-charcoal-ink);
-  color: #ffffff;
+  color: var(--ka-cream);
   font-family: var(--font-inter-tight);
   font-size: 13px;
   font-weight: 600;
@@ -1374,7 +1462,7 @@ h2.section-title {
 }
 
 .card-zoom-badge {
-  background: #ffffff;
+  background: var(--ka-cream);
   color: var(--ink);
   font-size: 12px;
   font-weight: 600;
@@ -1473,7 +1561,7 @@ h2.section-title {
   position: fixed;
   inset: 0;
   z-index: 2000;
-  background: rgba(34, 34, 34, 0.96);
+  background: rgba(38, 27, 21, 0.96);
   backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
@@ -1496,7 +1584,7 @@ h2.section-title {
   align-items: center;
   justify-content: space-between;
   padding-bottom: 16px;
-  color: #ffffff;
+  color: var(--ka-cream);
 }
 
 .lightbox-counter {
@@ -1523,9 +1611,9 @@ h2.section-title {
 }
 
 .lightbox-action-btn {
-  background: rgba(255, 255, 255, 0.15);
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(253, 248, 242, 0.15);
+  color: var(--ka-cream);
+  border: 1px solid rgba(253, 248, 242, 0.3);
   border-radius: var(--radius-buttons);
   padding: 8px 16px;
   font-size: 14px;
@@ -1535,13 +1623,13 @@ h2.section-title {
 }
 
 .lightbox-action-btn:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(253, 248, 242, 0.25);
 }
 
 .lightbox-close-btn {
-  background: rgba(255, 255, 255, 0.15);
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(253, 248, 242, 0.15);
+  color: var(--ka-cream);
+  border: 1px solid rgba(253, 248, 242, 0.3);
   border-radius: 50%;
   width: 44px;
   height: 44px;
@@ -1556,7 +1644,7 @@ h2.section-title {
 }
 
 .lightbox-close-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(253, 248, 242, 0.3);
   transform: scale(1.05);
 }
 
@@ -1588,9 +1676,9 @@ h2.section-title {
 }
 
 .lightbox-nav-btn {
-  background: rgba(255, 255, 255, 0.15);
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(253, 248, 242, 0.15);
+  color: var(--ka-cream);
+  border: 1px solid rgba(253, 248, 242, 0.3);
   border-radius: 50%;
   width: 48px;
   height: 48px;
@@ -1610,7 +1698,7 @@ h2.section-title {
 }
 
 .lightbox-nav-btn:hover {
-  background: rgba(255, 255, 255, 0.35);
+  background: rgba(253, 248, 242, 0.35);
   transform: translateY(-50%) scale(1.08);
 }
 
@@ -1628,7 +1716,7 @@ h2.section-title {
   justify-content: space-between;
   gap: 24px;
   padding-top: 18px;
-  color: #ffffff;
+  color: var(--ka-cream);
 }
 
 .lightbox-meta {
@@ -1644,7 +1732,7 @@ h2.section-title {
 }
 
 .lightbox-title {
-  color: #ffffff;
+  color: var(--ka-cream);
   font-size: 22px;
   font-weight: 600;
   letter-spacing: var(--tracking-display);
@@ -1661,7 +1749,7 @@ h2.section-title {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: #ffffff;
+  background: var(--ka-cream);
   color: var(--ink);
   padding: 12px 24px;
   border-radius: var(--radius-buttons);
@@ -1791,6 +1879,56 @@ h2.section-title {
 }
 
 /* ============================================================ */
+/* BRAND TYPOGRAPHY (display serif for titles >= 19px)          */
+/* ============================================================ */
+.pillar-title,
+.service-name,
+.card-title,
+.lightbox-title,
+.final-title,
+.footer-title,
+.moving-card-title {
+  font-family: var(--font-display);
+  letter-spacing: var(--tracking-heading);
+}
+
+.pillar-title {
+  font-size: 26px;
+  font-weight: 600;
+}
+
+.service-name {
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.card-title {
+  font-size: 23px;
+  font-weight: 600;
+}
+
+.moving-card-title {
+  font-size: 19px;
+  font-weight: 600;
+}
+
+.lightbox-title {
+  font-size: 30px;
+  font-weight: 500;
+}
+
+.footer-title {
+  font-size: 22px;
+  font-weight: 600;
+}
+
+/* Keyboard focus stays visible on espresso surfaces */
+.final-booking-band,
+.lightbox-overlay {
+  --focus: var(--ka-cream);
+}
+
+/* ============================================================ */
 /* RESPONSIVE BREAKPOINTS (320px, 390px, 768px, 1024px)         */
 /* ============================================================ */
 @media (max-width: 1024px) {
@@ -1903,7 +2041,7 @@ h2.section-title {
   }
 
   .hero-heading {
-    font-size: 34px;
+    font-size: 42px;
   }
 }
 

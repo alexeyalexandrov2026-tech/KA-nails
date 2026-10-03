@@ -1,6 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { preload } from "react-dom";
 import { LanguageSwitcher } from "./language-switcher";
 import { getDictionary, getLocalizedPath, type Locale } from "../lib/locales";
 
@@ -9,7 +10,25 @@ interface SiteLayoutProps {
   children: React.ReactNode;
 }
 
+// Fonts used above the fold, preloaded so the first paint already uses them
+// (no swap, no layout shift). Files come from tools/sync-fonts.mjs.
+const PRELOAD_FONTS: Record<Locale, string[]> = {
+  en: [
+    "/fonts/inter-latin-wght-normal.woff2",
+    "/fonts/cormorant-garamond-latin-wght-normal.woff2",
+  ],
+  ru: [
+    "/fonts/inter-latin-wght-normal.woff2",
+    "/fonts/inter-cyrillic-wght-normal.woff2",
+    "/fonts/cormorant-garamond-latin-wght-normal.woff2",
+    "/fonts/cormorant-garamond-cyrillic-wght-normal.woff2",
+  ],
+};
+
 export function SiteLayout({ locale, children }: SiteLayoutProps) {
+  for (const href of PRELOAD_FONTS[locale]) {
+    preload(href, { as: "font", type: "font/woff2", crossOrigin: "anonymous" });
+  }
   const dict = getDictionary(locale);
 
   const homeHref = locale === "ru" ? "/ru/" : "/";
@@ -56,10 +75,11 @@ export function SiteLayout({ locale, children }: SiteLayoutProps) {
         <footer className="footer">
           <div className="footer-brand">
             <Image
-              src="/assets/ka-nails-logo.png"
+              src="/assets/ka-nails-logo-320.webp"
               alt={dict.footer.logoAlt}
               width={112}
               height={112}
+              loading="lazy"
               unoptimized
             />
             <div className="footer-brand-text">
