@@ -106,4 +106,8 @@ entries short and delete any that stop being true.
   `source-assets/master/`) and phone/WhatsApp. The Telegram link they sent
   (t.me/@id6103756473) shows an empty profile, so it is not published.
 - 2026-10-03: NailSalon JSON-LD waits for a postal address (Google requires it).
+- 2026-10-03: Owner's price menu (PDF "Pedicure Collection 2026") published: 8
+  pedicures, 5 add-ons ("+" prices), 2 notes. It gives no durations, so
+  `durationMinutes` became optional; the PDF also says Hollywood, Florida, which
+  is not on the site yet.
 - Open: no manual screen-reader test yet; WCAG 2.2 AA conformance not established.

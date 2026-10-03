@@ -2895,6 +2895,79 @@ h2.section-title {
   font-variant-numeric: lining-nums tabular-nums;
 }
 
+.service-addons-title {
+  font-size: clamp(26px, 2.6vw, 32px);
+  margin: 48px 0 16px;
+}
+
+/* Two columns that fill top to bottom, as on the printed menu. */
+.service-addon-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  columns: 2 300px;
+  column-gap: 48px;
+}
+
+.service-addon {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+  break-inside: avoid;
+}
+
+.service-addon-name {
+  font-size: 17px;
+}
+
+.service-addon-duration,
+.service-addon-desc {
+  display: block;
+  margin-top: 2px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.service-addon-price {
+  flex: none;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 1.2;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.service-menu-notes {
+  margin-top: 40px;
+  padding: clamp(20px, 3vw, 32px);
+  border-radius: var(--radius-cards);
+  background: var(--ka-cream-deep);
+}
+
+.service-menu-notes-title {
+  margin: 0 0 4px;
+  font-family: var(--font-inter);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: var(--tracking-eyebrow);
+  line-height: 1.4;
+  text-transform: uppercase;
+  color: var(--accent-text);
+}
+
+.service-menu-notes p {
+  max-width: 72ch;
+  margin: 8px 0 0;
+  color: var(--muted);
+}
+
+.notice-action {
+  margin: 24px 0 0;
+}
+
 .contact-channel-link {
   display: flex;
   flex-wrap: wrap;
@@ -3002,6 +3075,16 @@ h2.section-title {
 
   .service-menu-meta {
     text-align: left;
+  }
+
+  /* A price on its own stays beside the name. */
+  .service-menu-price-only .service-menu-item {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px 20px;
+  }
+
+  .service-menu-price-only .service-menu-meta {
+    text-align: right;
   }
 
   .contact-channel-link {

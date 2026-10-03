@@ -8,7 +8,13 @@ import {
   bookingSubject,
   requestLinks,
 } from "../../lib/booking-message";
-import { studioFacts, type StudioFacts } from "../../lib/studio-facts";
+import {
+  pick,
+  priceText,
+  studioFacts,
+  type ServiceFact,
+  type StudioFacts,
+} from "../../lib/studio-facts";
 
 // The query string does not change while the page is open.
 const noSubscription = () => () => {};
@@ -27,8 +33,9 @@ export function BookingRequest({
   locale,
   facts = studioFacts,
 }: BookingRequestProps) {
-  const dict = getDictionary(locale).bookingRequest;
+  const { bookingRequest: dict, facts: factsDict } = getDictionary(locale);
   const works = useMemo(() => getGalleryItems(locale), [locale]);
+  const [serviceId, setServiceId] = useState("");
   // null until the visitor picks a look; then their choice wins.
   const [lookChoice, setLookChoice] = useState<string | null>(null);
   const [preferredTime, setPreferredTime] = useState("");
@@ -48,7 +55,12 @@ export function BookingRequest({
     lookChoice ??
     (works.some((work) => work.id === lookFromUrl) ? lookFromUrl : "");
   const look = works.find((work) => work.id === lookId);
+  // The service as the menu shows it, with its price.
+  const serviceText = (service: ServiceFact) =>
+    `${pick(service.name, locale)} — ${priceText(service.price, locale, factsDict.priceFrom)}`;
+  const service = facts.services.find((item) => item.id === serviceId);
   const text = bookingMessage(locale, {
+    service: service && serviceText(service),
     looks: look ? [{ id: look.id, title: look.title }] : [],
     preferredTime,
     name,
@@ -73,6 +85,23 @@ export function BookingRequest({
         className="booking-request-form"
         onSubmit={(event) => event.preventDefault()}
       >
+        {facts.services.length > 0 && (
+          <label className="request-field">
+            <span>{dict.serviceLabel}</span>
+            <select
+              value={serviceId}
+              onChange={(event) => setServiceId(event.target.value)}
+            >
+              <option value="">{dict.serviceAny}</option>
+              {facts.services.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {serviceText(item)}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+
         <label className="request-field">
           <span>{dict.lookLabel}</span>
           <select

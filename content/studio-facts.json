@@ -1,5 +1,140 @@
 {
-  "services": [],
+  "services": [
+    {
+      "id": "classic-pedicure",
+      "name": { "en": "Classic Pedicure", "ru": "Классический педикюр" },
+      "description": {
+        "en": "Nails, cuticle care, shape and regular polish. Designed for clients who do not need heel care.",
+        "ru": "Ногти, уход за кутикулой, форма и обычный лак. Для тех, кому не нужна обработка пяток."
+      },
+      "price": { "amount": 75, "currency": "USD" }
+    },
+    {
+      "id": "russian-dry-pedicure-gel",
+      "name": {
+        "en": "Russian Dry Pedicure + Gel Polish",
+        "ru": "Русский сухой педикюр + гель-лак"
+      },
+      "description": {
+        "en": "Detailed dry nail and cuticle work with long-wear gel polish. Heel care is not included.",
+        "ru": "Тщательная сухая обработка ногтей и кутикулы, стойкое покрытие гель-лаком. Обработка пяток не входит."
+      },
+      "price": { "amount": 95, "currency": "USD" }
+    },
+    {
+      "id": "russian-dry-pedicure-regular",
+      "name": {
+        "en": "Russian Dry Pedicure + Regular Polish",
+        "ru": "Русский сухой педикюр + обычный лак"
+      },
+      "description": {
+        "en": "Detailed dry nail and cuticle work with regular polish. Heel care is not included.",
+        "ru": "Тщательная сухая обработка ногтей и кутикулы, покрытие обычным лаком. Обработка пяток не входит."
+      },
+      "price": { "amount": 85, "currency": "USD" }
+    },
+    {
+      "id": "full-dry-pedicure-gel",
+      "name": {
+        "en": "Full Dry Pedicure + Gel Polish",
+        "ru": "Полный сухой педикюр + гель-лак"
+      },
+      "description": {
+        "en": "Everything in the Russian Dry Pedicure plus cosmetic heel care, with gel polish.",
+        "ru": "Всё, что входит в русский сухой педикюр, плюс косметическая обработка пяток. Покрытие гель-лаком."
+      },
+      "price": { "amount": 115, "currency": "USD" }
+    },
+    {
+      "id": "full-dry-pedicure-regular",
+      "name": {
+        "en": "Full Dry Pedicure + Regular Polish",
+        "ru": "Полный сухой педикюр + обычный лак"
+      },
+      "description": {
+        "en": "Everything in the Russian Dry Pedicure plus cosmetic heel care, with regular polish.",
+        "ru": "Всё, что входит в русский сухой педикюр, плюс косметическая обработка пяток. Покрытие обычным лаком."
+      },
+      "price": { "amount": 100, "currency": "USD" }
+    },
+    {
+      "id": "hammam-luxury-pedicure",
+      "name": { "en": "Hammam Luxury Pedicure", "ru": "Педикюр «Хаммам Люкс»" },
+      "description": {
+        "en": "Signature spa ritual: full dry pedicure with cosmetic heel care, Black Soap with Eucalyptus, Ayurvedic scrub, warm towels, Melting Balm and massage. Without gel polish.",
+        "ru": "Фирменный спа-ритуал: полный сухой педикюр с косметической обработкой пяток, чёрное мыло с эвкалиптом, аюрведический скраб, тёплые полотенца, тающий бальзам и массаж. Без гель-лака."
+      },
+      "price": { "amount": 145, "currency": "USD" }
+    },
+    {
+      "id": "hammam-luxury-pedicure-gel",
+      "name": {
+        "en": "Hammam Luxury + Gel Polish",
+        "ru": "«Хаммам Люкс» + гель-лак"
+      },
+      "description": {
+        "en": "The full Hammam ritual, finished with gel polish.",
+        "ru": "Полный ритуал «Хаммам Люкс» с покрытием гель-лаком."
+      },
+      "price": { "amount": 160, "currency": "USD" }
+    },
+    {
+      "id": "hammam-luxury-pedicure-gel-french",
+      "name": {
+        "en": "Hammam Luxury + Gel French",
+        "ru": "«Хаммам Люкс» + гель-френч"
+      },
+      "description": {
+        "en": "The full Hammam ritual, finished with a gel French.",
+        "ru": "Полный ритуал «Хаммам Люкс» с френчем гель-лаком."
+      },
+      "price": { "amount": 175, "currency": "USD" }
+    }
+  ],
+  "addOns": [
+    {
+      "id": "french-gel",
+      "name": { "en": "French Gel", "ru": "Гель-френч" },
+      "price": { "amount": 15, "currency": "USD", "plus": true }
+    },
+    {
+      "id": "hammam-spa-upgrade",
+      "name": { "en": "Hammam Spa Upgrade", "ru": "Спа-дополнение «Хаммам»" },
+      "price": { "amount": 40, "currency": "USD", "plus": true }
+    },
+    {
+      "id": "other-salon-gel-removal",
+      "name": {
+        "en": "Removal of Other Salon’s Gel",
+        "ru": "Снятие гель-лака другого салона"
+      },
+      "price": { "amount": 15, "currency": "USD", "plus": true }
+    },
+    {
+      "id": "heel-care-only",
+      "name": { "en": "Heel Care Only", "ru": "Только обработка пяток" },
+      "price": { "amount": 40, "currency": "USD" }
+    },
+    {
+      "id": "extra-foot-massage",
+      "name": {
+        "en": "Extra Foot Massage",
+        "ru": "Дополнительный массаж стоп"
+      },
+      "durationMinutes": 15,
+      "price": { "amount": 20, "currency": "USD" }
+    }
+  ],
+  "menuNotes": [
+    {
+      "en": "Heel care is included only where stated.",
+      "ru": "Обработка пяток включена только там, где это указано."
+    },
+    {
+      "en": "Service suitability is confirmed after a visual check of the skin and nails. If there is an open wound, visible infection or another condition that makes the service unsafe, the affected service area should not be treated.",
+      "ru": "Возможность выполнить услугу подтверждается после осмотра кожи и ногтей. Если есть открытая рана, видимая инфекция или другое состояние, при котором процедура небезопасна, эту зону не обрабатывают."
+    }
+  ],
   "channels": [
     { "kind": "phone", "value": "+15613828779" },
     { "kind": "whatsapp", "value": "+15613828779" }

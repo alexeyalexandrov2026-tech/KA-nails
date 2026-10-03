@@ -1,8 +1,8 @@
 import rawFacts from "../content/studio-facts.json";
 import type { Locale } from "./locales/types";
 
-// Confirmed business facts of the studio. The JSON file is empty until the
-// owner confirms the data; every block that reads it renders nothing while its
+// Confirmed business facts of the studio. Only data the owner has confirmed
+// goes into the JSON file; every block that reads it renders nothing while its
 // part is empty. The shape matches the future GORGONA admin export.
 
 export interface Bilingual {
@@ -17,13 +17,16 @@ export interface Price {
   currency: Currency;
   /** Shown as "from $50" when the final price depends on the visit. */
   from?: boolean;
+  /** Shown as "+$15": an add-on whose price is added to the pedicure's. */
+  plus?: boolean;
 }
 
 export interface ServiceFact {
   id: string;
   name: Bilingual;
   description?: Bilingual;
-  durationMinutes: number;
+  /** Left out until the owner states how long the service takes. */
+  durationMinutes?: number;
   price: Price;
 }
 
@@ -81,6 +84,10 @@ export interface MasterFact {
 
 export interface StudioFacts {
   services: ServiceFact[];
+  /** Extras listed under the menu, such as French gel or gel removal. */
+  addOns: ServiceFact[];
+  /** Short notes printed under the menu, such as what is not included. */
+  menuNotes: Bilingual[];
   channels: ContactChannel[];
   address: StudioAddress | null;
   hours: OpeningHours[];
@@ -146,37 +153,41 @@ export function validateStudioFacts(raw: unknown): StudioFacts {
     throw new Error("studio-facts.json: expected an object");
   }
 
-  const { services, channels, address, hours, master } = raw;
+  const { services, addOns, menuNotes, channels, address, hours, master } = raw;
 
-  if (!Array.isArray(services)) {
-    problems.push("services: expected an array");
-  } else {
-    const ids = new Set<string>();
-    services.forEach((service, i) => {
-      const where = `services[${i}]`;
-      if (!isRecord(service)) {
+  // Services and add-ons share one set of ids.
+  const ids = new Set<string>();
+  const offers = (list: unknown, field: "services" | "addOns") => {
+    if (!Array.isArray(list)) {
+      problems.push(`${field}: expected an array`);
+      return;
+    }
+    list.forEach((offer, i) => {
+      const where = `${field}[${i}]`;
+      if (!isRecord(offer)) {
         problems.push(`${where}: expected an object`);
         return;
       }
-      if (typeof service.id !== "string" || !ID.test(service.id)) {
+      if (typeof offer.id !== "string" || !ID.test(offer.id)) {
         problems.push(`${where}.id: use lowercase-words-with-dashes`);
-      } else if (ids.has(service.id)) {
-        problems.push(`${where}.id: duplicate id "${service.id}"`);
+      } else if (ids.has(offer.id)) {
+        problems.push(`${where}.id: duplicate id "${offer.id}"`);
       } else {
-        ids.add(service.id);
+        ids.add(offer.id);
       }
-      text(service.name, `${where}.name`);
-      text(service.description, `${where}.description`, true);
-      const minutes = service.durationMinutes;
+      text(offer.name, `${where}.name`);
+      text(offer.description, `${where}.description`, true);
+      const minutes = offer.durationMinutes;
       if (
-        typeof minutes !== "number" ||
-        !Number.isInteger(minutes) ||
-        minutes < 10 ||
-        minutes > 480
+        minutes !== undefined &&
+        (typeof minutes !== "number" ||
+          !Number.isInteger(minutes) ||
+          minutes < 10 ||
+          minutes > 480)
       ) {
         problems.push(`${where}.durationMinutes: whole minutes, 10–480`);
       }
-      const price = service.price;
+      const price = offer.price;
       if (!isRecord(price)) {
         problems.push(`${where}.price: expected { amount, currency }`);
       } else {
@@ -191,11 +202,28 @@ export function validateStudioFacts(raw: unknown): StudioFacts {
         if (!CURRENCIES.includes(price.currency as Currency)) {
           problems.push(`${where}.price.currency: one of ${CURRENCIES}`);
         }
-        if (price.from !== undefined && typeof price.from !== "boolean") {
-          problems.push(`${where}.price.from: true or false`);
+        for (const flag of ["from", "plus"] as const) {
+          if (price[flag] !== undefined && typeof price[flag] !== "boolean") {
+            problems.push(`${where}.price.${flag}: true or false`);
+          }
+        }
+        if (price.plus === true) {
+          if (field === "services") {
+            problems.push(`${where}.price.plus: only add-ons add to a price`);
+          } else if (price.from === true) {
+            problems.push(`${where}.price: "from" or "plus", not both`);
+          }
         }
       }
     });
+  };
+  offers(services, "services");
+  offers(addOns, "addOns");
+
+  if (!Array.isArray(menuNotes)) {
+    problems.push("menuNotes: expected an array");
+  } else {
+    menuNotes.forEach((note, i) => text(note, `menuNotes[${i}]`));
   }
 
   if (!Array.isArray(channels)) {
@@ -363,6 +391,17 @@ export function formatPrice(price: Price, locale: Locale): string {
     minimumFractionDigits: whole ? 0 : 2,
     maximumFractionDigits: whole ? 0 : 2,
   }).format(price.amount);
+}
+
+/** A price as the menu shows it: "$75", "from $50" or "+$15". */
+export function priceText(
+  price: Price,
+  locale: Locale,
+  from: (price: string) => string,
+): string {
+  const amount = formatPrice(price, locale);
+  if (price.from) return from(amount);
+  return price.plus ? `+${amount}` : amount;
 }
 
 export function formatDuration(minutes: number, locale: Locale): string {

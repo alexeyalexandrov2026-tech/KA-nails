@@ -46,7 +46,8 @@ hours, the master) lives in `content/studio-facts.json`; the format is described
 [`content/README.md`](content/README.md). The build validates it and fails on bad
 data. Every block that uses it (service menu, contact channels, address and hours,
 master profile, the messenger booking request and NailSalon structured data) renders
-nothing until its data exists. The file is empty: nothing is invented.
+nothing until its data exists. Only owner-confirmed data goes in: so far the
+master, phone/WhatsApp and the price menu; address and hours are still missing.
 
 ## Booking boundary
 
@@ -66,7 +67,8 @@ errors, races, expiry, not-live state and retries are handled by the real wizard
 ## Publication state
 
 All pages are `noindex, nofollow` until `NEXT_PUBLIC_SITE_INDEXING=index` is set.
-Address, contact, hours, staff, prices, durations, policies and production domain
+The owner has confirmed the master, phone/WhatsApp and the price menu (3 October
+2026). Address, hours, service durations, other policies and the production domain
 remain unconfirmed and are not invented. The owner has confirmed the rights and
 client consent for all 19 portfolio photographs (3 October 2026). The generic services page
 displays the actual platform service picker only when the booking origin is

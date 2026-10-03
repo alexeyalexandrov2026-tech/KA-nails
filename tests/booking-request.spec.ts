@@ -13,6 +13,8 @@ import {
 import { nailSalonJsonLd, serializeJsonLd } from "../lib/structured-data";
 import {
   channelHref,
+  pick,
+  priceText,
   studioFacts,
   validateStudioFacts,
   type StudioFacts,
@@ -31,6 +33,8 @@ const BookingRequest = loadComponent<
 
 const EMPTY: StudioFacts = {
   services: [],
+  addOns: [],
+  menuNotes: [],
   channels: [],
   address: null,
   hours: [],
@@ -52,6 +56,8 @@ const FAKE: StudioFacts = {
       price: { amount: 80, currency: "USD" },
     },
   ],
+  addOns: [],
+  menuNotes: [],
   channels: [
     { kind: "email", value: "fake@example.com" },
     { kind: "whatsapp", value: "+13055550100", preferred: true },
@@ -167,7 +173,68 @@ test.describe("Messenger booking requests and structured data", () => {
     expect(bookingMessage("ru", {})).toBe(
       "Здравствуйте, KA Nails! Хочу записаться на педикюр.",
     );
+    // A service chosen from the menu comes right after the greeting.
+    const withService = bookingMessage("en", {
+      service: "Classic Pedicure — $75",
+      looks: [{ id: "work-03", title: "Pastel Lilac Bliss" }],
+    });
+    expect(withService.split("\n").slice(0, 4)).toEqual([
+      "Hello, KA Nails! I would like to book a pedicure.",
+      "",
+      "Service: Classic Pedicure — $75",
+      "",
+    ]);
+    expect(bookingMessage("ru", { service: "Классический педикюр" })).toBe(
+      "Здравствуйте, KA Nails! Хочу записаться на педикюр.\n\nУслуга: Классический педикюр",
+    );
     for (const text of [en, ru]) expect(text).not.toMatch(/manicur|маникюр/i);
+  });
+
+  test("a service chosen on /book/ goes into the prepared message", async ({
+    page,
+  }) => {
+    const service = studioFacts.services.at(-1);
+    if (!PUBLISHED_WHATSAPP || !service) return;
+    for (const locale of ["en", "ru"] as const) {
+      await page.goto(locale === "ru" ? "/ru/book/" : "/book/");
+      const form = page.locator('[data-facts="request"]');
+      const label = locales.getDictionary(locale).bookingRequest.serviceLabel;
+      await form.getByLabel(label).selectOption(service.id);
+      const href = await form.locator('a[href*="wa.me"]').getAttribute("href");
+      const text = new URL(href!).searchParams.get("text")!;
+      const price = priceText(
+        service.price,
+        locale,
+        locales.getDictionary(locale).facts.priceFrom,
+      );
+      expect(text.split("\n")[2]).toBe(
+        `${locale === "ru" ? "Услуга" : "Service"}: ${pick(service.name, locale)} — ${price}`,
+      );
+    }
+  });
+
+  test("the services page offers the request form while online booking is off", async ({
+    page,
+  }) => {
+    const canRequest = requestLinks(studioFacts.channels, "", "").length > 0;
+    for (const [url, href] of [
+      ["/services/", "/book/"],
+      ["/ru/services/", "/ru/book/"],
+    ] as const) {
+      await page.goto(url);
+      const link = page.locator(".notice .notice-action a");
+      if (canRequest) {
+        await expect(link).toHaveAttribute("href", href);
+        await link.click();
+        await expect(page).toHaveURL(new RegExp(`${href}$`));
+        await expect(page.locator('[data-facts="request"]')).toBeVisible();
+      } else {
+        await expect(link).toHaveCount(0);
+      }
+    }
+    // The request form follows the notice on /book/ itself.
+    await page.goto("/book/");
+    await expect(page.locator(".notice .notice-action")).toHaveCount(0);
   });
 
   test("request links open the studio's own messengers, preferred first", () => {
@@ -211,12 +278,23 @@ test.describe("Messenger booking requests and structured data", () => {
     expect(html).toContain('data-facts="request"');
     expect(html).toContain("Request an appointment");
     // Every field has a visible label.
-    expect(html.match(/<label/g)?.length).toBe(4);
+    expect(html.match(/<label/g)?.length).toBe(5);
     expect(html).toContain('href="https://wa.me/13055550100?text=Hello');
     expect(html).toContain('href="mailto:fake@example.com?subject=');
     expect(html).toContain("Copy and open Telegram");
-    expect(html.match(/<option/g)?.length).toBe(20);
+    // The published services with their prices, then the 19 looks.
+    expect(html).toContain(">FAKE spa pedicure — $80</option>");
+    expect(html.match(/<option/g)?.length).toBe(2 + 20);
     expect(html).not.toMatch(/manicur|маникюр/i);
+    // Without a published menu there is no service choice.
+    const noMenu = renderToStaticMarkup(
+      React.createElement(BookingRequest, {
+        locale: "en",
+        facts: { ...FAKE, services: [] },
+      }),
+    );
+    expect(noMenu.match(/<label/g)?.length).toBe(4);
+    expect(noMenu.match(/<option/g)?.length).toBe(20);
   });
 
   test("structured data describes the studio from confirmed facts only", () => {

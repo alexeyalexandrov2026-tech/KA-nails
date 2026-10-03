@@ -1,30 +1,34 @@
 # Studio facts
 
-`studio-facts.json` holds the studio's confirmed business facts: pedicure
-services with prices and durations, contact channels, address, opening hours
-and the master's profile. It is empty on purpose: nothing is shown on the site
-until the owner confirms the data. Every block appears by itself once its data
-is filled in.
+`studio-facts.json` holds the studio's confirmed business facts: the pedicure
+menu (services, add-ons and notes, with prices), contact channels, address,
+opening hours and the master's profile. Only data the owner has confirmed goes
+in; nothing is shown on the site for a part that is still empty. Every block
+appears by itself once its data is filled in.
 
 What each part turns on:
 
+- `services`: the menu on the services page (a duration is shown only when
+  `durationMinutes` is given) and the service choice in the /book/ request
+  form. `addOns` and `menuNotes` are listed under the menu; an add-on price
+  with `"plus": true` reads "+$15" (added to a pedicure's price).
 - `channels` with WhatsApp, Telegram or email: the appointment request form
-  on /book/, "Book this look on WhatsApp" in the photo viewer and "Send these
-  looks" in the style finder. The site only prepares the message; visitors
-  send it from their own app.
+  on /book/ (and a link to it on the services page), "Book this look on
+  WhatsApp" in the photo viewer and "Send these looks" in the style finder.
+  The site only prepares the message; visitors send it from their own app.
 - `address.postal`: the schema.org `NailSalon` description for search
   engines (Google requires the address), with the phone from `channels`,
   hours that have `daysOfWeek`, and services with prices.
 - `master.photo`: put the original in `source-assets/master/` and run
   `node tools/make-master-photo.mjs`; it writes
   `public/photos/master/<name>.webp`, the path to use here.
-- `address`, `hours`, `services`, `master`: the matching blocks on the
-  contact, services and home pages.
+- `address`, `hours`, `master`: the matching blocks on the contact and home
+  pages.
 
 The build validates this file (`lib/studio-facts.ts`) and fails on missing
 EN/RU text, phone numbers not in E.164 format, invalid handles, non-https
-links, invalid prices or durations, duplicate ids, or any service that is not
-pedicure.
+links, invalid prices or durations, "+" prices outside add-ons, duplicate ids,
+or any service that is not pedicure.
 
 Example of a filled file (illustrative values only — never publish them):
 
@@ -39,6 +43,14 @@ Example of a filled file (illustrative values only — never publish them):
       "price": { "amount": 50, "currency": "USD", "from": false }
     }
   ],
+  "addOns": [
+    {
+      "id": "french-gel",
+      "name": { "en": "French gel", "ru": "Гель-френч" },
+      "price": { "amount": 15, "currency": "USD", "plus": true }
+    }
+  ],
+  "menuNotes": [{ "en": "…", "ru": "…" }],
   "channels": [
     { "kind": "phone", "value": "+13055550100", "preferred": true },
     { "kind": "whatsapp", "value": "+13055550100" },
