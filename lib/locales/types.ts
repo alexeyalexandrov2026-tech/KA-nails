@@ -92,7 +92,10 @@ export interface LocaleDictionary {
   servicesPage: {
     eyebrow: string;
     heading: string;
+    /** Shown while no service menu is published. */
     lead: string;
+    /** Shown once the service menu from studio facts is published. */
+    leadWithMenu: string;
   };
   galleryPage: {
     eyebrow: string;
@@ -135,6 +138,29 @@ export interface LocaleDictionary {
     helpTextTrail: string;
     frameTitle: string;
     panelAriaLabel: string;
+  };
+  facts: {
+    servicesEyebrow: string;
+    servicesTitle: string;
+    durationLabel: string;
+    priceLabel: string;
+    priceFrom: (price: string) => string;
+    channelsEyebrow: string;
+    channelsTitle: string;
+    preferredLabel: string;
+    channelLabels: Record<
+      "phone" | "whatsapp" | "telegram" | "instagram" | "email",
+      string
+    >;
+    detailsEyebrow: string;
+    detailsTitle: string;
+    addressLabel: string;
+    hoursLabel: string;
+    closedLabel: string;
+    mapLink: string;
+    masterEyebrow: string;
+    masterTitle: string;
+    masterPhotoAlt: (name: string) => string;
   };
   lightbox: {
     dialogAriaLabel: (title: string, current: number, total: number) => string;

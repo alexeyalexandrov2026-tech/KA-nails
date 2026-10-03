@@ -129,7 +129,9 @@ export const ruLocale: LocaleDictionary = {
   servicesPage: {
     eyebrow: "Студия / Услуги",
     heading: "Выберите процедуру.",
-    lead: "Список услуг, цены и продолжительность процедур будут опубликованы в модуле записи ниже.",
+    lead: "Педикюр в KA Nails. Меню услуг с ценами и продолжительностью появится здесь после подтверждения.",
+    leadWithMenu:
+      "Все услуги — педикюр. Продолжительность и цены указаны ниже.",
   },
   galleryPage: {
     eyebrow: "KA Nails / Выставка студии",
@@ -183,6 +185,32 @@ export const ruLocale: LocaleDictionary = {
     helpTextTrail: ".",
     frameTitle: "Запись на прием в студию KA Nails",
     panelAriaLabel: "Модуль бронирования студии",
+  },
+  facts: {
+    servicesEyebrow: "Меню педикюра",
+    servicesTitle: "Услуги и цены",
+    durationLabel: "Продолжительность",
+    priceLabel: "Цена",
+    priceFrom: (price) => `от ${price}`,
+    channelsEyebrow: "Связаться",
+    channelsTitle: "Связь со студией",
+    preferredLabel: "Предпочтительно",
+    channelLabels: {
+      phone: "Телефон",
+      whatsapp: "WhatsApp",
+      telegram: "Telegram",
+      instagram: "Instagram",
+      email: "Почта",
+    },
+    detailsEyebrow: "Визит",
+    detailsTitle: "Адрес и часы работы",
+    addressLabel: "Адрес",
+    hoursLabel: "Часы работы",
+    closedLabel: "Выходной",
+    mapLink: "Открыть на карте",
+    masterEyebrow: "05 / Ваш мастер",
+    masterTitle: "Знакомьтесь: мастер",
+    masterPhotoAlt: (name) => `${name}, мастер педикюра KA Nails`,
   },
   lightbox: {
     dialogAriaLabel: (title, current, total) =>

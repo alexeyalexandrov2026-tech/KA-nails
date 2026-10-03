@@ -2046,6 +2046,194 @@ h2.section-title {
 }
 
 /* ============================================================ */
+/* STUDIO FACTS (menu, channels, address/hours, master)          */
+/* Rendered only once lib/studio-facts.ts has confirmed data.    */
+/* ============================================================ */
+.facts-block {
+  margin: 48px 0;
+}
+
+.facts-title {
+  font-size: clamp(28px, 3.4vw, 44px);
+  margin: 8px 0 24px;
+}
+
+.service-menu-list,
+.contact-channel-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--line);
+}
+
+.service-menu-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px 32px;
+  align-items: baseline;
+  padding: 22px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.service-menu-name {
+  font-size: 26px;
+  margin: 0;
+}
+
+.service-menu-desc {
+  margin: 6px 0 0;
+  max-width: 60ch;
+  color: var(--muted);
+}
+
+.service-menu-meta {
+  display: flex;
+  gap: 28px;
+  margin: 0;
+  text-align: right;
+}
+
+.service-menu-meta dt,
+.studio-details-label,
+.contact-channel-kind {
+  font-family: var(--font-inter);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent-text);
+}
+
+.service-menu-meta dd {
+  margin: 6px 0 0;
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 500;
+  line-height: 1.2;
+  /* Cormorant defaults to old-style figures; prices read better lining. */
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.contact-channel-link {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 24px;
+  min-height: 44px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.contact-channel-link:hover .contact-channel-value,
+.contact-channel-link:focus-visible .contact-channel-value {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.contact-channel-value {
+  font-size: 18px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.studio-details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 32px;
+}
+
+.studio-details-label {
+  margin: 0 0 12px;
+}
+
+.studio-address {
+  font-style: normal;
+  font-size: 18px;
+  line-height: 1.6;
+}
+
+.studio-address-line {
+  display: block;
+}
+
+.studio-map-link {
+  display: inline-block;
+  margin-top: 12px;
+  color: var(--ink);
+}
+
+.studio-hours {
+  margin: 0;
+}
+
+.studio-hours-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  font-variant-numeric: tabular-nums;
+}
+
+.studio-hours-row dd {
+  margin: 0;
+}
+
+.master-profile {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: clamp(24px, 5vw, 72px);
+  align-items: center;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: clamp(64px, 9vw, 120px) 5vw;
+}
+
+.master-photo {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  border-radius: var(--radius-images);
+}
+
+.master-name {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-style: italic;
+  margin: 0 0 12px;
+}
+
+.master-bio {
+  max-width: 56ch;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1.6;
+}
+
+@media (max-width: 720px) {
+  .service-menu-item {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .service-menu-meta {
+    text-align: left;
+  }
+
+  .contact-channel-link {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .master-profile {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ============================================================ */
 /* STRICT PREFERS-REDUCED-MOTION CONTRACT                       */
 /* ============================================================ */
 @media (prefers-reduced-motion: reduce) {

@@ -2,6 +2,7 @@ import React from "react";
 import Link from "next/link";
 import { HeroCollage } from "./hero-collage";
 import { HomeMovingWall } from "./home-moving-wall";
+import { MasterProfile } from "./facts/master-profile";
 import { getDictionary, getLocalizedPath, type Locale } from "../lib/locales";
 
 interface HomePageContentProps {
@@ -135,7 +136,10 @@ export function HomePageContent({ locale = "en" }: HomePageContentProps) {
         </div>
       </section>
 
-      {/* Final Booking Callout (Section 05) */}
+      {/* Master profile from studio facts; hidden until published */}
+      <MasterProfile locale={locale} />
+
+      {/* Final Booking Callout */}
       <section
         className="final-booking-band"
         aria-label={dict.finalBooking.ariaLabel}

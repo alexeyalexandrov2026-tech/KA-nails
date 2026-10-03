@@ -128,7 +128,9 @@ export const enLocale: LocaleDictionary = {
   servicesPage: {
     eyebrow: "The studio / Services",
     heading: "Choose your care.",
-    lead: "Published services, prices and durations are shown in the studio’s booking below.",
+    lead: "Pedicure care at KA Nails. The service menu with prices and durations will be published here once it is confirmed.",
+    leadWithMenu:
+      "Every service is pedicure care. Durations and prices are listed below.",
   },
   galleryPage: {
     eyebrow: "KA Nails / Studio Exhibition",
@@ -180,6 +182,32 @@ export const enLocale: LocaleDictionary = {
     helpTextTrail: ".",
     frameTitle: "KA Nails appointment booking",
     panelAriaLabel: "Studio booking",
+  },
+  facts: {
+    servicesEyebrow: "Pedicure menu",
+    servicesTitle: "Services and prices",
+    durationLabel: "Duration",
+    priceLabel: "Price",
+    priceFrom: (price) => `from ${price}`,
+    channelsEyebrow: "Get in touch",
+    channelsTitle: "Contact the studio",
+    preferredLabel: "Preferred",
+    channelLabels: {
+      phone: "Phone",
+      whatsapp: "WhatsApp",
+      telegram: "Telegram",
+      instagram: "Instagram",
+      email: "Email",
+    },
+    detailsEyebrow: "Visit",
+    detailsTitle: "Address and hours",
+    addressLabel: "Address",
+    hoursLabel: "Opening hours",
+    closedLabel: "Closed",
+    mapLink: "Open in maps",
+    masterEyebrow: "05 / Your master",
+    masterTitle: "Meet your master",
+    masterPhotoAlt: (name) => `${name}, KA Nails pedicure master`,
   },
   lightbox: {
     dialogAriaLabel: (title, current, total) =>
