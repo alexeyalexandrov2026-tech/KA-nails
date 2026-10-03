@@ -1393,8 +1393,21 @@ h2.section-title {
 }
 
 .gallery-page-header {
-  margin-bottom: 40px;
+  position: relative;
+  margin-bottom: 48px;
   max-width: 860px;
+}
+
+.cta-arc circle {
+  fill: none;
+  stroke: var(--ka-rose);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.gallery-page-container {
+  position: relative;
+  isolation: isolate;
 }
 
 .gallery-page-title {
@@ -1421,8 +1434,8 @@ h2.section-title {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: transparent;
+  border: 1px solid var(--ka-control);
   color: var(--ink);
   border-radius: var(--radius-compactbuttons);
   padding: 8px 18px;
@@ -1447,14 +1460,18 @@ h2.section-title {
 
 .pill-count {
   font-size: 11px;
-  opacity: 0.7;
+  color: var(--muted);
+}
+
+.filter-pill.active .pill-count {
+  color: var(--ka-cream-muted);
 }
 
 /* Honest Inventory & Status Banner */
 .gallery-inventory-banner {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  background: var(--ka-cream-deep);
+  border: 0;
+  border-radius: var(--radius-cards);
   padding: 14px 20px;
   margin-bottom: 24px;
   display: flex;
@@ -1472,8 +1489,8 @@ h2.section-title {
   font-family: var(--font-inter-tight);
   font-size: 13px;
   font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 4px;
+  padding: 4px 12px;
+  border-radius: 999px;
   white-space: nowrap;
 }
 
@@ -1488,24 +1505,35 @@ h2.section-title {
   margin-bottom: 28px;
 }
 
-/* Asymmetric Gallery Grid */
+/* Gallery wall: three columns, the middle one set lower */
 .gallery-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 32px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+  gap: 40px 32px;
   margin-bottom: 72px;
+}
+
+@media (min-width: 1025px) {
+  .gallery-grid > .gallery-card:nth-child(3n + 2) {
+    translate: 0 64px;
+  }
+
+  .gallery-grid:has(> .gallery-card:nth-child(2)) {
+    margin-bottom: 136px;
+  }
 }
 
 .gallery-card {
   position: relative;
-  background: var(--surface);
+  background: var(--ka-paper);
   border: 1px solid var(--line-subtle);
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: var(--shadow-subtle);
+  border-radius: var(--radius-cards);
+  padding: 10px;
   cursor: pointer;
   display: flex;
   flex-direction: column;
+  scroll-margin: 120px 0;
   transition:
     transform 0.25s ease,
     box-shadow 0.25s ease,
@@ -1515,7 +1543,17 @@ h2.section-title {
 .gallery-card:hover,
 .gallery-card:has(.gallery-card-trigger:hover) {
   transform: translateY(-6px);
-  border-color: var(--ink);
+  border-color: var(--ka-rose);
+}
+
+/* A work opened from a link (/gallery/#work-NN) gets a rose-gold double ring */
+.gallery-card.is-target,
+.gallery-card:target {
+  border-color: var(--ka-rose);
+  box-shadow:
+    0 0 0 1px var(--ka-rose),
+    0 0 0 8px var(--canvas),
+    0 0 0 9px var(--ka-rose);
 }
 
 .gallery-card:has(.gallery-card-trigger:focus-visible) {
@@ -1534,7 +1572,7 @@ h2.section-title {
   cursor: pointer;
   display: inline-block;
   min-height: 24px;
-  line-height: 1.35;
+  line-height: 1.25;
 }
 
 .gallery-card-trigger::after {
@@ -1542,7 +1580,7 @@ h2.section-title {
   position: absolute;
   inset: 0;
   z-index: 10;
-  border-radius: 8px;
+  border-radius: var(--radius-cards);
 }
 
 .gallery-card-trigger:focus-visible {
@@ -1556,11 +1594,13 @@ h2.section-title {
   }
 }
 
+/* Arched photo inside a cream passe-partout */
 .gallery-card-media {
   position: relative;
   width: 100%;
-  background: var(--color-absolute-black);
+  background: var(--ka-cream-deep);
   overflow: hidden;
+  border-radius: 999px 999px 2px 2px;
 }
 
 .grid-span-tall .gallery-card-media {
@@ -1590,7 +1630,7 @@ h2.section-title {
 .gallery-card-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(38, 27, 21, 0.28);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1604,16 +1644,16 @@ h2.section-title {
 
 .card-zoom-badge {
   background: var(--ka-cream);
-  color: var(--ink);
+  color: var(--ka-espresso);
   font-size: 12px;
   font-weight: 600;
   padding: 6px 14px;
-  border-radius: 4px;
+  border-radius: 999px;
   letter-spacing: 0.02em;
 }
 
 .gallery-card-info {
-  padding: 20px 22px;
+  padding: 18px 10px 8px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1622,14 +1662,18 @@ h2.section-title {
 
 .card-header-row {
   display: flex;
-  align-items: center;
+  flex-wrap: wrap;
+  align-items: baseline;
   justify-content: space-between;
+  gap: 4px 12px;
 }
 
 .card-category {
   font-family: var(--font-inter-tight);
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
   color: var(--accent-text);
 }
 
@@ -1639,16 +1683,16 @@ h2.section-title {
 }
 
 .card-title {
-  font-size: 18px;
-  font-weight: 600;
-  letter-spacing: var(--tracking-display);
-  line-height: 1.25;
+  font-size: 24px;
+  font-style: italic;
+  font-weight: 500;
+  line-height: 1.2;
 }
 
 .card-technique {
   font-size: 13px;
   color: var(--muted);
-  line-height: 1.45;
+  line-height: 1.5;
 }
 
 .card-footer-row {
@@ -1658,6 +1702,7 @@ h2.section-title {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   font-size: 12px;
 }
 
@@ -1670,13 +1715,29 @@ h2.section-title {
   font-weight: 600;
 }
 
-/* Gallery CTA Band */
+/* Gallery CTA Band: espresso, like the home finale */
 .gallery-cta-band {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-utilitysurfaces);
-  padding: clamp(36px, 5vw, 64px);
-  box-shadow: var(--shadow-subtle);
+  --ink: var(--ka-cream);
+  --muted: var(--ka-cream-muted);
+  --accent-text: var(--ka-rose);
+  --focus: var(--ka-cream);
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--ka-espresso);
+  color: var(--ka-cream);
+  border-radius: var(--radius-cards);
+  padding: clamp(40px, 6vw, 80px);
+}
+
+.cta-arc {
+  position: absolute;
+  right: -120px;
+  bottom: -220px;
+  width: 520px;
+  height: 520px;
+  z-index: -1;
+  pointer-events: none;
 }
 
 .gallery-cta-content {
@@ -1686,6 +1747,17 @@ h2.section-title {
 .gallery-cta-content h2 {
   font-size: clamp(28px, 3.5vw, var(--text-section-heading));
   margin: 12px 0 16px;
+}
+
+.gallery-cta-band .button {
+  background: var(--ka-cream);
+  color: var(--ka-espresso);
+  border-color: var(--ka-cream);
+}
+
+.gallery-cta-band .button:hover {
+  background: var(--ka-paper);
+  border-color: var(--ka-paper);
 }
 
 .cta-action-row {
@@ -1702,7 +1774,7 @@ h2.section-title {
   position: fixed;
   inset: 0;
   z-index: 2000;
-  background: rgba(38, 27, 21, 0.96);
+  background: rgba(27, 19, 15, 0.97);
   backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
@@ -1737,7 +1809,7 @@ h2.section-title {
 }
 
 .counter-sep {
-  opacity: 0.5;
+  color: var(--ka-cream-muted);
 }
 
 .counter-category {
@@ -1799,6 +1871,7 @@ h2.section-title {
   max-height: 65vh;
 }
 
+/* The photo sits in a thin rose-gold frame */
 .lightbox-media-wrapper {
   position: relative;
   max-height: 65vh;
@@ -1806,10 +1879,14 @@ h2.section-title {
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 10px;
+  border: 1px solid var(--ka-rose);
+  border-radius: var(--radius-cards);
 }
 
 .lightbox-image {
-  max-height: 65vh;
+  height: auto;
+  max-height: calc(65vh - 22px);
   width: auto;
   max-width: 100%;
   object-fit: contain;
@@ -1817,9 +1894,10 @@ h2.section-title {
 }
 
 .lightbox-nav-btn {
-  background: rgba(253, 248, 242, 0.15);
+  /* Solid: on phones the arrows sit on top of the photo */
+  background: var(--ka-espresso-raised);
   color: var(--ka-cream);
-  border: 1px solid rgba(253, 248, 242, 0.3);
+  border: 1px solid rgba(253, 248, 242, 0.45);
   border-radius: 50%;
   width: 48px;
   height: 48px;
@@ -1839,7 +1917,7 @@ h2.section-title {
 }
 
 .lightbox-nav-btn:hover {
-  background: rgba(253, 248, 242, 0.35);
+  background: var(--ka-espresso);
   transform: translateY(-50%) scale(1.08);
 }
 
@@ -1913,17 +1991,71 @@ h2.section-title {
 /* OTHER PAGES (SERVICES, BOOK, CONTACT)                        */
 /* ============================================================ */
 .page {
-  max-width: 1280px;
+  max-width: 1440px;
   margin: auto;
   padding: 64px 5vw 88px;
 }
 
+/* Shared intro of the inner pages: text beside an arched portfolio photo */
+.page-intro {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 4fr);
+  gap: clamp(32px, 6vw, 96px);
+  align-items: end;
+  padding-bottom: 8px;
+}
+
+.page-intro h1 {
+  margin: 4px 0 8px;
+}
+
+.page-intro-figure {
+  position: relative;
+  margin: 0;
+  max-width: 360px;
+  justify-self: end;
+  width: 100%;
+}
+
+/* Rose-gold arch drawn just outside the photo (decoration only) */
+.page-intro-arc {
+  position: absolute;
+  inset: -14px;
+  width: calc(100% + 28px);
+  height: calc(100% + 28px);
+  pointer-events: none;
+}
+
+.page-intro-arc path {
+  fill: none;
+  stroke: var(--ka-rose);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+/* Notices: a deeper cream panel with a rose-gold ring in the corner */
 .notice {
-  margin: 48px 0;
-  border: 1px solid var(--line);
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  margin: 56px 0;
+  border: 0;
   border-radius: var(--radius-cards);
-  padding: clamp(24px, 4vw, 48px);
-  background: var(--surface);
+  padding: clamp(28px, 5vw, 56px);
+  background: var(--ka-cream-deep);
+}
+
+.notice::after {
+  content: "";
+  position: absolute;
+  right: -110px;
+  bottom: -190px;
+  width: 380px;
+  height: 380px;
+  border: 1px solid var(--ka-rose);
+  border-radius: 50%;
+  z-index: -1;
+  pointer-events: none;
 }
 
 .notice h2 {
@@ -1938,6 +2070,39 @@ h2.section-title {
 
 .booking-panel {
   margin-top: 40px;
+}
+
+/* Strip of portfolio works on the services page */
+.work-strip {
+  margin-top: 72px;
+}
+
+.work-strip-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px 24px;
+  margin-bottom: 28px;
+}
+
+.work-strip-header .facts-title {
+  margin: 0;
+}
+
+.work-strip-list {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(16px, 3vw, 40px);
+}
+
+.work-strip-list a {
+  display: block;
+}
+
+.work-strip-list li:nth-child(2) {
+  margin-top: 48px;
 }
 
 .booking-help {
@@ -2120,6 +2285,7 @@ h2.section-title {
 
 .lightbox-title {
   font-size: 30px;
+  font-style: italic;
   font-weight: 500;
 }
 
@@ -2155,6 +2321,16 @@ h2.section-title {
 
   .pillars-figure {
     max-width: 380px;
+  }
+
+  .page-intro {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .page-intro-figure {
+    justify-self: start;
+    max-width: 260px;
   }
 }
 
@@ -2221,6 +2397,22 @@ h2.section-title {
 
   .service-chapter-photo {
     aspect-ratio: 4 / 3;
+  }
+
+  .work-strip-list li:nth-child(2) {
+    margin-top: 24px;
+  }
+
+  .page-intro-figure {
+    max-width: 200px;
+  }
+
+  .notice::after {
+    display: none;
+  }
+
+  .gallery-grid {
+    gap: 28px;
   }
 
   .pillar-card {

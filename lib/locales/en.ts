@@ -151,6 +151,8 @@ export const enLocale: LocaleDictionary = {
     lead: "Pedicure care at KA Nails. The service menu with prices and durations will be published here once it is confirmed.",
     leadWithMenu:
       "Every service is pedicure care. Durations and prices are listed below.",
+    stripTitle: "From the studio portfolio",
+    stripLink: "See the full gallery",
   },
   galleryPage: {
     eyebrow: "KA Nails / Studio Exhibition",
@@ -159,8 +161,8 @@ export const enLocale: LocaleDictionary = {
     lead: "Explore our archive of authentic studio works. From refined French lines and deep bordeaux gloss to restorative aesthetic care and attentive salon detailing.",
     filterAriaLabel: "Filter gallery by technique",
     inventoryBadge: "Authentic Studio Archive",
-    inventoryText: (uniquePhotos, additionalNeeded, target) =>
-      `${uniquePhotos} authentic salon works displayed • ${additionalNeeded} additional works pending client curation (Target: ${target})`,
+    inventoryText: (uniquePhotos) =>
+      `${uniquePhotos} authentic salon works displayed`,
     statusText: (count, category) =>
       `Showing ${count} ${category === "All" ? "curated styles" : `${category} designs`}`,
     cardAriaLabel: (title, category) =>

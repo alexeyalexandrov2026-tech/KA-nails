@@ -1,5 +1,6 @@
 import React from "react";
 import { BookingPanel } from "./booking-panel";
+import { PageIntro } from "./page-intro";
 import { ContactChannels } from "./facts/contact-channels";
 import { getDictionary, type Locale } from "../lib/locales";
 
@@ -12,8 +13,12 @@ export function BookContent({ locale = "en" }: BookContentProps) {
 
   return (
     <div className="page">
-      <p className="eyebrow">{dict.eyebrow}</p>
-      <h1>{dict.heading}</h1>
+      <PageIntro
+        locale={locale}
+        eyebrow={dict.eyebrow}
+        heading={dict.heading}
+        photoId="work-09"
+      />
       <BookingPanel locale={locale} />
       <ContactChannels locale={locale} />
     </div>

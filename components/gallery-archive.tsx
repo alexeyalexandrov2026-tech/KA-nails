@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -22,6 +22,23 @@ export function GalleryArchive({ locale = "en" }: GalleryArchiveProps) {
   const [selectedCategory, setSelectedCategory] =
     useState<GalleryCategory>("All");
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
+  // Work linked from elsewhere (/gallery/#work-NN): shown and highlighted.
+  const [targetId, setTargetId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const showLinkedWork = () => {
+      const id = decodeURIComponent(window.location.hash.slice(1));
+      if (!/^work-\d+$/.test(id)) return;
+      setSelectedCategory("All");
+      setTargetId(id);
+      requestAnimationFrame(() =>
+        document.getElementById(id)?.scrollIntoView({ block: "center" }),
+      );
+    };
+    showLinkedWork();
+    window.addEventListener("hashchange", showLinkedWork);
+    return () => window.removeEventListener("hashchange", showLinkedWork);
+  }, []);
 
   const items = useMemo(() => getGalleryItems(locale), [locale]);
   const categories = useMemo(() => getGalleryCategories(locale), [locale]);
@@ -82,11 +99,7 @@ export function GalleryArchive({ locale = "en" }: GalleryArchiveProps) {
       <div className="gallery-inventory-banner" role="status">
         <span className="inventory-badge">{dict.inventoryBadge}</span>
         <span className="inventory-text">
-          {dict.inventoryText(
-            GALLERY_METRICS.uniquePhotos,
-            GALLERY_METRICS.additionalPhotosNeededForMinimum,
-            GALLERY_METRICS.minimumTarget,
-          )}
+          {dict.inventoryText(GALLERY_METRICS.uniquePhotos)}
         </span>
       </div>
 
@@ -119,7 +132,9 @@ export function GalleryArchive({ locale = "en" }: GalleryArchiveProps) {
             <article
               key={item.id}
               id={item.id}
-              className={`gallery-card ${gridSpanClass}`}
+              className={`gallery-card ${gridSpanClass}${
+                item.id === targetId ? " is-target" : ""
+              }`}
             >
               <div className="gallery-card-media gallery-media-wrapper">
                 <Image
@@ -177,6 +192,15 @@ export function GalleryArchive({ locale = "en" }: GalleryArchiveProps) {
 
       {/* Bottom Conversion Band */}
       <div className="gallery-cta-band">
+        <svg
+          className="cta-arc"
+          data-decor=""
+          aria-hidden="true"
+          focusable="false"
+          viewBox="0 0 400 400"
+        >
+          <circle cx="200" cy="200" r="196" />
+        </svg>
         <div className="gallery-cta-content">
           <p className="eyebrow">{dict.ctaEyebrow}</p>
           <h2>{dict.ctaTitle}</h2>

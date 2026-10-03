@@ -115,6 +115,8 @@ export interface LocaleDictionary {
     lead: string;
     /** Shown once the service menu from studio facts is published. */
     leadWithMenu: string;
+    stripTitle: string;
+    stripLink: string;
   };
   galleryPage: {
     eyebrow: string;
@@ -123,11 +125,7 @@ export interface LocaleDictionary {
     lead: string;
     filterAriaLabel: string;
     inventoryBadge: string;
-    inventoryText: (
-      uniquePhotos: number,
-      additionalNeeded: number,
-      target: number,
-    ) => string;
+    inventoryText: (uniquePhotos: number) => string;
     statusText: (count: number, category: string) => string;
     cardAriaLabel: (title: string, category: string) => string;
     expandLabel: string;

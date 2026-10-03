@@ -152,6 +152,8 @@ export const ruLocale: LocaleDictionary = {
     lead: "Педикюр в KA Nails. Меню услуг с ценами и продолжительностью появится здесь после подтверждения.",
     leadWithMenu:
       "Все услуги — педикюр. Продолжительность и цены указаны ниже.",
+    stripTitle: "Из портфолио студии",
+    stripLink: "Вся галерея",
   },
   galleryPage: {
     eyebrow: "KA Nails / Выставка студии",
@@ -160,8 +162,8 @@ export const ruLocale: LocaleDictionary = {
     lead: "Познакомьтесь с архивом подлинных работ нашей студии: от утонченного френча и глубокого глянца до деликатного восстановительного ухода и аккуратных акцентов.",
     filterAriaLabel: "Фильтрация галереи по технике выполнения",
     inventoryBadge: "Подлинный архив студии",
-    inventoryText: (uniquePhotos, additionalNeeded, target) =>
-      `Представлено ${uniquePhotos} подлинных работ студии • ${additionalNeeded} дополнительных работ на этапе отбора (цель: ${target})`,
+    inventoryText: (uniquePhotos) =>
+      `Представлено ${uniquePhotos} подлинных работ студии`,
     statusText: (count, category) =>
       category === "All"
         ? `Показано ${count} авторских работ`

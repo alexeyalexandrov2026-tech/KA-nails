@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useCallback, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import Link from "next/link";
 import type { GalleryItem } from "../lib/gallery-data";
@@ -23,7 +24,6 @@ export function GalleryViewer({
 }: GalleryViewerProps) {
   const dict = getDictionary(locale).lightbox;
   const dialogRef = useRef<HTMLDivElement>(null);
-  const triggerElementRef = useRef<HTMLElement | null>(null);
   const touchStartXRef = useRef<number | null>(null);
   const touchDeltaXRef = useRef<number>(0);
   const [copiedNotification, setCopiedNotification] = useState(false);
@@ -31,13 +31,6 @@ export function GalleryViewer({
   const isOpen =
     currentIndex !== null && currentIndex >= 0 && currentIndex < items.length;
   const currentItem = isOpen ? items[currentIndex] : null;
-
-  // Capture invoking element on open
-  useEffect(() => {
-    if (isOpen) {
-      triggerElementRef.current = document.activeElement as HTMLElement | null;
-    }
-  }, [isOpen]);
 
   const handlePrev = useCallback(() => {
     if (currentIndex === null) return;
@@ -51,14 +44,35 @@ export function GalleryViewer({
     onNavigate(nextIndex);
   }, [currentIndex, items.length, onNavigate]);
 
-  // Keyboard navigation & body scroll lock
+  // Latest handlers for the key listener, so the open/close effect below runs
+  // only when the dialog opens or closes (not on every navigation, which used
+  // to send focus back to the page behind the dialog).
+  const handlersRef = useRef({ onClose, handlePrev, handleNext });
+  useEffect(() => {
+    handlersRef.current = { onClose, handlePrev, handleNext };
+  });
+
+  // Open/close lifecycle: focus, scroll lock, inert background, key handling.
   useEffect(() => {
     if (!isOpen) return;
 
+    const trigger = document.activeElement as HTMLElement | null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
+    // The dialog is rendered straight into <body>; everything else becomes
+    // inert while it is open, so neither focus nor clicks reach the page.
+    const dialog = dialogRef.current;
+    const inerted: Element[] = [];
+    for (const el of Array.from(document.body.children)) {
+      if (el === dialog || el.tagName === "SCRIPT" || el.hasAttribute("inert"))
+        continue;
+      el.setAttribute("inert", "");
+      inerted.push(el);
+    }
+
     const handleKeyDown = (e: KeyboardEvent) => {
+      const { onClose, handlePrev, handleNext } = handlersRef.current;
       if (e.key === "Escape") {
         e.preventDefault();
         onClose();
@@ -93,17 +107,14 @@ export function GalleryViewer({
     window.addEventListener("keydown", handleKeyDown);
 
     // Initial focus on dialog close button
-    const closeBtn = dialogRef.current?.querySelector<HTMLButtonElement>(
-      ".lightbox-close-btn",
-    );
-    closeBtn?.focus();
+    dialog?.querySelector<HTMLButtonElement>(".lightbox-close-btn")?.focus();
 
     return () => {
-      document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      for (const el of inerted) el.removeAttribute("inert");
 
-      // Restore focus to original invoking card/control if still in DOM
-      const trigger = triggerElementRef.current;
+      // Restore focus to the invoking card/control if still in the page
       if (trigger && typeof trigger.focus === "function") {
         setTimeout(() => {
           if (document.contains(trigger)) {
@@ -112,7 +123,7 @@ export function GalleryViewer({
         }, 0);
       }
     };
-  }, [isOpen, onClose, handlePrev, handleNext]);
+  }, [isOpen]);
 
   // Touch swipe support
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -177,7 +188,7 @@ export function GalleryViewer({
   const bookHref = getLocalizedPath("/book/", locale);
   const categoryLabel = currentItem.categoryLabel || currentItem.category;
 
-  return (
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
@@ -286,6 +297,7 @@ export function GalleryViewer({
           </div>
         </footer>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
