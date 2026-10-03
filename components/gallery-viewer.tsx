@@ -5,6 +5,8 @@ import { createPortal } from "react-dom";
 import Image from "next/image";
 import Link from "next/link";
 import type { GalleryItem } from "../lib/gallery-data";
+import { whatsappLookLink } from "../lib/booking-message";
+import { studioFacts } from "../lib/studio-facts";
 import { getDictionary, getLocalizedPath, type Locale } from "../lib/locales";
 
 interface GalleryViewerProps {
@@ -23,6 +25,7 @@ export function GalleryViewer({
   locale = "en",
 }: GalleryViewerProps) {
   const dict = getDictionary(locale).lightbox;
+  const bookingDict = getDictionary(locale).bookingRequest;
   const dialogRef = useRef<HTMLDivElement>(null);
   const touchStartXRef = useRef<number | null>(null);
   const touchDeltaXRef = useRef<number>(0);
@@ -186,6 +189,10 @@ export function GalleryViewer({
   }
 
   const bookHref = getLocalizedPath("/book/", locale);
+  // Shown only once the studio publishes a WhatsApp number in studio facts.
+  const whatsappHref = whatsappLookLink(studioFacts.channels, locale, [
+    { id: currentItem.id, title: currentItem.title },
+  ]);
   const categoryLabel = currentItem.categoryLabel || currentItem.category;
 
   return createPortal(
@@ -286,6 +293,17 @@ export function GalleryViewer({
           </div>
 
           <div className="lightbox-booking-action">
+            {whatsappHref && (
+              <a
+                href={whatsappHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="lightbox-whatsapp-btn"
+                aria-label={bookingDict.lookOnWhatsAppAria(currentItem.title)}
+              >
+                {bookingDict.lookOnWhatsApp} <span aria-hidden="true">↗</span>
+              </a>
+            )}
             <Link
               href={bookHref}
               onClick={onClose}

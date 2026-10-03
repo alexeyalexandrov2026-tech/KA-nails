@@ -7,8 +7,8 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
-import Image from "next/image";
 import Link from "next/link";
+import { PortfolioImage } from "./portfolio-image";
 import { getGalleryItems, type GalleryItem } from "../lib/gallery-data";
 import { GalleryViewer } from "./gallery-viewer";
 import { getDictionary, getLocalizedPath, type Locale } from "../lib/locales";
@@ -568,15 +568,11 @@ export function HomeMovingWall({ locale = "en" }: HomeMovingWallProps) {
                     }
                   >
                     <div className="moving-card-media">
-                      <Image
-                        src={item.srcMed || item.src}
+                      <PortfolioImage
+                        photo={item}
                         alt={isClone ? "" : item.alt}
-                        width={item.width}
-                        height={item.height}
-                        unoptimized
-                        loading="lazy"
-                        className="moving-card-image"
                         sizes="(max-width: 767px) 210px, 280px"
+                        className="moving-card-image"
                       />
                       <div className="moving-card-glare" />
                     </div>
@@ -656,15 +652,11 @@ export function HomeMovingWall({ locale = "en" }: HomeMovingWallProps) {
                     }
                   >
                     <div className="moving-card-media">
-                      <Image
-                        src={item.srcMed || item.src}
+                      <PortfolioImage
+                        photo={item}
                         alt={isClone ? "" : item.alt}
-                        width={item.width}
-                        height={item.height}
-                        unoptimized
-                        loading="lazy"
-                        className="moving-card-image"
                         sizes="(max-width: 767px) 260px, 340px"
+                        className="moving-card-image"
                       />
                       <div className="moving-card-glare" />
                       <div className="moving-card-tag-badge">
@@ -749,15 +741,11 @@ export function HomeMovingWall({ locale = "en" }: HomeMovingWallProps) {
                     }
                   >
                     <div className="moving-card-media">
-                      <Image
-                        src={item.srcThumb || item.srcMed || item.src}
+                      <PortfolioImage
+                        photo={item}
                         alt={isClone ? "" : item.alt}
-                        width={item.width}
-                        height={item.height}
-                        unoptimized
-                        loading="lazy"
-                        className="moving-card-image"
                         sizes="(max-width: 767px) 170px, 230px"
+                        className="moving-card-image"
                       />
                       <div className="moving-card-glare" />
                     </div>

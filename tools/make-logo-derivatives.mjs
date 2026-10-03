@@ -53,6 +53,19 @@ const ico = Buffer.concat([header, ...entries, ...pngs]);
 await fs.writeFile(path.join(app, "favicon.ico"), ico);
 console.log(`app/favicon.ico: ${ico.length} bytes`);
 
+// Home-screen icons referenced by app/manifest.ts.
+const icons = path.resolve("public/icons");
+await fs.mkdir(icons, { recursive: true });
+for (const size of [192, 512]) {
+  const out = path.join(icons, `icon-${size}.png`);
+  await sharp(source)
+    .resize(size, size, { kernel: "lanczos3" })
+    .png({ compressionLevel: 9 })
+    .toFile(out);
+  const { size: bytes } = await fs.stat(out);
+  console.log(`${path.relative(process.cwd(), out)}: ${bytes} bytes`);
+}
+
 const apple = path.join(app, "apple-icon.png");
 await sharp(source)
   .resize(180, 180, { kernel: "lanczos3" })

@@ -1,6 +1,6 @@
 import React from "react";
-import Image from "next/image";
 import Link from "next/link";
+import { PortfolioImage } from "./portfolio-image";
 import { BookingPanel } from "./booking-panel";
 import { PageIntro } from "./page-intro";
 import { ServiceMenu } from "./facts/service-menu";
@@ -59,13 +59,10 @@ export function ServicesContent({ locale = "en" }: ServicesContentProps) {
                   item.categoryLabel || item.category,
                 )}
               >
-                <Image
-                  src={item.srcMed}
+                <PortfolioImage
+                  photo={item}
                   alt=""
-                  width={item.width}
-                  height={item.height}
-                  loading="lazy"
-                  unoptimized
+                  sizes="(max-width: 767px) 30vw, 28vw"
                   className="arch-photo reveal-photo"
                 />
               </Link>

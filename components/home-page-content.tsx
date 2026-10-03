@@ -1,6 +1,6 @@
 import React from "react";
-import Image from "next/image";
 import Link from "next/link";
+import { PortfolioImage } from "./portfolio-image";
 import { HeroCollage } from "./hero-collage";
 import { HomeMovingWall } from "./home-moving-wall";
 import { MasterProfile } from "./facts/master-profile";
@@ -57,13 +57,10 @@ export function HomePageContent({ locale = "en" }: HomePageContentProps) {
       >
         {standardsPhoto && (
           <figure className="pillars-figure">
-            <Image
-              src={standardsPhoto.srcMed}
+            <PortfolioImage
+              photo={standardsPhoto}
               alt={standardsPhoto.alt}
-              width={standardsPhoto.width}
-              height={standardsPhoto.height}
-              loading="lazy"
-              unoptimized
+              sizes="(max-width: 900px) 380px, 40vw"
               className="arch-photo reveal-photo"
             />
           </figure>
@@ -117,13 +114,10 @@ export function HomePageContent({ locale = "en" }: HomePageContentProps) {
             {chapters.map(({ card, photo, numeral }) => (
               <div className="service-preview-card" key={numeral}>
                 {photo && (
-                  <Image
-                    src={photo.srcMed}
+                  <PortfolioImage
+                    photo={photo}
                     alt={photo.alt}
-                    width={photo.width}
-                    height={photo.height}
-                    loading="lazy"
-                    unoptimized
+                    sizes="(max-width: 767px) 90vw, 30vw"
                     className="arch-photo service-chapter-photo reveal-photo"
                   />
                 )}

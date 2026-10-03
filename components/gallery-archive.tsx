@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import Image from "next/image";
 import Link from "next/link";
+import { PortfolioImage } from "./portfolio-image";
 import {
   type GalleryCategory,
   GALLERY_CATEGORIES,
@@ -137,13 +137,11 @@ export function GalleryArchive({ locale = "en" }: GalleryArchiveProps) {
               }`}
             >
               <div className="gallery-card-media gallery-media-wrapper">
-                <Image
-                  src={item.srcMed || item.src}
+                <PortfolioImage
+                  photo={item}
                   alt={item.alt}
-                  width={item.width}
-                  height={item.height}
-                  unoptimized
-                  loading={index < 8 ? "eager" : "lazy"}
+                  sizes="(max-width: 767px) 90vw, (max-width: 1024px) 45vw, 30vw"
+                  loading={index < 3 ? "eager" : "lazy"}
                   className="gallery-card-image"
                 />
                 <div className="gallery-card-overlay">

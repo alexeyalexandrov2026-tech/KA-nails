@@ -3,6 +3,7 @@
 import React, { useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { PortfolioImage } from "./portfolio-image";
 import { getHeroGalleryTiles } from "../lib/gallery-data";
 import { getDictionary, getLocalizedPath, type Locale } from "../lib/locales";
 
@@ -182,13 +183,12 @@ export function HeroCollage({ locale = "en" }: HeroCollageProps) {
                   tile1.categoryLabel || tile1.category,
                 )}
               >
-                <Image
-                  src={tile1.srcMed}
+                <PortfolioImage
+                  photo={tile1}
                   alt={tile1.alt}
-                  width={tile1.width}
-                  height={tile1.height}
+                  sizes="(max-width: 767px) 42vw, 230px"
                   loading="eager"
-                  unoptimized
+                  fetchPriority="low"
                   className="collage-artwork-img"
                 />
                 <span className="tile-micro-label">
@@ -209,13 +209,12 @@ export function HeroCollage({ locale = "en" }: HeroCollageProps) {
                   tile2.categoryLabel || tile2.category,
                 )}
               >
-                <Image
-                  src={tile2.srcMed}
+                <PortfolioImage
+                  photo={tile2}
                   alt={tile2.alt}
-                  width={tile2.width}
-                  height={tile2.height}
+                  sizes="(max-width: 767px) 42vw, 230px"
                   loading="eager"
-                  unoptimized
+                  fetchPriority="low"
                   className="collage-artwork-img"
                 />
                 <span className="tile-micro-label">
@@ -241,13 +240,12 @@ export function HeroCollage({ locale = "en" }: HeroCollageProps) {
                   tile3.categoryLabel || tile3.category,
                 )}
               >
-                <Image
-                  src={tile3.srcMed}
+                <PortfolioImage
+                  photo={tile3}
                   alt={tile3.alt}
-                  width={tile3.width}
-                  height={tile3.height}
+                  sizes="(max-width: 767px) 42vw, 230px"
                   loading="eager"
-                  unoptimized
+                  fetchPriority="low"
                   className="collage-artwork-img"
                 />
                 <span className="tile-micro-label">
@@ -273,13 +271,12 @@ export function HeroCollage({ locale = "en" }: HeroCollageProps) {
                   tile4.categoryLabel || tile4.category,
                 )}
               >
-                <Image
-                  src={tile4.srcMed}
+                <PortfolioImage
+                  photo={tile4}
                   alt={tile4.alt}
-                  width={tile4.width}
-                  height={tile4.height}
+                  sizes="(max-width: 767px) 42vw, 230px"
                   loading="eager"
-                  unoptimized
+                  fetchPriority="low"
                   className="collage-artwork-img"
                 />
                 <span className="tile-micro-label">

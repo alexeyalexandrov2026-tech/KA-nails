@@ -3,22 +3,36 @@ import type { LocaleDictionary } from "./types";
 export const enLocale: LocaleDictionary = {
   locale: "en",
   meta: {
-    siteTitle: "KA Nails",
-    siteTitleTemplate: "%s | KA Nails",
-    siteDescription:
-      "Pedicure at KA Nails. Explore services and reserve an appointment when online booking becomes available.",
-    servicesTitle: "Services — KA Nails",
-    servicesDescription:
-      "Published studio services, prices and durations will appear in the booking portal when online booking opens.",
-    galleryTitle: "Gallery — Curated Studio Works | KA Nails",
-    galleryDescription:
-      "Explore authentic salon pedicure artistry, deep bordeaux gloss, royal cobalt, pastel lilac, and attentive care by KA Nails.",
-    contactTitle: "Studio Information — KA Nails",
-    contactDescription:
-      "Studio address, contact details and opening hours for KA Nails.",
-    bookTitle: "Book an Appointment — KA Nails",
-    bookDescription:
-      "Explore services and check appointment availability for KA Nails.",
+    pages: {
+      home: {
+        title: "KA Nails",
+        description:
+          "Pedicure at KA Nails. Explore services and reserve an appointment when online booking becomes available.",
+      },
+      services: {
+        title: "Services",
+        description:
+          "Pedicure services at KA Nails. Prices and durations will be published here once they are confirmed.",
+      },
+      gallery: {
+        title: "Gallery — Curated Studio Works",
+        description:
+          "Explore authentic salon pedicure artistry, deep bordeaux gloss, royal cobalt, pastel lilac, and attentive care by KA Nails.",
+      },
+      contact: {
+        title: "Studio information",
+        description:
+          "Studio address, contact details and opening hours for KA Nails.",
+      },
+      book: {
+        title: "Book an appointment",
+        description:
+          "Explore services and check appointment availability for KA Nails.",
+      },
+    },
+    ogLocale: "en_US",
+    shareImageAlt:
+      "KA Nails logo on a cream background beside three pedicure works from the studio portfolio",
   },
   nav: {
     brandName: "KA Nails",
@@ -48,13 +62,13 @@ export const enLocale: LocaleDictionary = {
     headingLine1: "A little care.",
     headingLine2: "A moment of pure artistry.",
     description:
-      "Carefully crafted pedicure artistry. Explore our verified portfolio of authentic salon works while online booking preparation is underway.",
+      "Carefully crafted pedicure artistry. Explore our portfolio of real studio works while online booking preparation is underway.",
     bookCta: "Book an appointment",
     galleryCta: "Explore gallery (19)",
     badge1: "Curated Pedicure Artistry",
     badge2: "Authentic Salon Portfolio",
     badge3: "Attentive Care",
-    badgeText: "Studio Portfolio · 19 Verified Works",
+    badgeText: "Studio Portfolio · 19 Real Works",
     tileAriaLabel: (title, category) =>
       `Open artwork ${title}, category: ${category}`,
     collageAriaLabel: "Visual salon collage with authentic photography",
@@ -140,7 +154,7 @@ export const enLocale: LocaleDictionary = {
     eyebrow: "Studio Appointments",
     titleLine1: "Crafted with care.",
     titleLine2: "Captured in detail.",
-    desc: "Explore our curated gallery of 19 verified salon works. Online booking will open once scheduling details are finalized with the studio.",
+    desc: "Explore our curated gallery of 19 real studio works. Online booking will open once scheduling details are finalized with the studio.",
     ariaLabel: "Studio Portfolio & Appointments",
     viewStatusBtn: "View booking status",
     exploreGalleryBtn: "Explore gallery (19)",
@@ -230,6 +244,27 @@ export const enLocale: LocaleDictionary = {
     masterEyebrow: "06 / Your master",
     masterTitle: "Meet your master",
     masterPhotoAlt: (name) => `${name}, KA Nails pedicure master`,
+  },
+  bookingRequest: {
+    eyebrow: "While online booking is being prepared",
+    title: "Request an appointment",
+    lead: "Choose a look and a convenient time. Your messenger opens with a ready message, and nothing is sent until you press send there.",
+    lookLabel: "Look from the portfolio (optional)",
+    lookAny: "I will choose with the master",
+    timeLabel: "Preferred days and time",
+    timeHint: "For example: weekday evenings or Saturday morning",
+    nameLabel: "Your name (optional)",
+    notesLabel: "Anything else (optional)",
+    sendVia: {
+      whatsapp: "Send via WhatsApp",
+      telegram: "Copy and open Telegram",
+      email: "Send by email",
+    },
+    copied: "The message is copied. Paste it into the Telegram chat.",
+    privacy: "This form is not stored or sent by the website.",
+    lookOnWhatsApp: "Book this look on WhatsApp",
+    lookOnWhatsAppAria: (title) => `Book ${title} on WhatsApp`,
+    sendLooks: "Send these looks on WhatsApp",
   },
   lightbox: {
     dialogAriaLabel: (title, current, total) =>

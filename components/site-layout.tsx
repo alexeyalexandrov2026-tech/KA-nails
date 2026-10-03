@@ -1,10 +1,12 @@
 import React from "react";
 import Link from "next/link";
+import { PortfolioImage } from "./portfolio-image";
 import Image from "next/image";
 import { preload } from "react-dom";
 import { LanguageSwitcher } from "./language-switcher";
 import { getDictionary, getLocalizedPath, type Locale } from "../lib/locales";
 import { getGalleryItems } from "../lib/gallery-data";
+import { nailSalonJsonLd, serializeJsonLd } from "../lib/structured-data";
 import {
   channelDisplay,
   channelHref,
@@ -41,6 +43,8 @@ export function SiteLayout({ locale, children }: SiteLayoutProps) {
     preload(href, { as: "font", type: "font/woff2", crossOrigin: "anonymous" });
   }
   const dict = getDictionary(locale);
+  // Published only once confirmed studio facts exist (phone or address).
+  const jsonLd = nailSalonJsonLd(studioFacts, locale);
 
   const homeHref = locale === "ru" ? "/ru/" : "/";
   const servicesHref = getLocalizedPath("/services/", locale);
@@ -86,6 +90,13 @@ export function SiteLayout({ locale, children }: SiteLayoutProps) {
 
         <main id="main">{children}</main>
 
+        {jsonLd && (
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
+          />
+        )}
+
         <footer className="footer">
           <div className="footer-main">
             <div className="footer-brand">
@@ -123,14 +134,7 @@ export function SiteLayout({ locale, children }: SiteLayoutProps) {
                       item.categoryLabel || item.category,
                     )}
                   >
-                    <Image
-                      src={item.srcThumb}
-                      alt=""
-                      width={item.width}
-                      height={item.height}
-                      loading="lazy"
-                      unoptimized
-                    />
+                    <PortfolioImage photo={item} alt="" sizes="116px" />
                   </Link>
                 </li>
               ))}

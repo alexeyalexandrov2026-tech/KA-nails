@@ -3,17 +3,14 @@ export type Locale = "en" | "ru";
 export interface LocaleDictionary {
   locale: Locale;
   meta: {
-    siteTitle: string;
-    siteTitleTemplate: string;
-    siteDescription: string;
-    servicesTitle: string;
-    servicesDescription: string;
-    galleryTitle: string;
-    galleryDescription: string;
-    contactTitle: string;
-    contactDescription: string;
-    bookTitle: string;
-    bookDescription: string;
+    /** Title (home: the full title) and description of every page. */
+    pages: Record<
+      "home" | "services" | "gallery" | "contact" | "book",
+      { title: string; description: string }
+    >;
+    /** Open Graph locale, e.g. "en_US". */
+    ogLocale: string;
+    shareImageAlt: string;
   };
   nav: {
     brandName: string;
@@ -178,6 +175,23 @@ export interface LocaleDictionary {
     masterEyebrow: string;
     masterTitle: string;
     masterPhotoAlt: (name: string) => string;
+  };
+  bookingRequest: {
+    eyebrow: string;
+    title: string;
+    lead: string;
+    lookLabel: string;
+    lookAny: string;
+    timeLabel: string;
+    timeHint: string;
+    nameLabel: string;
+    notesLabel: string;
+    sendVia: Record<"whatsapp" | "telegram" | "email", string>;
+    copied: string;
+    privacy: string;
+    lookOnWhatsApp: string;
+    lookOnWhatsAppAria: (title: string) => string;
+    sendLooks: string;
   };
   lightbox: {
     dialogAriaLabel: (title: string, current: number, total: number) => string;

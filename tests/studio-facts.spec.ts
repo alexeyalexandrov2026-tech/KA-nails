@@ -1,8 +1,5 @@
-import fs from "node:fs";
-import path from "node:path";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import ts from "typescript";
 import Image from "next/image";
 import { expect, test } from "@playwright/test";
 import * as locales from "../lib/locales";
@@ -12,40 +9,20 @@ import {
   validateStudioFacts,
   type StudioFacts,
 } from "../lib/studio-facts";
+import { loadComponent } from "./support/load-component";
 
 type FactsBlock = React.ComponentType<{
   locale: "en" | "ru";
   facts: StudioFacts;
 }>;
 
-// Playwright replaces react/jsx-runtime inside test files with its own
-// component-testing objects, so the real components are compiled here with
-// classic React.createElement and given the real modules they import.
 function loadBlock(file: string, name: string): FactsBlock {
-  const source = fs.readFileSync(
-    path.join(__dirname, "../components/facts", file),
-    "utf8",
-  );
-  const { outputText } = ts.transpileModule(source, {
-    compilerOptions: {
-      jsx: ts.JsxEmit.React,
-      module: ts.ModuleKind.CommonJS,
-      target: ts.ScriptTarget.ES2022,
-      esModuleInterop: true,
-    },
-  });
-  const modules: Record<string, unknown> = {
+  return loadComponent<FactsBlock>(`components/facts/${file}`, name, {
     react: React,
     "next/image": { __esModule: true, default: Image },
     "../../lib/locales": locales,
     "../../lib/studio-facts": facts,
-  };
-  const exports: Record<string, unknown> = {};
-  new Function("require", "exports", outputText)((id: string) => {
-    if (!(id in modules)) throw new Error(`unexpected import ${id}`);
-    return modules[id];
-  }, exports);
-  return exports[name] as FactsBlock;
+  });
 }
 
 const ServiceMenu = loadBlock("service-menu.tsx", "ServiceMenu");

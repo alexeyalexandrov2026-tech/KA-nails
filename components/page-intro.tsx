@@ -1,5 +1,5 @@
 import React from "react";
-import Image from "next/image";
+import { PortfolioImage } from "./portfolio-image";
 import { getGalleryItems } from "../lib/gallery-data";
 import type { Locale } from "../lib/locales";
 
@@ -40,14 +40,11 @@ export function PageIntro({
           >
             <path d="M 8 500 L 8 200 A 192 192 0 0 1 392 200 L 392 500" />
           </svg>
-          <Image
-            src={photo.srcMed}
+          <PortfolioImage
+            photo={photo}
             alt={photo.alt}
-            width={photo.width}
-            height={photo.height}
+            sizes="(max-width: 767px) 200px, (max-width: 900px) 260px, 360px"
             loading="eager"
-            fetchPriority="high"
-            unoptimized
             className="arch-photo"
           />
         </figure>

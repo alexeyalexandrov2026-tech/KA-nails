@@ -36,13 +36,38 @@ export interface ContactChannel {
   preferred?: boolean;
 }
 
+/** Structured address for search engines (schema.org PostalAddress). */
+export interface PostalAddress {
+  streetAddress: string;
+  addressLocality: string;
+  addressRegion: string;
+  postalCode: string;
+  /** ISO 3166-1 alpha-2, e.g. "US". */
+  addressCountry: string;
+}
+
 export interface StudioAddress {
   lines: Bilingual[];
   mapUrl?: string;
+  postal?: PostalAddress;
 }
+
+export const DAYS_OF_WEEK = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+] as const;
+
+export type DayOfWeek = (typeof DAYS_OF_WEEK)[number];
 
 export interface OpeningHours {
   days: Bilingual;
+  /** Machine-readable days for search engines; `days` is what people read. */
+  daysOfWeek?: DayOfWeek[];
   opens?: string;
   closes?: string;
   closed?: boolean;
@@ -231,6 +256,32 @@ export function validateStudioFacts(raw: unknown): StudioFacts {
       if (address.mapUrl !== undefined && !isHttpsUrl(address.mapUrl)) {
         problems.push("address.mapUrl: https link");
       }
+      if (address.postal !== undefined) {
+        const postal = address.postal;
+        if (!isRecord(postal)) {
+          problems.push("address.postal: expected an object");
+        } else {
+          for (const field of [
+            "streetAddress",
+            "addressLocality",
+            "addressRegion",
+            "postalCode",
+          ] as const) {
+            const value = postal[field];
+            if (typeof value !== "string" || value.trim() === "") {
+              problems.push(`address.postal.${field}: text is empty`);
+            }
+          }
+          if (
+            typeof postal.addressCountry !== "string" ||
+            !/^[A-Z]{2}$/.test(postal.addressCountry)
+          ) {
+            problems.push(
+              'address.postal.addressCountry: two letters, e.g. "US"',
+            );
+          }
+        }
+      }
     }
   }
 
@@ -244,6 +295,19 @@ export function validateStudioFacts(raw: unknown): StudioFacts {
         return;
       }
       text(row.days, `${where}.days`);
+      if (row.daysOfWeek !== undefined) {
+        const days = row.daysOfWeek;
+        if (
+          !Array.isArray(days) ||
+          days.length === 0 ||
+          days.some((day) => !DAYS_OF_WEEK.includes(day as DayOfWeek)) ||
+          new Set(days).size !== days.length
+        ) {
+          problems.push(
+            `${where}.daysOfWeek: distinct English day names, e.g. ["Monday"]`,
+          );
+        }
+      }
       if (row.closed === true) {
         if (row.opens !== undefined || row.closes !== undefined) {
           problems.push(`${where}: a closed day has no opening time`);

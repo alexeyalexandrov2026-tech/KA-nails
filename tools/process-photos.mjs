@@ -107,7 +107,8 @@ const PHOTO_DEFINITIONS = [
     featured: true,
     heroEligible: true,
     heroRole: "accent-tile-5",
-    cropBottomPx: 70, // Remove social media audio icon
+    cropBottomPx: 70,
+    cropRightPx: 140, // video sound icon and progress bar at the right edge
     aspectRatio: "1:1",
   },
   {
@@ -125,6 +126,7 @@ const PHOTO_DEFINITIONS = [
     heroEligible: true,
     heroRole: "accent-tile-6",
     cropBottomPx: 75,
+    cropRightPx: 140,
     aspectRatio: "1:1",
   },
   {
@@ -141,6 +143,7 @@ const PHOTO_DEFINITIONS = [
     featured: true,
     heroEligible: false,
     cropBottomPx: 70,
+    cropRightPx: 140,
     aspectRatio: "1:1",
   },
   {
@@ -173,6 +176,7 @@ const PHOTO_DEFINITIONS = [
     featured: false,
     heroEligible: false,
     cropBottomPx: 70,
+    cropRightPx: 140,
     aspectRatio: "1:1",
   },
   {
@@ -190,7 +194,7 @@ const PHOTO_DEFINITIONS = [
     featured: false,
     heroEligible: false,
     cropBottomPx: 75,
-    cropRightPx: 25,
+    cropRightPx: 140,
     aspectRatio: "1:1",
   },
   {
@@ -311,12 +315,15 @@ const PHOTO_DEFINITIONS = [
     subCategory: "Pedicure",
     finish: "Restorative Care",
     colorFamily: "Scarlet Red / Natural Care",
-    alt: "Restorative aesthetic pedicure transformation showing professional nail revitalization and red finish",
+    alt: "Before-and-after pedicure: natural toenails before care, then neatly shaped toenails finished in scarlet red",
     notes:
-      "Clinical before & after demonstration of precision nail bed restoration and polish",
+      "Before and after: a careful restorative pedicure finished in classic red",
     featured: false,
     heroEligible: false,
     isTransformation: true,
+    // Instagram screenshot: header (account name, date), sound icon, progress bar
+    cropTopPx: 145,
+    cropRightPx: 140,
     aspectRatio: "3:4",
   },
 ];
@@ -330,71 +337,88 @@ async function main() {
 
   const inventory = [];
 
+  // `--only=work-06,work-19` re-renders just those works; every other work
+  // keeps its existing files and the inventory is rebuilt from what is on disk.
+  const onlyArg = process.argv.find((arg) => arg.startsWith("--only="));
+  const only = onlyArg ? onlyArg.slice("--only=".length).split(",") : null;
+
   for (const item of PHOTO_DEFINITIONS) {
-    console.log(`Processing [${item.id}] ${item.title} ...`);
-
-    // Copy original safely
-    const originalExt = path.extname(item.rawPath);
-    const originalDest = path.join(originalsDir, `${item.slug}${originalExt}`);
-    await fs.copyFile(item.rawPath, originalDest);
-
-    // Load with sharp and auto-rotate according to EXIF
-    let pipeline = sharp(item.rawPath).rotate();
-    let meta = await pipeline.metadata();
-
-    // Perform intentional crop if specified (to clean social audio icons or border artifacts)
-    if (item.cropBottomPx || item.cropRightPx) {
-      const cropW = meta.width - (item.cropRightPx || 0);
-      const cropH = meta.height - (item.cropBottomPx || 0);
-      pipeline = pipeline.extract({
-        left: 0,
-        top: 0,
-        width: cropW,
-        height: cropH,
-      });
-      // Re-read updated dimensions
-      meta = await pipeline.clone().metadata();
-    }
-
-    // Base filename in public/photos
     const baseName = item.slug;
-
-    // Generate responsive widths: full (1200w max), medium (750w), thumb (400w)
-    const fullWidth = Math.min(1200, meta.width);
-    const medWidth = Math.min(750, meta.width);
-    const thumbWidth = Math.min(400, meta.width);
-
-    // Save WebP full
     const fullWebp = `${baseName}.webp`;
-    await pipeline
-      .clone()
-      .resize({ width: fullWidth, withoutEnlargement: true })
-      .webp({ quality: 88, effort: 5 })
-      .toFile(path.join(publicPhotosDir, fullWebp));
-
-    // Save WebP medium
     const medWebp = `${baseName}-med.webp`;
-    await pipeline
-      .clone()
-      .resize({ width: medWidth, withoutEnlargement: true })
-      .webp({ quality: 85, effort: 5 })
-      .toFile(path.join(publicPhotosDir, medWebp));
-
-    // Save WebP thumb
     const thumbWebp = `${baseName}-thumb.webp`;
-    await pipeline
-      .clone()
-      .resize({ width: thumbWidth, withoutEnlargement: true })
-      .webp({ quality: 82, effort: 5 })
-      .toFile(path.join(publicPhotosDir, thumbWebp));
-
-    // Save JPEG fallback for legacy/compatibility
     const fullJpg = `${baseName}.jpg`;
-    await pipeline
-      .clone()
-      .resize({ width: fullWidth, withoutEnlargement: true })
-      .jpeg({ quality: 88, mozjpeg: true })
-      .toFile(path.join(publicPhotosDir, fullJpg));
+
+    if (only && !only.includes(item.id)) {
+      console.log(`Keeping [${item.id}] ${item.title}`);
+    } else {
+      console.log(`Processing [${item.id}] ${item.title} ...`);
+
+      // The raw archive is not kept in the repository; untouched copies of the
+      // originals live in source-assets/photos/originals/ and are used instead.
+      const originalExt = path.extname(item.rawPath);
+      const originalDest = path.join(
+        originalsDir,
+        `${item.slug}${originalExt}`,
+      );
+      const hasRaw = await fs
+        .access(item.rawPath)
+        .then(() => true)
+        .catch(() => false);
+      if (hasRaw) await fs.copyFile(item.rawPath, originalDest);
+      const input = hasRaw ? item.rawPath : originalDest;
+
+      // Load with sharp and auto-rotate according to EXIF
+      let pipeline = sharp(input).rotate();
+      let meta = await pipeline.metadata();
+
+      // Intentional crops remove app overlays (video sound icon, progress bar,
+      // Instagram header) captured in some of the supplied screenshots.
+      const top = item.cropTopPx || 0;
+      const left = item.cropLeftPx || 0;
+      const right = item.cropRightPx || 0;
+      const bottom = item.cropBottomPx || 0;
+      if (top || left || right || bottom) {
+        pipeline = pipeline.extract({
+          left,
+          top,
+          width: meta.width - left - right,
+          height: meta.height - top - bottom,
+        });
+        meta = {
+          ...meta,
+          width: meta.width - left - right,
+          height: meta.height - top - bottom,
+        };
+      }
+
+      // Generate responsive widths: full (1200w max), medium (750w), thumb (400w)
+      const fullWidth = Math.min(1200, meta.width);
+      const medWidth = Math.min(750, meta.width);
+      const thumbWidth = Math.min(400, meta.width);
+
+      await pipeline
+        .clone()
+        .resize({ width: fullWidth, withoutEnlargement: true })
+        .webp({ quality: 88, effort: 5 })
+        .toFile(path.join(publicPhotosDir, fullWebp));
+      await pipeline
+        .clone()
+        .resize({ width: medWidth, withoutEnlargement: true })
+        .webp({ quality: 85, effort: 5 })
+        .toFile(path.join(publicPhotosDir, medWebp));
+      await pipeline
+        .clone()
+        .resize({ width: thumbWidth, withoutEnlargement: true })
+        .webp({ quality: 82, effort: 5 })
+        .toFile(path.join(publicPhotosDir, thumbWebp));
+      // JPEG fallback for legacy/compatibility
+      await pipeline
+        .clone()
+        .resize({ width: fullWidth, withoutEnlargement: true })
+        .jpeg({ quality: 88, mozjpeg: true })
+        .toFile(path.join(publicPhotosDir, fullJpg));
+    }
 
     const finalMeta = await sharp(
       path.join(publicPhotosDir, fullWebp),

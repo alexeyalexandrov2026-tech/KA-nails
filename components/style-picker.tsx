@@ -1,10 +1,12 @@
 "use client";
 
 import React, { useId, useMemo, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
+import { PortfolioImage } from "./portfolio-image";
 import { GalleryViewer } from "./gallery-viewer";
 import { getGalleryItems } from "../lib/gallery-data";
+import { whatsappLookLink } from "../lib/booking-message";
+import { studioFacts } from "../lib/studio-facts";
 import { getDictionary, getLocalizedPath, type Locale } from "../lib/locales";
 import {
   LOOKS,
@@ -37,6 +39,12 @@ export function StylePicker({ locale = "en" }: StylePickerProps) {
     [items, look, tone],
   );
   const shown = result.items.slice(0, MAX_RESULTS);
+  // Shown only once the studio publishes a WhatsApp number in studio facts.
+  const sendHref = whatsappLookLink(
+    studioFacts.channels,
+    locale,
+    shown.map((item) => ({ id: item.id, title: item.title })),
+  );
 
   const option = (
     name: string,
@@ -114,6 +122,17 @@ export function StylePicker({ locale = "en" }: StylePickerProps) {
                   ? copy.status(result.exactCount, items.length)
                   : copy.closestNote}
               </p>
+              {sendHref && (
+                <a
+                  href={sendHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="picker-send"
+                >
+                  {dict.bookingRequest.sendLooks}{" "}
+                  <span aria-hidden="true">↗</span>
+                </a>
+              )}
               {(look || tone) && (
                 <button
                   type="button"
@@ -147,13 +166,10 @@ export function StylePicker({ locale = "en" }: StylePickerProps) {
                 )}
                 onClick={() => setViewerIndex(index)}
               >
-                <Image
-                  src={item.srcThumb || item.srcMed}
+                <PortfolioImage
+                  photo={item}
                   alt=""
-                  width={item.width}
-                  height={item.height}
-                  loading="lazy"
-                  unoptimized
+                  sizes="(max-width: 767px) 45vw, 20vw"
                   className="picker-result-img"
                 />
               </button>
