@@ -3,17 +3,14 @@ export type Locale = "en" | "ru";
 export interface LocaleDictionary {
   locale: Locale;
   meta: {
-    siteTitle: string;
-    siteTitleTemplate: string;
-    siteDescription: string;
-    servicesTitle: string;
-    servicesDescription: string;
-    galleryTitle: string;
-    galleryDescription: string;
-    contactTitle: string;
-    contactDescription: string;
-    bookTitle: string;
-    bookDescription: string;
+    /** Title (home: the full title) and description of every page. */
+    pages: Record<
+      "home" | "services" | "gallery" | "contact" | "book",
+      { title: string; description: string }
+    >;
+    /** Open Graph locale, e.g. "en_US". */
+    ogLocale: string;
+    shareImageAlt: string;
   };
   nav: {
     brandName: string;
@@ -34,6 +31,9 @@ export interface LocaleDictionary {
     book: string;
     contact: string;
     logoAlt: string;
+    navAriaLabel: string;
+    worksAriaLabel: string;
+    copyright: string;
   };
   hero: {
     eyebrow: string;
@@ -59,6 +59,8 @@ export interface LocaleDictionary {
     cardAriaLabel: (title: string, category: string) => string;
     pauseMotionAria: string;
     resumeMotionAria: string;
+    footnote: (count: number) => string;
+    footnoteLink: string;
   };
   pillars: {
     eyebrow: string;
@@ -76,9 +78,23 @@ export interface LocaleDictionary {
     ariaLabel: string;
     viewServiceInfo: string;
     exploreInGallery: string;
-    card1: { tag: string; duration: string; name: string; desc: string };
-    card2: { tag: string; duration: string; name: string; desc: string };
-    card3: { tag: string; duration: string; name: string; desc: string };
+    card1: { tag: string; name: string; desc: string };
+    card2: { tag: string; name: string; desc: string };
+    card3: { tag: string; name: string; desc: string };
+  };
+  stylePicker: {
+    eyebrow: string;
+    title: string;
+    lead: string;
+    ariaLabel: string;
+    lookLegend: string;
+    toneLegend: string;
+    anyOption: string;
+    tones: Record<"light" | "deep" | "bright", string>;
+    status: (count: number, total: number) => string;
+    closestNote: string;
+    reset: string;
+    viewGallery: string;
   };
   finalBooking: {
     eyebrow: string;
@@ -92,7 +108,12 @@ export interface LocaleDictionary {
   servicesPage: {
     eyebrow: string;
     heading: string;
+    /** Shown while no service menu is published. */
     lead: string;
+    /** Shown once the service menu from studio facts is published. */
+    leadWithMenu: string;
+    stripTitle: string;
+    stripLink: string;
   };
   galleryPage: {
     eyebrow: string;
@@ -101,11 +122,7 @@ export interface LocaleDictionary {
     lead: string;
     filterAriaLabel: string;
     inventoryBadge: string;
-    inventoryText: (
-      uniquePhotos: number,
-      additionalNeeded: number,
-      target: number,
-    ) => string;
+    inventoryText: (uniquePhotos: number) => string;
     statusText: (count: number, category: string) => string;
     cardAriaLabel: (title: string, category: string) => string;
     expandLabel: string;
@@ -135,6 +152,46 @@ export interface LocaleDictionary {
     helpTextTrail: string;
     frameTitle: string;
     panelAriaLabel: string;
+  };
+  facts: {
+    servicesEyebrow: string;
+    servicesTitle: string;
+    durationLabel: string;
+    priceLabel: string;
+    priceFrom: (price: string) => string;
+    channelsEyebrow: string;
+    channelsTitle: string;
+    preferredLabel: string;
+    channelLabels: Record<
+      "phone" | "whatsapp" | "telegram" | "instagram" | "email",
+      string
+    >;
+    detailsEyebrow: string;
+    detailsTitle: string;
+    addressLabel: string;
+    hoursLabel: string;
+    closedLabel: string;
+    mapLink: string;
+    masterEyebrow: string;
+    masterTitle: string;
+    masterPhotoAlt: (name: string) => string;
+  };
+  bookingRequest: {
+    eyebrow: string;
+    title: string;
+    lead: string;
+    lookLabel: string;
+    lookAny: string;
+    timeLabel: string;
+    timeHint: string;
+    nameLabel: string;
+    notesLabel: string;
+    sendVia: Record<"whatsapp" | "telegram" | "email", string>;
+    copied: string;
+    privacy: string;
+    lookOnWhatsApp: string;
+    lookOnWhatsAppAria: (title: string) => string;
+    sendLooks: string;
   };
   lightbox: {
     dialogAriaLabel: (title: string, current: number, total: number) => string;

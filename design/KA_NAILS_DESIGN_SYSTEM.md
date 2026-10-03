@@ -1,6 +1,26 @@
 # KA Nails — public salon website design system
 
-> **Status (October 2026):** the live site no longer follows the cream / Onest / rose-gold proposal below. It now uses the achromatic Studio.Design style reference in [`studio-design-reference.md`](studio-design-reference.md): `#eeeeee` canvas, `#222222` ink and controls, Inter (self-hosted, Latin + Cyrillic) for display and body, Inter Tight for navigation and labels, -0.04em display tracking, 8px buttons and cards, 4px compact controls and images, and a shadow only on prominent button hover. Implemented tokens live in `app/globals.css` `:root`. The KA Nails logo rules below still apply. The proposal is kept for history.
+> **Status (October 2026):** the site implements the "brand luxe" direction below, derived from the logo: cream ground, espresso type and rose-gold detail, with Cormorant Garamond for display type. The earlier achromatic Studio.Design phase ([`studio-design-reference.md`](studio-design-reference.md)) is kept for history only. The implemented tokens live in `app/globals.css` `:root`; the summary in "Implemented system" below is the reference, and the original proposal further down is kept for context.
+
+## Implemented system (October 2026)
+
+**Tokens** (`app/globals.css`), three tiers:
+
+- Brand primitives `--ka-*`: cream `#fdf8f2` (canvas, matches the logo ground), cream-deep `#f4ece2` (alternate bands, notices), paper `#fffcf7`, espresso `#261b15` / raised `#3a2a21` / deep `#1b130f`, soft ink `#655951`, rose `#b8937f`, rose ink `#7e5f4e`, cream-muted `#d9ccc0`, hairline `#e3d5c8`, control `#756459`.
+- Semantic roles (`--canvas`, `--surface`, `--ink`, `--muted`, `--accent-text`, `--line`, `--line-subtle`, `--focus`) point at primitives. Dark bands (`.moving-wall-section`, `.final-booking-band`, `.gallery-cta-band`, `.lightbox-overlay`) re-point the roles locally, so components invert without new rules.
+- The Studio.Design legacy names have been removed.
+
+**Contrast rules:** on light grounds, text uses espresso, soft ink or rose ink only. Rose `#b8937f` is for decoration only on light (rules, arcs, rings, SVG); it is text-safe on espresso. Secondary text on espresso uses cream-muted. No text sits directly on a photo (captions use opaque cream plates), and no element containing text uses `opacity` below 1.
+
+**Type:** Cormorant Garamond Variable (Latin + Cyrillic, normal + italic) for headings, card and section titles. It has a metric-matched local fallback ("Cormorant Fallback"), so the swap causes no layout shift. Inter Variable is used for body text and UI. Both are self-hosted in `public/fonts/` (`tools/sync-fonts.mjs`) and preloaded per locale (`components/site-layout.tsx`). Eyebrows are 12 px, 600, uppercase with 0.16em tracking, in rose ink. Prices use lining figures.
+
+**Shape and motifs:** pill buttons and filters (999 px), 4 px cards and images, and arched photos (`.arch-photo`, `border-radius: 999px 999px 4px 4px`) echoing the swash of the logo. Thin rose-gold arcs and rings are decoration only (`aria-hidden`, `pointer-events: none`, `data-decor`).
+
+**Motion:** the hero parallax runs only while a fine pointer moves. Photo reveals use scroll-driven animations, and page transitions use `@view-transition`. Both apply only under `prefers-reduced-motion: no-preference`, and the base state is always fully visible. The reduced-motion block stays last in the stylesheet.
+
+**Images:** portfolio photos are pre-rendered at 400 / 750 / up to 1200 px (`tools/process-photos.mjs`, which can re-render single works with `--only=`). They are served through `components/portfolio-image.tsx` with an exact `srcset`. Logo derivatives (WebP, favicon, apple icon, app icons) come from `tools/make-logo-derivatives.mjs`; the original PNG is never modified.
+
+**Content without invented facts:** confirmed business data lives in `content/studio-facts.json`, validated at build time by `lib/studio-facts.ts`. Each block (service menu, contact channels, address and hours, master profile, messenger booking request, NailSalon structured data) renders nothing until its data exists.
 
 **Version:** design proposal v1, 30 September 2026  
 **Scope:** public tenant website and customer booking journey  

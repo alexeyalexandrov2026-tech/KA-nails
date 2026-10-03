@@ -7,8 +7,8 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
-import Image from "next/image";
 import Link from "next/link";
+import { PortfolioImage } from "./portfolio-image";
 import { getGalleryItems, type GalleryItem } from "../lib/gallery-data";
 import { GalleryViewer } from "./gallery-viewer";
 import { getDictionary, getLocalizedPath, type Locale } from "../lib/locales";
@@ -425,6 +425,9 @@ export function HomeMovingWall({ locale = "en" }: HomeMovingWallProps) {
       aria-label={dict.eyebrow}
       ref={sectionRef}
     >
+      <span className="section-numeral" data-decor="" aria-hidden="true">
+        02
+      </span>
       <div className="moving-wall-header">
         <div>
           <p className="eyebrow">{dict.eyebrow}</p>
@@ -565,16 +568,11 @@ export function HomeMovingWall({ locale = "en" }: HomeMovingWallProps) {
                     }
                   >
                     <div className="moving-card-media">
-                      <Image
-                        src={item.srcMed || item.src}
+                      <PortfolioImage
+                        photo={item}
                         alt={isClone ? "" : item.alt}
-                        width={item.width}
-                        height={item.height}
-                        unoptimized
-                        priority={index < 4}
-                        loading={index < 4 ? "eager" : "lazy"}
-                        className="moving-card-image"
                         sizes="(max-width: 767px) 210px, 280px"
+                        className="moving-card-image"
                       />
                       <div className="moving-card-glare" />
                     </div>
@@ -654,16 +652,11 @@ export function HomeMovingWall({ locale = "en" }: HomeMovingWallProps) {
                     }
                   >
                     <div className="moving-card-media">
-                      <Image
-                        src={item.srcMed || item.src}
+                      <PortfolioImage
+                        photo={item}
                         alt={isClone ? "" : item.alt}
-                        width={item.width}
-                        height={item.height}
-                        unoptimized
-                        priority={index < 2}
-                        loading={index < 2 ? "eager" : "lazy"}
-                        className="moving-card-image"
                         sizes="(max-width: 767px) 260px, 340px"
+                        className="moving-card-image"
                       />
                       <div className="moving-card-glare" />
                       <div className="moving-card-tag-badge">
@@ -748,14 +741,11 @@ export function HomeMovingWall({ locale = "en" }: HomeMovingWallProps) {
                     }
                   >
                     <div className="moving-card-media">
-                      <Image
-                        src={item.srcMed || item.src}
+                      <PortfolioImage
+                        photo={item}
                         alt={isClone ? "" : item.alt}
-                        width={item.width}
-                        height={item.height}
-                        unoptimized
-                        className="moving-card-image"
                         sizes="(max-width: 767px) 170px, 230px"
+                        className="moving-card-image"
                       />
                       <div className="moving-card-glare" />
                     </div>
@@ -781,19 +771,8 @@ export function HomeMovingWall({ locale = "en" }: HomeMovingWallProps) {
 
       <div className="moving-wall-footer-note">
         <p>
-          {locale === "ru" ? (
-            <>
-              19 подлинных работ студии · 11 дополнительных работ на этапе
-              отбора (цель: 30) ·{" "}
-              <Link href={galleryHref}>Вся галерея работ</Link>
-            </>
-          ) : (
-            <>
-              19 authentic salon works displayed · 11 additional works pending
-              client curation (Target: 30) ·{" "}
-              <Link href={galleryHref}>Explore full gallery</Link>
-            </>
-          )}
+          {dict.footnote(allItems.length)} ·{" "}
+          <Link href={galleryHref}>{dict.footnoteLink}</Link>
         </p>
       </div>
 

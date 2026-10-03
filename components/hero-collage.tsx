@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { PortfolioImage } from "./portfolio-image";
 import { getHeroGalleryTiles } from "../lib/gallery-data";
 import { getDictionary, getLocalizedPath, type Locale } from "../lib/locales";
 
@@ -13,31 +14,52 @@ interface HeroCollageProps {
 export function HeroCollage({ locale = "en" }: HeroCollageProps) {
   const dict = getDictionary(locale).hero;
   const [tile1, tile2, tile4, tile3] = getHeroGalleryTiles(locale);
+  const visualColRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
-  const [isHovered, setIsHovered] = useState(false);
 
+  // Pointer parallax writes two CSS variables on the stage; the tilt and the
+  // per-tile depth offsets are computed in CSS. The loop only runs while the
+  // pointer moves and stops once the spring settles, so the hero is idle (no
+  // re-renders, no DOM writes) when nobody interacts with it.
   useEffect(() => {
+    const col = visualColRef.current;
     const stage = stageRef.current;
-    if (!stage) return;
+    if (!col || !stage) return;
 
-    // Check if user prefers reduced motion
-    const prefersReducedMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
-    if (prefersReducedMotion) return;
+    const finePointerMotion = window.matchMedia(
+      "(prefers-reduced-motion: no-preference) and (hover: hover) and (pointer: fine)",
+    );
+    if (!finePointerMotion.matches) return;
 
-    let rafId: number;
+    let rafId = 0;
     let targetX = 0;
     let targetY = 0;
     let currentX = 0;
     let currentY = 0;
 
-    const handleMouseMove = (e: MouseEvent) => {
-      const rect = stage.getBoundingClientRect();
+    const step = () => {
+      currentX += (targetX - currentX) * 0.08;
+      currentY += (targetY - currentY) * 0.08;
+      const settled =
+        Math.abs(targetX - currentX) < 0.001 &&
+        Math.abs(targetY - currentY) < 0.001;
+      if (settled) {
+        currentX = targetX;
+        currentY = targetY;
+      }
+      stage.style.setProperty("--px", currentX.toFixed(3));
+      stage.style.setProperty("--py", currentY.toFixed(3));
+      rafId = settled ? 0 : requestAnimationFrame(step);
+    };
+
+    const kick = () => {
+      if (!rafId) rafId = requestAnimationFrame(step);
+    };
+
+    const handlePointerMove = (e: PointerEvent) => {
+      const rect = col.getBoundingClientRect();
       const centerX = rect.left + rect.width / 2;
       const centerY = rect.top + rect.height / 2;
-
       // Normalized coordinates: -1 to 1
       targetX = Math.max(
         -1,
@@ -47,44 +69,24 @@ export function HeroCollage({ locale = "en" }: HeroCollageProps) {
         -1,
         Math.min(1, (e.clientY - centerY) / (rect.height / 2)),
       );
+      kick();
     };
 
-    const handleMouseEnter = () => setIsHovered(true);
-    const handleMouseLeave = () => {
-      setIsHovered(false);
+    const handlePointerLeave = () => {
       targetX = 0;
       targetY = 0;
+      kick();
     };
 
-    const animate = () => {
-      // Smooth spring lerp
-      currentX += (targetX - currentX) * 0.08;
-      currentY += (targetY - currentY) * 0.08;
-
-      setMousePos({
-        x: Math.round(currentX * 1000) / 1000,
-        y: Math.round(currentY * 1000) / 1000,
-      });
-
-      rafId = requestAnimationFrame(animate);
-    };
-
-    stage.addEventListener("mousemove", handleMouseMove);
-    stage.addEventListener("mouseenter", handleMouseEnter);
-    stage.addEventListener("mouseleave", handleMouseLeave);
-    rafId = requestAnimationFrame(animate);
+    col.addEventListener("pointermove", handlePointerMove);
+    col.addEventListener("pointerleave", handlePointerLeave);
 
     return () => {
-      stage.removeEventListener("mousemove", handleMouseMove);
-      stage.removeEventListener("mouseenter", handleMouseEnter);
-      stage.removeEventListener("mouseleave", handleMouseLeave);
+      col.removeEventListener("pointermove", handlePointerMove);
+      col.removeEventListener("pointerleave", handlePointerLeave);
       cancelAnimationFrame(rafId);
     };
   }, []);
-
-  // Compute 3D rotation degrees for the perspective artboard
-  const rotateX = -mousePos.y * 6; // Max 6 deg tilt
-  const rotateY = mousePos.x * 6;
 
   const bookHref = getLocalizedPath("/book/", locale);
   const galleryHref = getLocalizedPath("/gallery/", locale);
@@ -97,7 +99,7 @@ export function HeroCollage({ locale = "en" }: HeroCollageProps) {
         <h1 className="hero-heading">
           {dict.headingLine1}
           <br />
-          {dict.headingLine2}
+          <span className="hero-heading-accent">{dict.headingLine2}</span>
         </h1>
         <p className="hero-description">{dict.description}</p>
 
@@ -139,40 +141,40 @@ export function HeroCollage({ locale = "en" }: HeroCollageProps) {
       <div
         className="hero-visual-col"
         aria-label={dict.collageAriaLabel}
-        ref={stageRef}
+        ref={visualColRef}
       >
-        <div
-          className="hero-collage-stage"
-          style={{
-            transform: `perspective(1200px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`,
-            transition: isHovered
-              ? "none"
-              : "transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)",
-          }}
-        >
-          {/* Main Logo Anchor Tile (Base Layer) */}
+        <div className="hero-collage-stage" ref={stageRef}>
+          {/* Rose-gold arc echoing the swash of the logo (decoration only) */}
+          <svg
+            className="hero-arc"
+            data-decor=""
+            aria-hidden="true"
+            focusable="false"
+            viewBox="0 0 540 520"
+            preserveAspectRatio="none"
+          >
+            <path d="M 60 510 C 250 485, 470 400, 528 120" />
+            <circle cx="528" cy="120" r="4" />
+          </svg>
+
+          {/* Main Logo Anchor Tile (Base Layer): a resized copy of the
+              original logo (tools/make-logo-derivatives.mjs). */}
           <div className="collage-tile tile-logo" data-layer="base">
             <Image
-              src="/assets/ka-nails-logo.png"
+              src="/assets/ka-nails-logo-640.webp"
               alt="KA Nails"
-              width={1254}
-              height={1254}
-              priority
+              width={640}
+              height={640}
+              loading="eager"
+              fetchPriority="high"
               unoptimized
               className="collage-logo-img"
-              sizes="(max-width: 767px) 80vw, 36vw"
             />
           </div>
 
           {/* Floating Tile 1: Top-Right Lead Editorial */}
           {tile1 && (
-            <div
-              className="collage-tile tile-drift-1"
-              data-layer="top"
-              style={{
-                transform: `translateZ(35px) translate3d(${mousePos.x * 12}px, ${mousePos.y * 12}px, 0)`,
-              }}
-            >
+            <div className="collage-tile tile-drift-1" data-layer="top">
               <Link
                 href={`${galleryHref}#${tile1.id}`}
                 tabIndex={-1}
@@ -181,12 +183,12 @@ export function HeroCollage({ locale = "en" }: HeroCollageProps) {
                   tile1.categoryLabel || tile1.category,
                 )}
               >
-                <Image
-                  src={tile1.src}
+                <PortfolioImage
+                  photo={tile1}
                   alt={tile1.alt}
-                  width={tile1.width}
-                  height={tile1.height}
-                  unoptimized
+                  sizes="(max-width: 767px) 42vw, 230px"
+                  loading="eager"
+                  fetchPriority="low"
                   className="collage-artwork-img"
                 />
                 <span className="tile-micro-label">
@@ -198,13 +200,7 @@ export function HeroCollage({ locale = "en" }: HeroCollageProps) {
 
           {/* Floating Tile 2: Center-Right Royal Cobalt */}
           {tile2 && (
-            <div
-              className="collage-tile tile-drift-2"
-              data-layer="mid"
-              style={{
-                transform: `translateZ(55px) translate3d(${mousePos.x * 20}px, ${mousePos.y * 20}px, 0)`,
-              }}
-            >
+            <div className="collage-tile tile-drift-2" data-layer="mid">
               <Link
                 href={`${galleryHref}#${tile2.id}`}
                 tabIndex={-1}
@@ -213,12 +209,12 @@ export function HeroCollage({ locale = "en" }: HeroCollageProps) {
                   tile2.categoryLabel || tile2.category,
                 )}
               >
-                <Image
-                  src={tile2.src}
+                <PortfolioImage
+                  photo={tile2}
                   alt={tile2.alt}
-                  width={tile2.width}
-                  height={tile2.height}
-                  unoptimized
+                  sizes="(max-width: 767px) 42vw, 230px"
+                  loading="eager"
+                  fetchPriority="low"
                   className="collage-artwork-img"
                 />
                 <span className="tile-micro-label">
@@ -233,15 +229,9 @@ export function HeroCollage({ locale = "en" }: HeroCollageProps) {
             </div>
           )}
 
-          {/* Floating Tile 3: Bottom-Left French Pink */}
+          {/* Floating Tile 3: Bottom-Left Cornflower */}
           {tile3 && (
-            <div
-              className="collage-tile tile-drift-3"
-              data-layer="accent"
-              style={{
-                transform: `translateZ(25px) translate3d(${mousePos.x * -10}px, ${mousePos.y * -10}px, 0)`,
-              }}
-            >
+            <div className="collage-tile tile-drift-3" data-layer="accent">
               <Link
                 href={`${galleryHref}#${tile3.id}`}
                 tabIndex={-1}
@@ -250,12 +240,12 @@ export function HeroCollage({ locale = "en" }: HeroCollageProps) {
                   tile3.categoryLabel || tile3.category,
                 )}
               >
-                <Image
-                  src={tile3.src}
+                <PortfolioImage
+                  photo={tile3}
                   alt={tile3.alt}
-                  width={tile3.width}
-                  height={tile3.height}
-                  unoptimized
+                  sizes="(max-width: 767px) 42vw, 230px"
+                  loading="eager"
+                  fetchPriority="low"
                   className="collage-artwork-img"
                 />
                 <span className="tile-micro-label">
@@ -272,13 +262,7 @@ export function HeroCollage({ locale = "en" }: HeroCollageProps) {
 
           {/* Floating Tile 4: Bottom-Right Pastel Lilac */}
           {tile4 && (
-            <div
-              className="collage-tile tile-drift-4"
-              data-layer="foreground"
-              style={{
-                transform: `translateZ(45px) translate3d(${mousePos.x * 16}px, ${mousePos.y * 16}px, 0)`,
-              }}
-            >
+            <div className="collage-tile tile-drift-4" data-layer="foreground">
               <Link
                 href={`${galleryHref}#${tile4.id}`}
                 tabIndex={-1}
@@ -287,12 +271,12 @@ export function HeroCollage({ locale = "en" }: HeroCollageProps) {
                   tile4.categoryLabel || tile4.category,
                 )}
               >
-                <Image
-                  src={tile4.src}
+                <PortfolioImage
+                  photo={tile4}
                   alt={tile4.alt}
-                  width={tile4.width}
-                  height={tile4.height}
-                  unoptimized
+                  sizes="(max-width: 767px) 42vw, 230px"
+                  loading="eager"
+                  fetchPriority="low"
                   className="collage-artwork-img"
                 />
                 <span className="tile-micro-label">

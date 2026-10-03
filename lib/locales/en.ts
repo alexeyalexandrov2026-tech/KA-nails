@@ -3,22 +3,36 @@ import type { LocaleDictionary } from "./types";
 export const enLocale: LocaleDictionary = {
   locale: "en",
   meta: {
-    siteTitle: "KA Nails",
-    siteTitleTemplate: "%s | KA Nails",
-    siteDescription:
-      "Pedicure at KA Nails. Explore services and reserve an appointment when online booking becomes available.",
-    servicesTitle: "Services — KA Nails",
-    servicesDescription:
-      "Published studio services, prices and durations will appear in the booking portal when online booking opens.",
-    galleryTitle: "Gallery — Curated Studio Works | KA Nails",
-    galleryDescription:
-      "Explore authentic salon pedicure artistry, deep bordeaux gloss, royal cobalt, pastel lilac, and attentive care by KA Nails.",
-    contactTitle: "Studio Information — KA Nails",
-    contactDescription:
-      "Studio address, contact details and opening hours for KA Nails.",
-    bookTitle: "Book an Appointment — KA Nails",
-    bookDescription:
-      "Explore services and check appointment availability for KA Nails.",
+    pages: {
+      home: {
+        title: "KA Nails",
+        description:
+          "Pedicure at KA Nails. Explore services and reserve an appointment when online booking becomes available.",
+      },
+      services: {
+        title: "Services",
+        description:
+          "Pedicure services at KA Nails. Prices and durations will be published here once they are confirmed.",
+      },
+      gallery: {
+        title: "Gallery — Curated Studio Works",
+        description:
+          "Explore authentic salon pedicure artistry, deep bordeaux gloss, royal cobalt, pastel lilac, and attentive care by KA Nails.",
+      },
+      contact: {
+        title: "Studio information",
+        description:
+          "Studio address, contact details and opening hours for KA Nails.",
+      },
+      book: {
+        title: "Book an appointment",
+        description:
+          "Explore services and check appointment availability for KA Nails.",
+      },
+    },
+    ogLocale: "en_US",
+    shareImageAlt:
+      "KA Nails logo on a cream background beside three pedicure works from the studio portfolio",
   },
   nav: {
     brandName: "KA Nails",
@@ -39,19 +53,22 @@ export const enLocale: LocaleDictionary = {
     book: "Book Appointment",
     contact: "Studio information",
     logoAlt: "KA Nails",
+    navAriaLabel: "Footer",
+    worksAriaLabel: "Works from the studio portfolio",
+    copyright: "© KA Nails",
   },
   hero: {
     eyebrow: "KA Nails",
     headingLine1: "A little care.",
     headingLine2: "A moment of pure artistry.",
     description:
-      "Carefully crafted pedicure artistry. Explore our verified portfolio of authentic salon works while online booking preparation is underway.",
+      "Carefully crafted pedicure artistry. Explore our portfolio of real studio works while online booking preparation is underway.",
     bookCta: "Book an appointment",
     galleryCta: "Explore gallery (19)",
     badge1: "Curated Pedicure Artistry",
     badge2: "Authentic Salon Portfolio",
     badge3: "Attentive Care",
-    badgeText: "Studio Portfolio · 19 Verified Works",
+    badgeText: "Studio Portfolio · 19 Real Works",
     tileAriaLabel: (title, category) =>
       `Open artwork ${title}, category: ${category}`,
     collageAriaLabel: "Visual salon collage with authentic photography",
@@ -68,6 +85,8 @@ export const enLocale: LocaleDictionary = {
       `Open ${title}, ${category} pedicure. Press Enter to view high resolution.`,
     pauseMotionAria: "Pause exhibition motion",
     resumeMotionAria: "Resume exhibition motion",
+    footnote: (count) => `${count} pedicure works in the studio portfolio`,
+    footnoteLink: "See the full gallery",
   },
   pillars: {
     eyebrow: "03 / The Studio Standard",
@@ -99,28 +118,43 @@ export const enLocale: LocaleDictionary = {
     exploreInGallery: "Explore in gallery",
     card1: {
       tag: "Classic",
-      duration: "Curated",
       name: "Classic Pedicure Artistry",
       desc: "Timeless deep bordeaux, neutral porcelain tones, and clean contours captured in our studio portfolio.",
     },
     card2: {
-      tag: "Featured",
-      duration: "Curated",
+      tag: "French",
       name: "French & Accent Detailing",
       desc: "Refined smile lines, delicate bow motifs, and accent rings showcased in authentic salon photography.",
     },
     card3: {
       tag: "Color",
-      duration: "Curated",
       name: "Vibrant Color & Shimmer",
       desc: "Royal cobalt gloss, cornflower drape, pastel lilac bliss, and rose shimmer lacquer finishes.",
     },
+  },
+  stylePicker: {
+    eyebrow: "05 / Find your style",
+    title: "Find your style.",
+    lead: "Two quick choices, and we will show the pedicure works from our portfolio that match.",
+    ariaLabel: "Pedicure style finder",
+    lookLegend: "1. Choose a look",
+    toneLegend: "2. Choose a tone",
+    anyOption: "Any",
+    tones: {
+      light: "Light & nude",
+      deep: "Deep & dark",
+      bright: "Bright color",
+    },
+    status: (count, total) => `Matching works: ${count} of ${total}`,
+    closestNote: "No exact match yet, so here are the closest works.",
+    reset: "Start over",
+    viewGallery: "See the full gallery",
   },
   finalBooking: {
     eyebrow: "Studio Appointments",
     titleLine1: "Crafted with care.",
     titleLine2: "Captured in detail.",
-    desc: "Explore our curated gallery of 19 verified salon works. Online booking will open once scheduling details are finalized with the studio.",
+    desc: "Explore our curated gallery of 19 real studio works. Online booking will open once scheduling details are finalized with the studio.",
     ariaLabel: "Studio Portfolio & Appointments",
     viewStatusBtn: "View booking status",
     exploreGalleryBtn: "Explore gallery (19)",
@@ -128,7 +162,11 @@ export const enLocale: LocaleDictionary = {
   servicesPage: {
     eyebrow: "The studio / Services",
     heading: "Choose your care.",
-    lead: "Published services, prices and durations are shown in the studio’s booking below.",
+    lead: "Pedicure care at KA Nails. The service menu with prices and durations will be published here once it is confirmed.",
+    leadWithMenu:
+      "Every service is pedicure care. Durations and prices are listed below.",
+    stripTitle: "From the studio portfolio",
+    stripLink: "See the full gallery",
   },
   galleryPage: {
     eyebrow: "KA Nails / Studio Exhibition",
@@ -137,8 +175,8 @@ export const enLocale: LocaleDictionary = {
     lead: "Explore our archive of authentic studio works. From refined French lines and deep bordeaux gloss to restorative aesthetic care and attentive salon detailing.",
     filterAriaLabel: "Filter gallery by technique",
     inventoryBadge: "Authentic Studio Archive",
-    inventoryText: (uniquePhotos, additionalNeeded, target) =>
-      `${uniquePhotos} authentic salon works displayed • ${additionalNeeded} additional works pending client curation (Target: ${target})`,
+    inventoryText: (uniquePhotos) =>
+      `${uniquePhotos} authentic salon works displayed`,
     statusText: (count, category) =>
       `Showing ${count} ${category === "All" ? "curated styles" : `${category} designs`}`,
     cardAriaLabel: (title, category) =>
@@ -180,6 +218,53 @@ export const enLocale: LocaleDictionary = {
     helpTextTrail: ".",
     frameTitle: "KA Nails appointment booking",
     panelAriaLabel: "Studio booking",
+  },
+  facts: {
+    servicesEyebrow: "Pedicure menu",
+    servicesTitle: "Services and prices",
+    durationLabel: "Duration",
+    priceLabel: "Price",
+    priceFrom: (price) => `from ${price}`,
+    channelsEyebrow: "Get in touch",
+    channelsTitle: "Contact the studio",
+    preferredLabel: "Preferred",
+    channelLabels: {
+      phone: "Phone",
+      whatsapp: "WhatsApp",
+      telegram: "Telegram",
+      instagram: "Instagram",
+      email: "Email",
+    },
+    detailsEyebrow: "Visit",
+    detailsTitle: "Address and hours",
+    addressLabel: "Address",
+    hoursLabel: "Opening hours",
+    closedLabel: "Closed",
+    mapLink: "Open in maps",
+    masterEyebrow: "06 / Your master",
+    masterTitle: "Meet your master",
+    masterPhotoAlt: (name) => `${name}, KA Nails pedicure master`,
+  },
+  bookingRequest: {
+    eyebrow: "While online booking is being prepared",
+    title: "Request an appointment",
+    lead: "Choose a look and a convenient time. Your messenger opens with a ready message, and nothing is sent until you press send there.",
+    lookLabel: "Look from the portfolio (optional)",
+    lookAny: "I will choose with the master",
+    timeLabel: "Preferred days and time",
+    timeHint: "For example: weekday evenings or Saturday morning",
+    nameLabel: "Your name (optional)",
+    notesLabel: "Anything else (optional)",
+    sendVia: {
+      whatsapp: "Send via WhatsApp",
+      telegram: "Copy and open Telegram",
+      email: "Send by email",
+    },
+    copied: "The message is copied. Paste it into the Telegram chat.",
+    privacy: "This form is not stored or sent by the website.",
+    lookOnWhatsApp: "Book this look on WhatsApp",
+    lookOnWhatsAppAria: (title) => `Book ${title} on WhatsApp`,
+    sendLooks: "Send these looks on WhatsApp",
   },
   lightbox: {
     dialogAriaLabel: (title, current, total) =>

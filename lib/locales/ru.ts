@@ -3,22 +3,35 @@ import type { LocaleDictionary } from "./types";
 export const ruLocale: LocaleDictionary = {
   locale: "ru",
   meta: {
-    siteTitle: "KA Nails",
-    siteTitleTemplate: "%s | KA Nails",
-    siteDescription:
-      "Педикюр в студии KA Nails. Познакомьтесь с услугами студии и запишитесь на процедуру после открытия онлайн-записи.",
-    servicesTitle: "Услуги — KA Nails",
-    servicesDescription:
-      "Список процедур, стоимость и длительность визита будут опубликованы в модуле записи после запуска онлайн-бронирования.",
-    galleryTitle: "Галерея — Избранные работы студии | KA Nails",
-    galleryDescription:
-      "Подлинное портфолио педикюра и ногтевой эстетики студии KA Nails. Глубокий винный глянец, королевский кобальт, френч и внимательный уход.",
-    contactTitle: "Информация о студии — KA Nails",
-    contactDescription:
-      "Адрес, контактные данные и часы работы студии KA Nails.",
-    bookTitle: "Запись на процедуру — KA Nails",
-    bookDescription:
-      "Запись на педикюр в студию KA Nails после запуска онлайн-бронирования.",
+    pages: {
+      home: {
+        title: "KA Nails",
+        description:
+          "Педикюр в студии KA Nails. Познакомьтесь с услугами студии и запишитесь на процедуру после открытия онлайн-записи.",
+      },
+      services: {
+        title: "Услуги",
+        description:
+          "Список услуг, стоимость и длительность процедур будут опубликованы в модуле онлайн-записи студии KA Nails.",
+      },
+      gallery: {
+        title: "Галерея — Избранные работы студии",
+        description:
+          "Подлинное портфолио педикюра и ногтевой эстетики студии KA Nails. Глубокий винный глянец, королевский кобальт, френч и внимательный уход.",
+      },
+      contact: {
+        title: "Информация о студии",
+        description: "Адрес, контактные данные и часы работы студии KA Nails.",
+      },
+      book: {
+        title: "Запись на процедуру",
+        description:
+          "Запись на педикюр в студию KA Nails после запуска онлайн-бронирования.",
+      },
+    },
+    ogLocale: "ru_RU",
+    shareImageAlt:
+      "Логотип KA Nails на кремовом фоне рядом с тремя работами педикюра из портфолио студии",
   },
   nav: {
     brandName: "KA Nails",
@@ -39,6 +52,9 @@ export const ruLocale: LocaleDictionary = {
     book: "Запись на прием",
     contact: "Информация о студии",
     logoAlt: "KA Nails",
+    navAriaLabel: "Ссылки в подвале сайта",
+    worksAriaLabel: "Работы из портфолио студии",
+    copyright: "© KA Nails",
   },
   hero: {
     eyebrow: "KA Nails",
@@ -69,6 +85,8 @@ export const ruLocale: LocaleDictionary = {
       `Открыть работу ${title}, категория: ${category}. Нажмите Enter для просмотра в высоком разрешении.`,
     pauseMotionAria: "Приостановить движение выставки",
     resumeMotionAria: "Возобновить движение выставки",
+    footnote: (count) => `Работ педикюра в портфолио студии: ${count}`,
+    footnoteLink: "Вся галерея работ",
   },
   pillars: {
     eyebrow: "03 / Стандарты студии",
@@ -100,22 +118,37 @@ export const ruLocale: LocaleDictionary = {
     exploreInGallery: "Смотреть в галерее",
     card1: {
       tag: "Классика",
-      duration: "Коллекция",
       name: "Классическая эстетика педикюра",
       desc: "Нестареющий глубокий бордо, благородные фарфоровые оттенки и чистые линии из портфолио нашей студии.",
     },
     card2: {
-      tag: "Избранное",
-      duration: "Коллекция",
+      tag: "Френч",
       name: "Френч и акцентные детали",
       desc: "Тонкие линии улыбки, изящные банты и акцентные кольца в подлинных фотографиях работ студии.",
     },
     card3: {
       tag: "Цвет",
-      duration: "Коллекция",
       name: "Глубокий цвет и сияние",
       desc: "Королевский кобальт, васильковый глянец, нежная сирень и мягкие шиммерные текстуры.",
     },
+  },
+  stylePicker: {
+    eyebrow: "05 / Подберите стиль",
+    title: "Подберите свой стиль.",
+    lead: "Два быстрых вопроса — и мы покажем подходящие работы педикюра из портфолио студии.",
+    ariaLabel: "Подбор стиля педикюра",
+    lookLegend: "1. Выберите образ",
+    toneLegend: "2. Выберите тон",
+    anyOption: "Любой",
+    tones: {
+      light: "Светлые и нюд",
+      deep: "Глубокие и тёмные",
+      bright: "Яркие",
+    },
+    status: (count, total) => `Подходящих работ: ${count} из ${total}`,
+    closestNote: "Точного совпадения пока нет — вот самые близкие работы.",
+    reset: "Сбросить выбор",
+    viewGallery: "Вся галерея",
   },
   finalBooking: {
     eyebrow: "Визит в студию",
@@ -129,7 +162,11 @@ export const ruLocale: LocaleDictionary = {
   servicesPage: {
     eyebrow: "Студия / Услуги",
     heading: "Выберите процедуру.",
-    lead: "Список услуг, цены и продолжительность процедур будут опубликованы в модуле записи ниже.",
+    lead: "Педикюр в KA Nails. Меню услуг с ценами и продолжительностью появится здесь после подтверждения.",
+    leadWithMenu:
+      "Все услуги — педикюр. Продолжительность и цены указаны ниже.",
+    stripTitle: "Из портфолио студии",
+    stripLink: "Вся галерея",
   },
   galleryPage: {
     eyebrow: "KA Nails / Выставка студии",
@@ -138,8 +175,8 @@ export const ruLocale: LocaleDictionary = {
     lead: "Познакомьтесь с архивом подлинных работ нашей студии: от утонченного френча и глубокого глянца до деликатного восстановительного ухода и аккуратных акцентов.",
     filterAriaLabel: "Фильтрация галереи по технике выполнения",
     inventoryBadge: "Подлинный архив студии",
-    inventoryText: (uniquePhotos, additionalNeeded, target) =>
-      `Представлено ${uniquePhotos} подлинных работ студии • ${additionalNeeded} дополнительных работ на этапе отбора (цель: ${target})`,
+    inventoryText: (uniquePhotos) =>
+      `Представлено ${uniquePhotos} подлинных работ студии`,
     statusText: (count, category) =>
       category === "All"
         ? `Показано ${count} авторских работ`
@@ -183,6 +220,53 @@ export const ruLocale: LocaleDictionary = {
     helpTextTrail: ".",
     frameTitle: "Запись на прием в студию KA Nails",
     panelAriaLabel: "Модуль бронирования студии",
+  },
+  facts: {
+    servicesEyebrow: "Меню педикюра",
+    servicesTitle: "Услуги и цены",
+    durationLabel: "Продолжительность",
+    priceLabel: "Цена",
+    priceFrom: (price) => `от ${price}`,
+    channelsEyebrow: "Связаться",
+    channelsTitle: "Связь со студией",
+    preferredLabel: "Предпочтительно",
+    channelLabels: {
+      phone: "Телефон",
+      whatsapp: "WhatsApp",
+      telegram: "Telegram",
+      instagram: "Instagram",
+      email: "Почта",
+    },
+    detailsEyebrow: "Визит",
+    detailsTitle: "Адрес и часы работы",
+    addressLabel: "Адрес",
+    hoursLabel: "Часы работы",
+    closedLabel: "Выходной",
+    mapLink: "Открыть на карте",
+    masterEyebrow: "06 / Ваш мастер",
+    masterTitle: "Знакомьтесь: мастер",
+    masterPhotoAlt: (name) => `${name}, мастер педикюра KA Nails`,
+  },
+  bookingRequest: {
+    eyebrow: "Пока готовится онлайн-запись",
+    title: "Запрос на запись",
+    lead: "Выберите образ и удобное время. Откроется ваш мессенджер с готовым сообщением — оно уйдёт, только когда вы нажмёте «Отправить».",
+    lookLabel: "Образ из портфолио (необязательно)",
+    lookAny: "Выберу вместе с мастером",
+    timeLabel: "Удобные дни и время",
+    timeHint: "Например: будни после 18:00 или субботнее утро",
+    nameLabel: "Ваше имя (необязательно)",
+    notesLabel: "Комментарий (необязательно)",
+    sendVia: {
+      whatsapp: "Отправить в WhatsApp",
+      telegram: "Скопировать и открыть Telegram",
+      email: "Отправить письмом",
+    },
+    copied: "Сообщение скопировано. Вставьте его в чат Telegram.",
+    privacy: "Сайт не сохраняет и не отправляет эту форму.",
+    lookOnWhatsApp: "Записаться на этот образ в WhatsApp",
+    lookOnWhatsAppAria: (title) => `Записаться на образ ${title} в WhatsApp`,
+    sendLooks: "Отправить эти образы в WhatsApp",
   },
   lightbox: {
     dialogAriaLabel: (title, current, total) =>
