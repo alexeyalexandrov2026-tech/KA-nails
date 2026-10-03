@@ -45,6 +45,16 @@ jobs:
       - name: Run E2E tests
         run: npx playwright test --grep-invert "Cloudflare Deployed Production QA"
 
+      # The tested export, ready for a manual upload in Cloudflare Pages
+      # (ka-nails > Create deployment) when no API token is configured.
+      - name: Upload static export
+        uses: actions/upload-artifact@v4
+        with:
+          name: ka-nails-out-${{ github.sha }}
+          path: out/
+          retention-days: 14
+          if-no-files-found: error
+
   deploy:
     needs: web
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -53,32 +63,45 @@ jobs:
     permissions:
       contents: read
       deployments: write
+    outputs:
+      deployed: ${{ steps.deploy.outcome == 'success' }}
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       # Account IDs are not secret; this is the account that owns ka-nails.
       CLOUDFLARE_ACCOUNT_ID: 41ae0fe583ca26aa3037b70370838147
     steps:
-      - name: Require Cloudflare credentials
+      # Without the token the site is published by hand: download the
+      # ka-nails-out-<sha> artifact from this run and upload it in Cloudflare.
+      - name: Check Cloudflare credentials
+        id: credentials
         run: |
           if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
-            echo "::error::Add the CLOUDFLARE_API_TOKEN repository secret (Account > Cloudflare Pages > Edit) to deploy to Cloudflare Pages."
-            exit 1
+            echo "::notice::Automatic deployment skipped: no CLOUDFLARE_API_TOKEN secret. Upload the ka-nails-out artifact of this run in Cloudflare Pages instead."
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=true" >> "$GITHUB_OUTPUT"
           fi
 
       - uses: actions/checkout@v4
+        if: steps.credentials.outputs.available == 'true'
 
       - uses: actions/setup-node@v4
+        if: steps.credentials.outputs.available == 'true'
         with:
           node-version: "24"
           cache: npm
 
       - name: Install dependencies
+        if: steps.credentials.outputs.available == 'true'
         run: npm ci
 
       - name: Build static export
+        if: steps.credentials.outputs.available == 'true'
         run: npm run build
 
       - name: Deploy to Cloudflare Pages
+        id: deploy
+        if: steps.credentials.outputs.available == 'true'
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -86,8 +109,10 @@ jobs:
           command: pages deploy out --project-name=ka-nails --branch=main --commit-hash=${{ github.sha }}
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
 
+  # A manual upload is checked with the verify-live workflow instead.
   verify-live:
     needs: deploy
+    if: needs.deploy.outputs.deployed == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
