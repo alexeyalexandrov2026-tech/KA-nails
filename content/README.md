@@ -12,9 +12,12 @@ What each part turns on:
   on /book/, "Book this look on WhatsApp" in the photo viewer and "Send these
   looks" in the style finder. The site only prepares the message; visitors
   send it from their own app.
-- `channels` (phone) or `address.postal`: the schema.org `NailSalon`
-  description for search engines (with hours that have `daysOfWeek`, and
-  services with prices).
+- `address.postal`: the schema.org `NailSalon` description for search
+  engines (Google requires the address), with the phone from `channels`,
+  hours that have `daysOfWeek`, and services with prices.
+- `master.photo`: put the original in `source-assets/master/` and run
+  `node tools/make-master-photo.mjs`; it writes
+  `public/photos/master/<name>.webp`, the path to use here.
 - `address`, `hours`, `services`, `master`: the matching blocks on the
   contact, services and home pages.
 
@@ -68,7 +71,7 @@ Example of a filled file (illustrative values only — never publish them):
   "master": {
     "name": { "en": "…", "ru": "…" },
     "bio": { "en": "…", "ru": "…" },
-    "photo": "/photos/…-med.webp"
+    "photo": "/photos/master/….webp"
   }
 }
 ```

@@ -102,4 +102,8 @@ entries short and delete any that stop being true.
   including work 19 (before/after).
 - 2026-10-03: Indexing is switched by the repository variable `SITE_INDEXING=index`
   (and the domain by `SITE_URL`) at deploy time; the live checks follow it.
+- 2026-10-03: Owner confirmed the master (Karina Mamedova, portrait in
+  `source-assets/master/`) and phone/WhatsApp. The Telegram link they sent
+  (t.me/@id6103756473) shows an empty profile, so it is not published.
+- 2026-10-03: NailSalon JSON-LD waits for a postal address (Google requires it).
 - Open: no manual screen-reader test yet; WCAG 2.2 AA conformance not established.

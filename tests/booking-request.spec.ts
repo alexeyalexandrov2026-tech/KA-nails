@@ -12,6 +12,7 @@ import {
 } from "../lib/booking-message";
 import { nailSalonJsonLd, serializeJsonLd } from "../lib/structured-data";
 import {
+  channelHref,
   studioFacts,
   validateStudioFacts,
   type StudioFacts,
@@ -27,6 +28,19 @@ const BookingRequest = loadComponent<
   "../../lib/gallery-data": galleryData,
   "../../lib/booking-message": bookingLib,
 });
+
+const EMPTY: StudioFacts = {
+  services: [],
+  channels: [],
+  address: null,
+  hours: [],
+  master: null,
+};
+
+// The studio's published WhatsApp link, if any.
+const PUBLISHED_WHATSAPP = studioFacts.channels
+  .filter((channel) => channel.kind === "whatsapp")
+  .map(channelHref)[0];
 
 // FAKE data for checks only. It never reaches the site.
 const FAKE: StudioFacts = {
@@ -82,18 +96,36 @@ const ROUTES = [
 ];
 
 test.describe("Messenger booking requests and structured data", () => {
-  test("nothing is published while studio facts are empty", async ({
+  test("structured data waits for a confirmed address; messenger links reach only the studio", async ({
     page,
   }) => {
-    expect(nailSalonJsonLd(studioFacts, "en")).toBeNull();
+    const jsonLd = nailSalonJsonLd(studioFacts, "en");
+    // Google requires an address for a local business, so without one nothing
+    // is described to search engines.
+    if (!studioFacts.address?.postal) expect(jsonLd).toBeNull();
     for (const url of ROUTES) {
       await page.goto(url);
       await expect(
         page.locator('script[type="application/ld+json"]'),
         url,
-      ).toHaveCount(0);
-      await expect(page.locator('a[href*="wa.me"]'), url).toHaveCount(0);
-      await expect(page.locator("[data-facts]"), url).toHaveCount(0);
+      ).toHaveCount(jsonLd ? 1 : 0);
+      const whatsapp = await page
+        .locator('a[href*="wa.me"]')
+        .evaluateAll((els) => els.map((el) => el.getAttribute("href")!));
+      for (const href of whatsapp) {
+        expect(PUBLISHED_WHATSAPP, `${url} has a WhatsApp link`).toBeTruthy();
+        expect(href.split("?")[0], url).toBe(PUBLISHED_WHATSAPP);
+      }
+    }
+    if (PUBLISHED_WHATSAPP) {
+      // The appointment request on /book/ prepares a WhatsApp message.
+      await page.goto("/book/");
+      await expect(
+        page.locator('[data-facts="request"] a[href*="wa.me"]'),
+      ).toHaveAttribute(
+        "href",
+        `${PUBLISHED_WHATSAPP}?text=Hello%2C%20KA%20Nails!%20I%20would%20like%20to%20book%20a%20pedicure.`,
+      );
     }
   });
 
@@ -154,11 +186,9 @@ test.describe("Messenger booking requests and structured data", () => {
       href: "https://t.me/fake_studio",
       copyFirst: true,
     });
-    expect(requestLinks(studioFacts.channels, "s", "t")).toEqual([]);
+    expect(requestLinks(EMPTY.channels, "s", "t")).toEqual([]);
     expect(
-      whatsappLookLink(studioFacts.channels, "en", [
-        { id: "work-01", title: "x" },
-      ]),
+      whatsappLookLink(EMPTY.channels, "en", [{ id: "work-01", title: "x" }]),
     ).toBeNull();
     expect(
       whatsappLookLink(FAKE.channels, "en", [
@@ -171,7 +201,7 @@ test.describe("Messenger booking requests and structured data", () => {
     for (const locale of ["en", "ru"] as const) {
       expect(
         renderToStaticMarkup(
-          React.createElement(BookingRequest, { locale, facts: studioFacts }),
+          React.createElement(BookingRequest, { locale, facts: EMPTY }),
         ),
       ).toBe("");
     }
@@ -230,10 +260,15 @@ test.describe("Messenger booking requests and structured data", () => {
     expect(nailSalonJsonLd(FAKE, "ru")!.url).toBe(
       "https://ka-nails.pages.dev/ru/",
     );
-    // Without a phone or a structured address nothing is published.
+    // Without a structured address nothing is published, even with a phone:
+    // Google requires the address for a local business.
     expect(
       nailSalonJsonLd({ ...FAKE, channels: [], address: null }, "en"),
     ).toBeNull();
+    expect(nailSalonJsonLd({ ...FAKE, address: null }, "en")).toBeNull();
+    expect(nailSalonJsonLd({ ...FAKE, channels: [] }, "en")).not.toHaveProperty(
+      "telephone",
+    );
     expect(serializeJsonLd({ name: "</script><b>" })).toBe(
       '{"name":"\\u003c/script>\\u003cb>"}',
     );

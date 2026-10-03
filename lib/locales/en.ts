@@ -202,7 +202,7 @@ export const enLocale: LocaleDictionary = {
     heading: "Stay close.",
     noticeTitle: "Studio details are coming soon.",
     noticeText:
-      "The studio’s address, contact information and opening hours will appear here once they are confirmed.",
+      "The studio’s address and opening hours will appear here once they are confirmed.",
   },
   bookPage: {
     eyebrow: "Your studio appointment",

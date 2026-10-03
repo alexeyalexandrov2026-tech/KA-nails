@@ -1761,13 +1761,16 @@ h2.section-title {
   padding: 24px;
 }
 
+/* Bar, photo, caption. The container has a definite height, so the photo row
+   gets exactly what the bar and caption leave and the photo shrinks to fit it
+   instead of overlapping them (the caption grows when booking links appear). */
 .lightbox-container {
   width: 100%;
   max-width: 1080px;
+  height: 100%;
   max-height: 94vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+  display: grid;
+  grid-template-rows: auto minmax(160px, 1fr) auto;
   position: relative;
 }
 
@@ -1845,15 +1848,14 @@ h2.section-title {
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-grow: 1;
-  min-height: 380px;
-  max-height: 65vh;
+  min-height: 0;
+  /* The photo is sized against this box (cqw/cqh units). */
+  container-type: size;
 }
 
 /* The photo sits in a thin rose-gold frame */
 .lightbox-media-wrapper {
   position: relative;
-  max-height: 65vh;
   max-width: 100%;
   display: flex;
   align-items: center;
@@ -1865,9 +1867,12 @@ h2.section-title {
 
 .lightbox-image {
   height: auto;
-  max-height: calc(65vh - 22px);
   width: auto;
+  max-height: calc(65vh - 22px);
   max-width: 100%;
+  /* Fit the photo row, less the frame's padding and border (2 × 11px). */
+  max-height: calc(100cqh - 22px);
+  max-width: calc(100cqw - 22px);
   object-fit: contain;
   border-radius: var(--radius-images);
 }
@@ -2403,8 +2408,15 @@ h2.section-title {
     font-size: 32px;
   }
 
-  .lightbox-stage {
-    min-height: 280px;
+  .lightbox-overlay {
+    padding: 16px;
+  }
+
+  /* Phones fill the screen; on very short ones the dialog scrolls rather than
+     letting the photo cover the bar or the booking links. */
+  .lightbox-container {
+    max-height: none;
+    overflow-y: auto;
   }
 
   .lightbox-nav-btn {

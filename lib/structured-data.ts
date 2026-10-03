@@ -6,8 +6,9 @@ type JsonLd = Record<string, unknown>;
 
 /**
  * schema.org NailSalon description of the studio, built only from confirmed
- * studio facts. Returns null until there is at least a phone number or a
- * structured address, so nothing unconfirmed is ever published.
+ * studio facts. Returns null until a structured address is confirmed: Google
+ * requires `address` for local businesses, so a description without one would
+ * only be rejected. Nothing unconfirmed is ever published.
  */
 export function nailSalonJsonLd(
   facts: StudioFacts,
@@ -19,7 +20,7 @@ export function nailSalonJsonLd(
   const email = byKind("email");
   const instagram = byKind("instagram");
   const postal = facts.address?.postal;
-  if (!phone && !postal) return null;
+  if (!postal) return null;
 
   const data: JsonLd = {
     "@context": "https://schema.org",
