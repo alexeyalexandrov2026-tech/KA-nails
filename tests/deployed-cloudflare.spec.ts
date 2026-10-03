@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import { studioFacts } from "../lib/studio-facts";
 
 const BASE_URL = "https://ka-nails.pages.dev";
 const LIVE_INDEXING = process.env.NEXT_PUBLIC_SITE_INDEXING === "index";
@@ -70,6 +71,13 @@ test.describe("Cloudflare Deployed Production QA - KA Nails", () => {
       }),
     ).toBeVisible();
     await expect(page.locator("iframe")).toHaveCount(0);
+    // The deployed menu is the published one.
+    await expect(
+      page.locator('[data-facts="services"] .service-menu-name'),
+    ).toHaveText(studioFacts.services.map((service) => service.name.en));
+    await expect(
+      page.locator('[data-facts="services"] .service-addon-name'),
+    ).toHaveText(studioFacts.addOns.map((addOn) => addOn.name.en));
     expect(pageErrors).toEqual([]);
   });
 

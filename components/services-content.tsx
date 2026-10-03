@@ -6,6 +6,7 @@ import { PageIntro } from "./page-intro";
 import { ServiceMenu } from "./facts/service-menu";
 import { getDictionary, getLocalizedPath, type Locale } from "../lib/locales";
 import { getGalleryItems } from "../lib/gallery-data";
+import { requestLinks } from "../lib/booking-message";
 import { studioFacts } from "../lib/studio-facts";
 
 // Portfolio works shown under the booking notice.
@@ -38,7 +39,15 @@ export function ServicesContent({ locale = "en" }: ServicesContentProps) {
         }
       />
       <ServiceMenu locale={locale} />
-      <BookingPanel locale={locale} />
+      <BookingPanel
+        locale={locale}
+        requestHref={
+          // The /book/ request form exists once a messenger is published.
+          requestLinks(studioFacts.channels, "", "").length > 0
+            ? getLocalizedPath("/book/", locale)
+            : undefined
+        }
+      />
 
       <section className="work-strip" aria-labelledby="work-strip-title">
         <div className="work-strip-header">

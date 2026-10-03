@@ -11,6 +11,8 @@ export interface BookingLook {
 }
 
 export interface BookingDraft {
+  /** The chosen service as the menu shows it, e.g. "Classic Pedicure — $75". */
+  service?: string;
   looks?: BookingLook[];
   preferredTime?: string;
   name?: string;
@@ -22,6 +24,7 @@ const COPY: Record<
   {
     subject: string;
     greeting: string;
+    service: string;
     looks: string;
     time: string;
     name: string;
@@ -31,6 +34,7 @@ const COPY: Record<
   en: {
     subject: "Pedicure appointment request",
     greeting: "Hello, KA Nails! I would like to book a pedicure.",
+    service: "Service",
     looks: "Look from your portfolio",
     time: "Preferred days and time",
     name: "Name",
@@ -39,6 +43,7 @@ const COPY: Record<
   ru: {
     subject: "Запрос записи на педикюр",
     greeting: "Здравствуйте, KA Nails! Хочу записаться на педикюр.",
+    service: "Услуга",
     looks: "Образ из портфолио",
     time: "Удобные дни и время",
     name: "Имя",
@@ -55,6 +60,7 @@ export function bookingMessage(locale: Locale, draft: BookingDraft): string {
   const copy = COPY[locale];
   const gallery = getLocalizedPath("/gallery/", locale);
   const lines = [copy.greeting];
+  if (draft.service) lines.push("", `${copy.service}: ${draft.service}`);
   if (draft.looks && draft.looks.length > 0) {
     lines.push("", `${copy.looks}:`);
     for (const look of draft.looks) {

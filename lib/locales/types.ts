@@ -8,6 +8,8 @@ export interface LocaleDictionary {
       "home" | "services" | "gallery" | "contact" | "book",
       { title: string; description: string }
     >;
+    /** Services page description once the menu from studio facts is published. */
+    servicesDescriptionWithMenu: string;
     /** Open Graph locale, e.g. "en_US". */
     ogLocale: string;
     shareImageAlt: string;
@@ -152,6 +154,8 @@ export interface LocaleDictionary {
     helpTextTrail: string;
     frameTitle: string;
     panelAriaLabel: string;
+    /** Link to the messenger request form while online booking is off. */
+    requestLink: string;
   };
   facts: {
     servicesEyebrow: string;
@@ -159,6 +163,8 @@ export interface LocaleDictionary {
     durationLabel: string;
     priceLabel: string;
     priceFrom: (price: string) => string;
+    addOnsTitle: string;
+    menuNotesTitle: string;
     channelsEyebrow: string;
     channelsTitle: string;
     preferredLabel: string;
@@ -180,6 +186,8 @@ export interface LocaleDictionary {
     eyebrow: string;
     title: string;
     lead: string;
+    serviceLabel: string;
+    serviceAny: string;
     lookLabel: string;
     lookAny: string;
     timeLabel: string;

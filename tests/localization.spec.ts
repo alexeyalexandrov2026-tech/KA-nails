@@ -181,7 +181,7 @@ test.describe("KA Nails Bilingual English + Russian Test Suite", () => {
       page.getByRole("heading", { name: "Онлайн-запись пока недоступна." }),
     ).toBeVisible();
     await expect(page.locator(".notice p").nth(1)).toContainText(
-      "Услуги, цены и доступные окна для записи появятся здесь, когда студия откроет онлайн-бронирование.",
+      "Свободные окна для записи появятся здесь, когда студия откроет онлайн-бронирование.",
     );
 
     await page.goto("/ru/services/");

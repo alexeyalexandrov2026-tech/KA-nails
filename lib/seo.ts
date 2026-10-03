@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getDictionary, getLocalizedPath, type Locale } from "./locales";
 import { SITE_URL, absoluteUrl } from "./site";
+import { studioFacts } from "./studio-facts";
 
 export type PageKey = "home" | "services" | "gallery" | "contact" | "book";
 
@@ -52,7 +53,12 @@ export function layoutMetadata(locale: Locale): Metadata {
  */
 export function pageMetadata(locale: Locale, page: PageKey): Metadata {
   const meta = getDictionary(locale).meta;
-  const { title, description } = meta.pages[page];
+  const { title } = meta.pages[page];
+  // The services page mentions prices only once the menu is published.
+  const description =
+    page === "services" && studioFacts.services.length > 0
+      ? meta.servicesDescriptionWithMenu
+      : meta.pages[page].description;
   const fullTitle = page === "home" ? title : `${title} | KA Nails`;
   const url = pageUrl(page, locale);
   const image = { ...SHARE_IMAGE, alt: meta.shareImageAlt };
