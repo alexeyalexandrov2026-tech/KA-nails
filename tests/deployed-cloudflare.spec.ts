@@ -96,4 +96,24 @@ test.describe("Cloudflare Deployed Production QA - KA Nails", () => {
     ).toBeVisible();
     expect(pageErrors).toEqual([]);
   });
+
+  test("Live pages carry the security and cache headers from public/_headers", async ({
+    request,
+  }) => {
+    const home = await request.get(`${BASE_URL}/`);
+    expect(home.ok()).toBe(true);
+    const headers = home.headers();
+    expect(headers["x-content-type-options"]).toBe("nosniff");
+    expect(headers["referrer-policy"]).toBe("strict-origin-when-cross-origin");
+    expect(headers["x-frame-options"]).toBe("DENY");
+    expect(headers["content-security-policy"]).toContain(
+      "frame-ancestors 'none'",
+    );
+
+    const font = await request.get(
+      `${BASE_URL}/fonts/inter-latin-wght-normal.woff2`,
+    );
+    expect(font.ok()).toBe(true);
+    expect(font.headers()["cache-control"]).toContain("max-age=2592000");
+  });
 });

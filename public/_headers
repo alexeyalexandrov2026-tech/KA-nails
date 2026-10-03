@@ -1,0 +1,21 @@
+# Cloudflare Pages response headers (https://developers.cloudflare.com/pages/configuration/headers/).
+# Headers from every matching rule are combined.
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  X-Frame-Options: DENY
+  Content-Security-Policy: frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'
+
+# Content-hashed build output never changes under the same URL.
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Fonts keep stable URLs across releases (tools/sync-fonts.mjs, exact package versions).
+/fonts/*
+  Cache-Control: public, max-age=2592000
+
+# Photos keep their names when re-rendered (tools/process-photos.mjs), so cache briefly.
+/photos/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
