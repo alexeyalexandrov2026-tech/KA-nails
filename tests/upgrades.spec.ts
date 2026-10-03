@@ -97,6 +97,30 @@ test.describe("Stage 6 upgrades: sharing, SEO switch, photos, images", () => {
     );
   });
 
+  test("Cloudflare gets security and cache headers for every page", async ({
+    request,
+  }) => {
+    const response = await request.get("/_headers");
+    expect(response.status()).toBe(200);
+    const rules = await response.text();
+    const block = (path: string) =>
+      rules.split(/\n(?=\/)/).find((part) => part.startsWith(`${path}\n`)) ??
+      "";
+    const all = block("/*");
+    expect(all).toContain("X-Content-Type-Options: nosniff");
+    expect(all).toContain("Referrer-Policy: strict-origin-when-cross-origin");
+    expect(all).toContain("X-Frame-Options: DENY");
+    expect(all).toMatch(/Content-Security-Policy: .*frame-ancestors 'none'/);
+    // The site must never block its own scripts: no script or default policy.
+    expect(all).not.toMatch(/script-src|default-src/);
+    expect(block("/_next/static/*")).toContain(
+      "Cache-Control: public, max-age=31536000, immutable",
+    );
+    // Photos and fonts keep stable names, so they must not be cached forever.
+    expect(block("/photos/*")).not.toContain("immutable");
+    expect(block("/fonts/*")).not.toContain("immutable");
+  });
+
   test("screenshot overlays are cropped from the portfolio photos", () => {
     // These works came from video screenshots (sound icon, progress bar,
     // Instagram header); the crops leave them narrower than 1200 px.

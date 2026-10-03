@@ -95,4 +95,7 @@ entries short and delete any that stop being true.
 - 2026-10-03: Studio facts module added and kept empty until the owner confirms data.
 - 2026-10-03: SEO, link previews and an indexing switch added; the site stays
   `noindex` until publication is approved.
+- 2026-10-03: `public/_headers` sets security headers (no script/default CSP, so
+  Next's inline scripts keep working) and caching; photos and fonts keep stable
+  names, so they are never `immutable`.
 - Open: no manual screen-reader test yet; WCAG 2.2 AA conformance not established.
