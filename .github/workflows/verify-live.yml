@@ -12,6 +12,9 @@ jobs:
   verify-live:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    env:
+      # The live checks expect the robots setting the site was deployed with.
+      NEXT_PUBLIC_SITE_INDEXING: ${{ vars.SITE_INDEXING }}
     steps:
       - uses: actions/checkout@v4
 

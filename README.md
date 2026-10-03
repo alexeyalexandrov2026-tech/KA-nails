@@ -66,14 +66,15 @@ errors, races, expiry, not-live state and retries are handled by the real wizard
 ## Publication state
 
 All pages are `noindex, nofollow` until `NEXT_PUBLIC_SITE_INDEXING=index` is set.
-Address, contact, hours, staff, prices, durations, policies, photographs and
-production domain remain unconfirmed and are not invented. The generic services page
+Address, contact, hours, staff, prices, durations, policies and production domain
+remain unconfirmed and are not invented. The owner has confirmed the rights and
+client consent for all 19 portfolio photographs (3 October 2026). The generic services page
 displays the actual platform service picker only when the booking origin is
 configured. Until then online booking is unavailable.
 
 Canonical links, EN/RU alternates and link previews are in place. Before
 publication, approve the studio facts and the registered booking domain, validate
-the real live tenant, review photography rights and mobile accessibility, and approve
+the real live tenant, review mobile accessibility, and approve
 hosting/TLS/CSP/asset routing. A manual screen-reader test has not been performed and
 WCAG 2.2 AA conformance has not been established. Changing this site's URL setting
 never makes a tenant live or bypasses GORGONA readiness.
@@ -131,3 +132,9 @@ Without the secret the `deploy` job is skipped with a notice. Publish by hand:
 download the artifact of the `main` run, upload its contents in Cloudflare
 (`ka-nails` → Create deployment → Production), then run the `verify-live` workflow
 (Actions → verify-live → Run workflow) on `main`.
+
+The deployed build reads two repository variables (Settings → Secrets and
+variables → Actions → Variables): `SITE_INDEXING=index` opens the site to search
+engines and `SITE_URL` sets the public origin once the studio has its own domain.
+After changing either, re-run the latest `main` run of the `ci` workflow so it is
+redeployed; `verify-live` expects the robots setting the site was deployed with.

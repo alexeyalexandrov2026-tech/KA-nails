@@ -98,4 +98,8 @@ entries short and delete any that stop being true.
 - 2026-10-03: `public/_headers` sets security headers (no script/default CSP, so
   Next's inline scripts keep working) and caching; photos and fonts keep stable
   names, so they are never `immutable`.
+- 2026-10-03: Owner confirmed rights and client consent for all 19 photos,
+  including work 19 (before/after).
+- 2026-10-03: Indexing is switched by the repository variable `SITE_INDEXING=index`
+  (and the domain by `SITE_URL`) at deploy time; the live checks follow it.
 - Open: no manual screen-reader test yet; WCAG 2.2 AA conformance not established.

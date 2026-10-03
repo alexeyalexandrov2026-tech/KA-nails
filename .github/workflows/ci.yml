@@ -95,8 +95,14 @@ jobs:
         if: steps.credentials.outputs.available == 'true'
         run: npm ci
 
+      # Repository variables (Settings > Secrets and variables > Actions >
+      # Variables): SITE_INDEXING=index opens the site to search engines;
+      # SITE_URL sets the public origin once the studio has its own domain.
       - name: Build static export
         if: steps.credentials.outputs.available == 'true'
+        env:
+          NEXT_PUBLIC_SITE_INDEXING: ${{ vars.SITE_INDEXING }}
+          NEXT_PUBLIC_SITE_URL: ${{ vars.SITE_URL }}
         run: npm run build
 
       - name: Deploy to Cloudflare Pages
@@ -115,6 +121,9 @@ jobs:
     if: needs.deploy.outputs.deployed == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    env:
+      # The live checks expect the robots setting the site was deployed with.
+      NEXT_PUBLIC_SITE_INDEXING: ${{ vars.SITE_INDEXING }}
     steps:
       - uses: actions/checkout@v4
 
