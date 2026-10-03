@@ -34,6 +34,9 @@ export interface LocaleDictionary {
     book: string;
     contact: string;
     logoAlt: string;
+    navAriaLabel: string;
+    worksAriaLabel: string;
+    copyright: string;
   };
   hero: {
     eyebrow: string;
@@ -59,6 +62,8 @@ export interface LocaleDictionary {
     cardAriaLabel: (title: string, category: string) => string;
     pauseMotionAria: string;
     resumeMotionAria: string;
+    footnote: (count: number) => string;
+    footnoteLink: string;
   };
   pillars: {
     eyebrow: string;
@@ -76,9 +81,23 @@ export interface LocaleDictionary {
     ariaLabel: string;
     viewServiceInfo: string;
     exploreInGallery: string;
-    card1: { tag: string; duration: string; name: string; desc: string };
-    card2: { tag: string; duration: string; name: string; desc: string };
-    card3: { tag: string; duration: string; name: string; desc: string };
+    card1: { tag: string; name: string; desc: string };
+    card2: { tag: string; name: string; desc: string };
+    card3: { tag: string; name: string; desc: string };
+  };
+  stylePicker: {
+    eyebrow: string;
+    title: string;
+    lead: string;
+    ariaLabel: string;
+    lookLegend: string;
+    toneLegend: string;
+    anyOption: string;
+    tones: Record<"light" | "deep" | "bright", string>;
+    status: (count: number, total: number) => string;
+    closestNote: string;
+    reset: string;
+    viewGallery: string;
   };
   finalBooking: {
     eyebrow: string;

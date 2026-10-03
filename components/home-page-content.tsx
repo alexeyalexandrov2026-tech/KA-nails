@@ -1,8 +1,11 @@
 import React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { HeroCollage } from "./hero-collage";
 import { HomeMovingWall } from "./home-moving-wall";
 import { MasterProfile } from "./facts/master-profile";
+import { StylePicker } from "./style-picker";
+import { getGalleryItems } from "../lib/gallery-data";
 import { getDictionary, getLocalizedPath, type Locale } from "../lib/locales";
 
 interface HomePageContentProps {
@@ -15,6 +18,29 @@ export function HomePageContent({ locale = "en" }: HomePageContentProps) {
   const servicesHref = getLocalizedPath("/services/", locale);
   const galleryHref = getLocalizedPath("/gallery/", locale);
   const bookHref = getLocalizedPath("/book/", locale);
+
+  const works = getGalleryItems(locale);
+  const work = (id: string) => works.find((item) => item.id === id);
+  // Real portfolio photos chosen for each block (see lib/photo-inventory.ts).
+  const standardsPhoto = work("work-12");
+  const pillars = [
+    dict.pillars.pillar1,
+    dict.pillars.pillar2,
+    dict.pillars.pillar3,
+  ];
+  const chapters = [
+    { numeral: "I", card: dict.servicesShowcase.card1, photo: work("work-18") },
+    {
+      numeral: "II",
+      card: dict.servicesShowcase.card2,
+      photo: work("work-17"),
+    },
+    {
+      numeral: "III",
+      card: dict.servicesShowcase.card3,
+      photo: work("work-14"),
+    },
+  ];
 
   return (
     <>
@@ -29,40 +55,44 @@ export function HomePageContent({ locale = "en" }: HomePageContentProps) {
         className="editorial-pillars"
         aria-label={dict.pillars.ariaLabel}
       >
-        <div className="pillars-intro">
-          <p className="eyebrow">{dict.pillars.eyebrow}</p>
-          <h2 className="section-title">
-            {dict.pillars.titleLine1}
-            <br />
-            {dict.pillars.titleLine2}
-          </h2>
-          <p className="lead">{dict.pillars.lead}</p>
-        </div>
+        {standardsPhoto && (
+          <figure className="pillars-figure">
+            <Image
+              src={standardsPhoto.srcMed}
+              alt={standardsPhoto.alt}
+              width={standardsPhoto.width}
+              height={standardsPhoto.height}
+              loading="lazy"
+              unoptimized
+              className="arch-photo reveal-photo"
+            />
+          </figure>
+        )}
 
-        <div className="pillars-grid">
-          <article className="pillar-card">
-            <span className="pillar-num" aria-hidden="true">
-              {dict.pillars.pillar1.num}
-            </span>
-            <h3 className="pillar-title">{dict.pillars.pillar1.title}</h3>
-            <p className="pillar-text">{dict.pillars.pillar1.text}</p>
-          </article>
+        <div className="pillars-body">
+          <div className="pillars-intro">
+            <p className="eyebrow">{dict.pillars.eyebrow}</p>
+            <h2 className="section-title">
+              {dict.pillars.titleLine1}
+              <br />
+              {dict.pillars.titleLine2}
+            </h2>
+            <p className="lead">{dict.pillars.lead}</p>
+          </div>
 
-          <article className="pillar-card">
-            <span className="pillar-num" aria-hidden="true">
-              {dict.pillars.pillar2.num}
-            </span>
-            <h3 className="pillar-title">{dict.pillars.pillar2.title}</h3>
-            <p className="pillar-text">{dict.pillars.pillar2.text}</p>
-          </article>
-
-          <article className="pillar-card">
-            <span className="pillar-num" aria-hidden="true">
-              {dict.pillars.pillar3.num}
-            </span>
-            <h3 className="pillar-title">{dict.pillars.pillar3.title}</h3>
-            <p className="pillar-text">{dict.pillars.pillar3.text}</p>
-          </article>
+          <div className="pillars-grid">
+            {pillars.map((pillar) => (
+              <article className="pillar-card" key={pillar.num}>
+                <span className="pillar-num" aria-hidden="true">
+                  {pillar.num}
+                </span>
+                <div>
+                  <h3 className="pillar-title">{pillar.title}</h3>
+                  <p className="pillar-text">{pillar.text}</p>
+                </div>
+              </article>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -71,70 +101,55 @@ export function HomePageContent({ locale = "en" }: HomePageContentProps) {
         className="services-showcase"
         aria-label={dict.servicesShowcase.ariaLabel}
       >
-        <div className="services-showcase-header">
-          <div>
-            <p className="eyebrow">{dict.servicesShowcase.eyebrow}</p>
-            <h2 className="section-title">{dict.servicesShowcase.title}</h2>
-          </div>
-          <Link href={servicesHref} className="button-secondary">
-            {dict.servicesShowcase.viewServiceInfo}{" "}
-            <span aria-hidden="true">→</span>
-          </Link>
-        </div>
-
-        <div className="services-preview-grid">
-          <div className="service-preview-card">
-            <div className="service-card-meta">
-              <span className="service-tag">
-                {dict.servicesShowcase.card1.tag}
-              </span>
-              <span className="service-duration">
-                {dict.servicesShowcase.card1.duration}
-              </span>
+        <div className="services-showcase-inner">
+          <div className="services-showcase-header">
+            <div>
+              <p className="eyebrow">{dict.servicesShowcase.eyebrow}</p>
+              <h2 className="section-title">{dict.servicesShowcase.title}</h2>
             </div>
-            <h3 className="service-name">{dict.servicesShowcase.card1.name}</h3>
-            <p className="service-desc">{dict.servicesShowcase.card1.desc}</p>
-            <Link href={galleryHref} className="service-book-link">
-              {dict.servicesShowcase.exploreInGallery}{" "}
+            <Link href={servicesHref} className="button-secondary">
+              {dict.servicesShowcase.viewServiceInfo}{" "}
               <span aria-hidden="true">→</span>
             </Link>
           </div>
 
-          <div className="service-preview-card featured">
-            <div className="service-card-meta">
-              <span className="service-tag highlight">
-                {dict.servicesShowcase.card2.tag}
-              </span>
-              <span className="service-duration">
-                {dict.servicesShowcase.card2.duration}
-              </span>
-            </div>
-            <h3 className="service-name">{dict.servicesShowcase.card2.name}</h3>
-            <p className="service-desc">{dict.servicesShowcase.card2.desc}</p>
-            <Link href={galleryHref} className="service-book-link">
-              {dict.servicesShowcase.exploreInGallery}{" "}
-              <span aria-hidden="true">→</span>
-            </Link>
-          </div>
-
-          <div className="service-preview-card">
-            <div className="service-card-meta">
-              <span className="service-tag">
-                {dict.servicesShowcase.card3.tag}
-              </span>
-              <span className="service-duration">
-                {dict.servicesShowcase.card3.duration}
-              </span>
-            </div>
-            <h3 className="service-name">{dict.servicesShowcase.card3.name}</h3>
-            <p className="service-desc">{dict.servicesShowcase.card3.desc}</p>
-            <Link href={galleryHref} className="service-book-link">
-              {dict.servicesShowcase.exploreInGallery}{" "}
-              <span aria-hidden="true">→</span>
-            </Link>
+          <div className="services-preview-grid">
+            {chapters.map(({ card, photo, numeral }) => (
+              <div className="service-preview-card" key={numeral}>
+                {photo && (
+                  <Image
+                    src={photo.srcMed}
+                    alt={photo.alt}
+                    width={photo.width}
+                    height={photo.height}
+                    loading="lazy"
+                    unoptimized
+                    className="arch-photo service-chapter-photo reveal-photo"
+                  />
+                )}
+                <div className="service-card-meta">
+                  <span className="service-tag">
+                    <span aria-hidden="true">{numeral} · </span>
+                    {card.tag}
+                  </span>
+                </div>
+                <h3 className="service-name">{card.name}</h3>
+                <p className="service-desc">{card.desc}</p>
+                <Link
+                  href={photo ? `${galleryHref}#${photo.id}` : galleryHref}
+                  className="service-book-link"
+                >
+                  {dict.servicesShowcase.exploreInGallery}{" "}
+                  <span aria-hidden="true">→</span>
+                </Link>
+              </div>
+            ))}
           </div>
         </div>
       </section>
+
+      {/* Style finder over the real portfolio (Section 05) */}
+      <StylePicker locale={locale} />
 
       {/* Master profile from studio facts; hidden until published */}
       <MasterProfile locale={locale} />
@@ -144,6 +159,16 @@ export function HomePageContent({ locale = "en" }: HomePageContentProps) {
         className="final-booking-band"
         aria-label={dict.finalBooking.ariaLabel}
       >
+        <svg
+          className="final-arc"
+          data-decor=""
+          aria-hidden="true"
+          focusable="false"
+          viewBox="0 0 1200 400"
+          preserveAspectRatio="none"
+        >
+          <path d="M -20 400 A 620 620 0 0 1 1220 400" />
+        </svg>
         <div className="final-booking-inner">
           <p className="eyebrow">{dict.finalBooking.eyebrow}</p>
           <h2 className="final-title">

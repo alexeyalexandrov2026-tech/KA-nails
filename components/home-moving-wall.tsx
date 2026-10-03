@@ -425,6 +425,9 @@ export function HomeMovingWall({ locale = "en" }: HomeMovingWallProps) {
       aria-label={dict.eyebrow}
       ref={sectionRef}
     >
+      <span className="section-numeral" data-decor="" aria-hidden="true">
+        02
+      </span>
       <div className="moving-wall-header">
         <div>
           <p className="eyebrow">{dict.eyebrow}</p>
@@ -780,19 +783,8 @@ export function HomeMovingWall({ locale = "en" }: HomeMovingWallProps) {
 
       <div className="moving-wall-footer-note">
         <p>
-          {locale === "ru" ? (
-            <>
-              19 подлинных работ студии · 11 дополнительных работ на этапе
-              отбора (цель: 30) ·{" "}
-              <Link href={galleryHref}>Вся галерея работ</Link>
-            </>
-          ) : (
-            <>
-              19 authentic salon works displayed · 11 additional works pending
-              client curation (Target: 30) ·{" "}
-              <Link href={galleryHref}>Explore full gallery</Link>
-            </>
-          )}
+          {dict.footnote(allItems.length)} ·{" "}
+          <Link href={galleryHref}>{dict.footnoteLink}</Link>
         </p>
       </div>
 

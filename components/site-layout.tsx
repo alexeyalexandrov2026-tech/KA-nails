@@ -4,6 +4,17 @@ import Image from "next/image";
 import { preload } from "react-dom";
 import { LanguageSwitcher } from "./language-switcher";
 import { getDictionary, getLocalizedPath, type Locale } from "../lib/locales";
+import { getGalleryItems } from "../lib/gallery-data";
+import {
+  channelDisplay,
+  channelHref,
+  orderedChannels,
+  pick,
+  studioFacts,
+} from "../lib/studio-facts";
+
+// Portfolio works shown as a small mosaic in the footer.
+const FOOTER_WORKS = ["work-01", "work-05", "work-13", "work-16"];
 
 interface SiteLayoutProps {
   locale: Locale;
@@ -36,6 +47,9 @@ export function SiteLayout({ locale, children }: SiteLayoutProps) {
   const galleryHref = getLocalizedPath("/gallery/", locale);
   const contactHref = getLocalizedPath("/contact/", locale);
   const bookHref = getLocalizedPath("/book/", locale);
+  const mosaic = getGalleryItems(locale).filter((item) =>
+    FOOTER_WORKS.includes(item.id),
+  );
 
   return (
     <html lang={locale}>
@@ -73,27 +87,83 @@ export function SiteLayout({ locale, children }: SiteLayoutProps) {
         <main id="main">{children}</main>
 
         <footer className="footer">
-          <div className="footer-brand">
-            <Image
-              src="/assets/ka-nails-logo-320.webp"
-              alt={dict.footer.logoAlt}
-              width={112}
-              height={112}
-              loading="lazy"
-              unoptimized
-            />
-            <div className="footer-brand-text">
-              <span className="footer-title">{dict.footer.brandTitle}</span>
-              <p className="footer-sub">{dict.footer.brandSub}</p>
+          <div className="footer-main">
+            <div className="footer-brand">
+              <Image
+                src="/assets/ka-nails-logo-320.webp"
+                alt={dict.footer.logoAlt}
+                width={112}
+                height={112}
+                loading="lazy"
+                unoptimized
+              />
+              <div className="footer-brand-text">
+                <span className="footer-title">{dict.footer.brandTitle}</span>
+                <p className="footer-sub">{dict.footer.brandSub}</p>
+              </div>
             </div>
+
+            <nav className="footer-links" aria-label={dict.footer.navAriaLabel}>
+              <Link href={servicesHref}>{dict.footer.services}</Link>
+              <Link href={galleryHref}>{dict.footer.gallery}</Link>
+              <Link href={bookHref}>{dict.footer.book}</Link>
+              <Link href={contactHref}>{dict.footer.contact}</Link>
+            </nav>
+
+            <ul
+              className="footer-mosaic"
+              aria-label={dict.footer.worksAriaLabel}
+            >
+              {mosaic.map((item) => (
+                <li key={item.id}>
+                  <Link
+                    href={`${galleryHref}#${item.id}`}
+                    aria-label={dict.hero.tileAriaLabel(
+                      item.title,
+                      item.categoryLabel || item.category,
+                    )}
+                  >
+                    <Image
+                      src={item.srcThumb}
+                      alt=""
+                      width={item.width}
+                      height={item.height}
+                      loading="lazy"
+                      unoptimized
+                    />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+
+            {(studioFacts.address || studioFacts.channels.length > 0) && (
+              <div className="footer-facts" data-facts="footer">
+                {studioFacts.address && (
+                  <address className="footer-address">
+                    {studioFacts.address.lines.map((line, i) => (
+                      <span key={i}>{pick(line, locale)}</span>
+                    ))}
+                  </address>
+                )}
+                {studioFacts.channels.length > 0 && (
+                  <ul className="footer-channels">
+                    {orderedChannels(studioFacts.channels).map((channel) => (
+                      <li key={`${channel.kind}:${channel.value}`}>
+                        <a
+                          href={channelHref(channel)}
+                          aria-label={`${dict.facts.channelLabels[channel.kind]}: ${channelDisplay(channel)}`}
+                        >
+                          {dict.facts.channelLabels[channel.kind]}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
           </div>
 
-          <div className="footer-links">
-            <Link href={servicesHref}>{dict.footer.services}</Link>
-            <Link href={galleryHref}>{dict.footer.gallery}</Link>
-            <Link href={bookHref}>{dict.footer.book}</Link>
-            <Link href={contactHref}>{dict.footer.contact}</Link>
-          </div>
+          <p className="footer-legal">{dict.footer.copyright}</p>
         </footer>
       </body>
     </html>

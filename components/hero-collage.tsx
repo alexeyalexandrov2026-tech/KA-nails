@@ -98,7 +98,7 @@ export function HeroCollage({ locale = "en" }: HeroCollageProps) {
         <h1 className="hero-heading">
           {dict.headingLine1}
           <br />
-          {dict.headingLine2}
+          <span className="hero-heading-accent">{dict.headingLine2}</span>
         </h1>
         <p className="hero-description">{dict.description}</p>
 
@@ -143,6 +143,19 @@ export function HeroCollage({ locale = "en" }: HeroCollageProps) {
         ref={visualColRef}
       >
         <div className="hero-collage-stage" ref={stageRef}>
+          {/* Rose-gold arc echoing the swash of the logo (decoration only) */}
+          <svg
+            className="hero-arc"
+            data-decor=""
+            aria-hidden="true"
+            focusable="false"
+            viewBox="0 0 540 520"
+            preserveAspectRatio="none"
+          >
+            <path d="M 60 510 C 250 485, 470 400, 528 120" />
+            <circle cx="528" cy="120" r="4" />
+          </svg>
+
           {/* Main Logo Anchor Tile (Base Layer): a resized copy of the
               original logo (tools/make-logo-derivatives.mjs). */}
           <div className="collage-tile tile-logo" data-layer="base">
