@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { channelHref, orderedChannels, studioFacts } from "../lib/studio-facts";
 
 test.describe("Home composition (stage 4)", () => {
   test("the hero logo is never covered by a tile at 1440, 390 and 320", async ({
@@ -143,7 +144,7 @@ test.describe("Home composition (stage 4)", () => {
     await expect(status).toHaveText("Matching works: 19 of 19");
   });
 
-  test("footer shows the logo, links, a work mosaic and no unconfirmed facts", async ({
+  test("footer shows the logo, links, a work mosaic and only published facts", async ({
     page,
   }) => {
     for (const [url, prefix] of [
@@ -163,10 +164,20 @@ test.describe("Home composition (stage 4)", () => {
         );
       }
       await expect(footer.locator(".footer-legal")).toHaveText("© KA Nails");
-      await expect(footer.locator("[data-facts]")).toHaveCount(0);
-      await expect(
-        footer.locator('a[href^="tel:"], a[href^="mailto:"]'),
-      ).toHaveCount(0);
+      const hasFacts =
+        studioFacts.address !== null || studioFacts.channels.length > 0;
+      await expect(footer.locator("[data-facts]")).toHaveCount(
+        hasFacts ? 1 : 0,
+      );
+      // Exactly the published channels, in the owner's order.
+      const contacts = await footer
+        .locator(
+          'a[href^="tel:"], a[href^="mailto:"], a[href*="wa.me"], a[href*="t.me/"], a[href*="instagram.com"]',
+        )
+        .evaluateAll((els) => els.map((el) => el.getAttribute("href")));
+      expect(contacts).toEqual(
+        orderedChannels(studioFacts.channels).map(channelHref),
+      );
     }
   });
 });

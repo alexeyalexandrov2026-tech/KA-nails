@@ -5,6 +5,7 @@ import { expect, test } from "@playwright/test";
 import * as locales from "../lib/locales";
 import * as facts from "../lib/studio-facts";
 import {
+  channelHref,
   studioFacts,
   validateStudioFacts,
   type StudioFacts,
@@ -42,6 +43,14 @@ const ROUTES = [
   "/ru/contact/",
   "/ru/book/",
 ];
+
+const EMPTY: StudioFacts = {
+  services: [],
+  channels: [],
+  address: null,
+  hours: [],
+  master: null,
+};
 
 // FAKE data for formatting checks only. It never reaches the site.
 const FAKE: StudioFacts = {
@@ -89,33 +98,84 @@ function withFake(patch: (facts: StudioFacts) => void): unknown {
 }
 
 test.describe("Studio facts", () => {
-  test("published facts are empty until the owner confirms them", () => {
-    expect(studioFacts).toEqual({
-      services: [],
-      channels: [],
-      address: null,
-      hours: [],
-      master: null,
+  test("published facts are exactly what the owner confirmed", () => {
+    // Confirmed by the owner on 3 October 2026. Address, hours and prices are
+    // not confirmed yet and stay empty; Telegram waits for a real username.
+    expect(studioFacts.services).toEqual([]);
+    expect(studioFacts.address).toBeNull();
+    expect(studioFacts.hours).toEqual([]);
+    expect(studioFacts.channels).toEqual([
+      { kind: "phone", value: "+15613828779" },
+      { kind: "whatsapp", value: "+15613828779" },
+    ]);
+    expect(studioFacts.master).toMatchObject({
+      name: { en: "Karina Mamedova", ru: "Карина Мамедова" },
+      photo: "/photos/master/karina-mamedova.webp",
     });
   });
 
-  test("no facts, contacts or prices appear on any page while empty", async ({
+  test("pages show only the published facts, and no prices until confirmed", async ({
     page,
+    request,
   }) => {
+    // Which blocks each page shows follows from which facts exist.
+    const messenger = studioFacts.channels.some((c) =>
+      ["whatsapp", "telegram", "email"].includes(c.kind),
+    );
+    const expected: Record<string, string[]> = {
+      "/": studioFacts.master ? ["master"] : [],
+      "/services/": studioFacts.services.length > 0 ? ["services"] : [],
+      "/gallery/": [],
+      "/contact/": [
+        ...(studioFacts.address || studioFacts.hours.length > 0
+          ? ["details"]
+          : []),
+        ...(studioFacts.channels.length > 0 ? ["channels"] : []),
+      ],
+      "/book/": [
+        ...(messenger ? ["request"] : []),
+        ...(studioFacts.channels.length > 0 ? ["channels"] : []),
+      ],
+    };
+    const published = studioFacts.channels.map(channelHref);
+    const whatsapp = studioFacts.channels
+      .filter((c) => c.kind === "whatsapp")
+      .map(channelHref);
+
     for (const url of ROUTES) {
       await page.goto(url);
-      const main = page.locator("main");
-      await expect(main.locator("[data-facts]"), url).toHaveCount(0);
-      await expect(
-        main.locator(
+      const blocks = await page
+        .locator("main [data-facts]")
+        .evaluateAll((els) => els.map((el) => el.getAttribute("data-facts")));
+      expect(blocks, url).toEqual(expected[url.replace(/^\/ru\//, "/")]);
+
+      // Every contact link on the page is one the owner published (WhatsApp
+      // links may carry a prepared message).
+      const hrefs = await page
+        .locator(
           'a[href^="tel:"], a[href^="mailto:"], a[href*="wa.me"], a[href*="t.me/"], a[href*="instagram.com"]',
-        ),
-        url,
-      ).toHaveCount(0);
-      const text = await main.innerText();
-      expect(text, `${url} shows no prices`).not.toMatch(
-        /\d\s?(€|₽|\$|EUR|RUB|USD)|(€|₽|\$)\s?\d|от \d|from \d/i,
-      );
+        )
+        .evaluateAll((els) => els.map((el) => el.getAttribute("href")!));
+      for (const href of hrefs) {
+        const known =
+          published.includes(href) ||
+          whatsapp.some((base) => href.startsWith(`${base}?text=`));
+        expect(known, `${url} links to ${href}`).toBe(true);
+      }
+
+      if (studioFacts.services.length === 0) {
+        const text = await page.locator("main").innerText();
+        expect(text, `${url} shows no prices`).not.toMatch(
+          /\d\s?(€|₽|\$|EUR|RUB|USD)|(€|₽|\$)\s?\d|от \d|from \d/i,
+        );
+      }
+    }
+
+    // The master's portrait is served from the site itself.
+    if (studioFacts.master?.photo) {
+      const photo = await request.get(studioFacts.master.photo);
+      expect(photo.status()).toBe(200);
+      expect(photo.headers()["content-type"]).toContain("image/webp");
     }
   });
 
@@ -217,7 +277,7 @@ test.describe("Studio facts", () => {
       ]) {
         expect(
           renderToStaticMarkup(
-            React.createElement(Block, { locale, facts: studioFacts }),
+            React.createElement(Block, { locale, facts: EMPTY }),
           ),
         ).toBe("");
       }

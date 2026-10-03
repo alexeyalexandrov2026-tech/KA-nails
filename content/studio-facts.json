@@ -1,7 +1,17 @@
 {
   "services": [],
-  "channels": [],
+  "channels": [
+    { "kind": "phone", "value": "+15613828779" },
+    { "kind": "whatsapp", "value": "+15613828779" }
+  ],
   "address": null,
   "hours": [],
-  "master": null
+  "master": {
+    "name": { "en": "Karina Mamedova", "ru": "Карина Мамедова" },
+    "bio": {
+      "en": "Pedicure and foot-care specialist, known for meticulous cuticle work, flawless polish and perfectly smooth heels.",
+      "ru": "Мастер педикюра и ухода за стопами. Её отличают тщательная работа с кутикулой, безупречное покрытие и идеально гладкие пятки."
+    },
+    "photo": "/photos/master/karina-mamedova.webp"
+  }
 }

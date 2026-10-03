@@ -135,6 +135,46 @@ test.describe("Stage 1 defect and performance regressions", () => {
     }
   });
 
+  test("the lightbox photo fits between the top bar and the caption", async ({
+    page,
+  }) => {
+    // The caption grows when booking links appear; the photo must shrink
+    // instead of covering Share/Close or the booking links (seen on phones).
+    for (const size of [
+      null,
+      { width: 320, height: 568 },
+      { width: 844, height: 390 },
+    ]) {
+      if (size) await page.setViewportSize(size);
+      await page.goto("/gallery/");
+      await page
+        .locator("article#work-01 .gallery-card-trigger")
+        .first()
+        .click();
+      const dialog = page.locator('div[role="dialog"].lightbox-overlay');
+      await expect(dialog).toBeVisible();
+      const box = (selector: string) =>
+        dialog.locator(selector).evaluate((el) => {
+          const r = el.getBoundingClientRect();
+          return { top: r.top, bottom: r.bottom };
+        });
+      const bar = await box(".lightbox-top-bar");
+      const photo = await box(".lightbox-media-wrapper");
+      const caption = await box(".lightbox-footer");
+      expect(photo.top, `${JSON.stringify(size)}`).toBeGreaterThanOrEqual(
+        bar.bottom - 1,
+      );
+      expect(photo.bottom, `${JSON.stringify(size)}`).toBeLessThanOrEqual(
+        caption.top + 1,
+      );
+      // Every control can be clicked, not just seen.
+      for (const control of await dialog.locator("button, a[href]").all()) {
+        await control.click({ trial: true });
+      }
+      await page.keyboard.press("Escape");
+    }
+  });
+
   test("final booking band sends visitors to the booking page", async ({
     page,
   }) => {
