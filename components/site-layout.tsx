@@ -4,6 +4,8 @@ import { PortfolioImage } from "./portfolio-image";
 import Image from "next/image";
 import { preload } from "react-dom";
 import { LanguageSwitcher } from "./language-switcher";
+import { ChatWidget } from "./chat/chat-widget";
+import { approvedChatApiUrl } from "../lib/chat-api-url";
 import { getDictionary, getLocalizedPath, type Locale } from "../lib/locales";
 import { getGalleryItems } from "../lib/gallery-data";
 import { nailSalonJsonLd, serializeJsonLd } from "../lib/structured-data";
@@ -45,6 +47,9 @@ export function SiteLayout({ locale, children }: SiteLayoutProps) {
   const dict = getDictionary(locale);
   // Published only once confirmed studio facts exist (phone or address).
   const jsonLd = nailSalonJsonLd(studioFacts, locale);
+  // The AI receptionist appears only once its API address is configured.
+  const chatEndpoint = approvedChatApiUrl(process.env.NEXT_PUBLIC_CHAT_API_URL);
+  const whatsapp = studioFacts.channels.find((c) => c.kind === "whatsapp");
 
   const homeHref = locale === "ru" ? "/ru/" : "/";
   const servicesHref = getLocalizedPath("/services/", locale);
@@ -169,6 +174,17 @@ export function SiteLayout({ locale, children }: SiteLayoutProps) {
 
           <p className="footer-legal">{dict.footer.copyright}</p>
         </footer>
+
+        {chatEndpoint && (
+          <ChatWidget
+            locale={locale}
+            endpoint={chatEndpoint}
+            whatsappHref={whatsapp ? channelHref(whatsapp) : null}
+            turnstileSiteKey={
+              process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || undefined
+            }
+          />
+        )}
       </body>
     </html>
   );

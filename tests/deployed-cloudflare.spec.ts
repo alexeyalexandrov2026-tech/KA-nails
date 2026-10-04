@@ -1,10 +1,12 @@
 import { createHash } from "node:crypto";
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import { approvedChatApiUrl } from "../lib/chat-api-url";
 import { studioFacts } from "../lib/studio-facts";
 
 const BASE_URL = "https://ka-nails.pages.dev";
 const LIVE_INDEXING = process.env.NEXT_PUBLIC_SITE_INDEXING === "index";
+const LIVE_CHAT = approvedChatApiUrl(process.env.NEXT_PUBLIC_CHAT_API_URL);
 
 test.describe("Cloudflare Deployed Production QA - KA Nails", () => {
   test("Home page loads over HTTPS with 0 blocking console errors, 0 axe violations, and responsive layout", async ({
@@ -139,5 +141,24 @@ test.describe("Cloudflare Deployed Production QA - KA Nails", () => {
     );
     expect(font.ok()).toBe(true);
     expect(font.headers()["cache-control"]).toContain("max-age=2592000");
+  });
+
+  test("The AI receptionist button follows the chat switch and its API is up", async ({
+    page,
+    request,
+  }) => {
+    await page.goto(`${BASE_URL}/`);
+    await expect(page.locator(".chat-launcher")).toHaveCount(LIVE_CHAT ? 1 : 0);
+    if (!LIVE_CHAT) return;
+
+    const health = await request.get(LIVE_CHAT.replace(/chat$/, "health"));
+    expect(health.ok()).toBe(true);
+    const report = (await health.json()) as {
+      status: string;
+      channels: Record<string, boolean>;
+    };
+    expect(report.status).toBe("ok");
+    // At least one way to reach the master must be switched on.
+    expect(Object.values(report.channels)).toContain(true);
   });
 });

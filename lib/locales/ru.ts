@@ -273,6 +273,25 @@ export const ruLocale: LocaleDictionary = {
     lookOnWhatsAppAria: (title) => `Записаться на образ ${title} в WhatsApp`,
     sendLooks: "Отправить эти образы в WhatsApp",
   },
+  chat: {
+    launcher: "Спросить / записаться",
+    title: "Ассистент KA Nails",
+    close: "Закрыть чат",
+    greeting:
+      "Здравствуйте! Я расскажу о педикюре и ценах и передам мастеру запрос на запись. Чем помочь?",
+    inputLabel: "Ваше сообщение",
+    placeholder: "Спросите об услугах или удобном времени…",
+    send: "Отправить",
+    typing: "Ассистент печатает…",
+    you: "Вы",
+    assistant: "Ассистент",
+    privacy: "Ответы пишет ИИ. Ваши контакты получит только студия.",
+    whatsapp: "Написать в WhatsApp",
+    error:
+      "Сообщение не отправилось. Проверьте связь и попробуйте ещё раз или напишите студии в WhatsApp.",
+    limit:
+      "Переписка получилась длинной для ассистента. Продолжите, пожалуйста, в WhatsApp или по телефону.",
+  },
   lightbox: {
     dialogAriaLabel: (title, current, total) =>
       `${title} — Работа ${current} из ${total}`,

@@ -201,6 +201,22 @@ export interface LocaleDictionary {
     lookOnWhatsAppAria: (title: string) => string;
     sendLooks: string;
   };
+  chat: {
+    launcher: string;
+    title: string;
+    close: string;
+    greeting: string;
+    inputLabel: string;
+    placeholder: string;
+    send: string;
+    typing: string;
+    you: string;
+    assistant: string;
+    privacy: string;
+    whatsapp: string;
+    error: string;
+    limit: string;
+  };
   lightbox: {
     dialogAriaLabel: (title: string, current: number, total: number) => string;
     share: string;

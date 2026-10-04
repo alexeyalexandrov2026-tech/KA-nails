@@ -21,6 +21,10 @@ npx playwright test --grep-invert "Cloudflare Deployed Production QA"
 ```
 
 The last line is the local suite CI's `web` job runs (it needs a fresh `build`).
+CI runs it a second time on a build with
+`NEXT_PUBLIC_CHAT_API_URL=http://127.0.0.1:4173`, which turns on the chat tests in
+`tests/chat.spec.ts`. The chat API has its own checks:
+`cd chat-api && npm ci && npm run typecheck && npm test`.
 
 - CI uses Node 24 (`engines: >=24 <25`); cloud containers have Node 22 / npm 10.
   Use `npm ci`, never `npm install`: the older npm strips the lockfile's `libc`
@@ -43,6 +47,11 @@ The last line is the local suite CI's `web` job runs (it needs a fresh `build`).
 - Photos: `source-assets/photos/originals/` → `tools/process-photos.mjs` →
   `public/photos/` and `lib/photo-inventory.ts` (19 works) → `lib/gallery-data.ts`;
   rendered by `components/portfolio-image.tsx`.
+- AI receptionist: widget `components/chat/chat-widget.tsx` (on when
+  `lib/chat-api-url.ts` approves `NEXT_PUBLIC_CHAT_API_URL`); API `chat-api/`
+  (Azure Functions, own `package.json`, excluded from the root tsconfig and
+  ESLint); Azure resources `infra/azure/` (Bicep plus the Cloud Shell setup script);
+  workflow `.github/workflows/chat-api.yml`.
 - Design tokens: `app/globals.css` `:root`; reference in
   `design/KA_NAILS_DESIGN_SYSTEM.md` ("Implemented system").
 
@@ -110,4 +119,9 @@ entries short and delete any that stop being true.
   pedicures, 5 add-ons ("+" prices), 2 notes. It gives no durations, so
   `durationMinutes` became optional; the PDF also says Hollywood, Florida, which
   is not on the site yet.
+- 2026-10-04: AI receptionist: Claude Haiku 4.5 in Microsoft Foundry (eastus2,
+  keyless) behind Azure Functions; requests go to Telegram and email and Table
+  Storage; it never confirms bookings. The owner chose Azure (not Google). It stays
+  off until the `CHAT_API_URL` variable is set. Next: WhatsApp (ACS), then
+  calendar booking through GORGONA.
 - Open: no manual screen-reader test yet; WCAG 2.2 AA conformance not established.
