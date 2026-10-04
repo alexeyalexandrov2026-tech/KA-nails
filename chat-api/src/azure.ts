@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import AnthropicFoundry from "@anthropic-ai/foundry-sdk";
-import type Anthropic from "@anthropic-ai/sdk";
+import Anthropic from "@anthropic-ai/sdk";
 import { EmailClient } from "@azure/communication-email";
 import { TableClient } from "@azure/data-tables";
 import { getBearerTokenProvider, type TokenCredential } from "@azure/identity";
@@ -10,15 +10,44 @@ import type { DailyCounter } from "./limits";
 import type { Notifier, NotifyResult } from "./notify";
 
 // Azure services behind the receptionist. Every one is reached with the
-// Function App's managed identity: no keys in code or settings.
+// Function App's managed identity: no keys in code or settings. The model
+// may instead run on OpenRouter, whose API key comes from Key Vault.
+
+type CreateMessage = (
+  params: Anthropic.MessageCreateParamsNonStreaming,
+) => Promise<Anthropic.Message>;
+
+/**
+ * A model on OpenRouter through its Anthropic-compatible Messages endpoint
+ * (POST https://openrouter.ai/api/v1/messages), so the chat code is the same
+ * for every model. Reasoning is off: the receptionist needs short answers.
+ */
+export function openRouterMessages(apiKey: string | undefined): CreateMessage {
+  if (!apiKey) {
+    return async () => {
+      throw new Error("OPENROUTER_API_KEY is not set");
+    };
+  }
+  const client = new Anthropic({
+    apiKey: null,
+    authToken: apiKey,
+    baseURL: "https://openrouter.ai/api",
+    defaultHeaders: {
+      "HTTP-Referer": "https://ka-nails.pages.dev",
+      "X-Title": "KA Nails",
+    },
+    maxRetries: 1,
+    timeout: 60_000,
+  });
+  return (params) =>
+    client.messages.create({ ...params, thinking: { type: "disabled" } });
+}
 
 /** Claude in Microsoft Foundry (Messages API), keyless via Entra ID. */
 export function foundryMessages(
   resource: string,
   credential: TokenCredential,
-): (
-  params: Anthropic.MessageCreateParamsNonStreaming,
-) => Promise<Anthropic.Message> {
+): CreateMessage {
   const client = new AnthropicFoundry({
     resource,
     azureADTokenProvider: getBearerTokenProvider(

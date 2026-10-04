@@ -98,9 +98,17 @@ receptionist never confirms an appointment: the master confirms the time persona
 It knows only `content/studio-facts.json`, the same data the site shows.
 
 - `chat-api/`: an Azure Functions app (Node 22, TypeScript) with `POST /api/chat`
-  and `GET /api/health`. The model is Claude Haiku 4.5 in Microsoft Foundry,
-  called with the app's managed identity (no API key). Secrets (Telegram, the
-  Cloudflare Turnstile key) live in Key Vault. Limits: 20 messages per visitor
+  and `GET /api/health`. The model runs on OpenRouter through its
+  Anthropic-compatible Messages endpoint; it is the free NVIDIA Nemotron 3 Ultra
+  (`nvidia/nemotron-3-ultra-550b-a55b`) unless the app setting
+  `OPENROUTER_MODEL` names another model with tool calling. Free OpenRouter
+  models are rate-limited (20 requests a minute, 50 a day until $10 of credits
+  is bought, then 1,000), and free providers may log or train on prompts, which
+  include visitors' names and phone numbers: check the account's privacy
+  settings. `MODEL_PROVIDER=foundry` switches to Claude Haiku 4.5 in Microsoft
+  Foundry with the app's managed identity, once the subscription has Claude
+  quota. Secrets (the OpenRouter key, Telegram, the Cloudflare Turnstile key)
+  live in Key Vault. Limits: 20 messages per visitor
   per 10 minutes, 500 per day for the whole site, 30 messages and 1,000
   characters per message; 20 booking requests a day and one per phone number
   a day. CORS admits only the site's origins (`ALLOWED_ORIGINS`). The
@@ -114,8 +122,9 @@ It knows only `content/studio-facts.json`, the same data the site shows.
   widget offers WhatsApp.
 - `infra/azure/chat.bicep` and `infra/azure/setup-chat.sh`: the Azure resources
   (resource group `rg-kanails-chat`, region `eastus2`) and a one-time setup script
-  for Azure Cloud Shell. Claude in Foundry needs a paid (pay-as-you-go) Azure
-  subscription.
+  for Azure Cloud Shell. Claude in Foundry (`MODEL_PROVIDER=foundry bash
+setup-chat.sh`) needs a pay-as-you-go subscription with Claude quota, which
+  can be 0 even then.
 
 ```sh
 cd chat-api && npm ci && npm run typecheck && npm test && npm run build
@@ -127,8 +136,8 @@ Setup, once:
    the master's account.
 2. In Azure Cloud Shell (Bash): `git clone` this repository, then
    `bash KA-nails/infra/azure/setup-chat.sh`. It asks for the studio email, the
-   business name, the website address(es) the chat answers, the bot token and
-   the Turnstile secret, creates everything and prints the values for GitHub.
+   website address(es) the chat answers, the OpenRouter model and API key
+   (openrouter.ai → Settings → Keys), the bot token and the Turnstile secret, creates everything and prints the values for GitHub.
 3. Create the Cloudflare Turnstile widget first (Cloudflare dashboard →
    Turnstile → Add widget, Managed mode, the site's hostnames). Invisible mode
    would need a privacy policy that references Cloudflare's Turnstile Privacy

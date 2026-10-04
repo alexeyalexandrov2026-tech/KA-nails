@@ -136,4 +136,9 @@ entries short and delete any that stop being true.
   references Cloudflare's Turnstile Privacy Addendum.
 - 2026-10-04: When `SITE_URL` changes, add the origin to the chat's
   `ALLOWED_ORIGINS` too; `verify-live` checks the CORS preflight.
+- 2026-10-04: The subscription's Claude quota in Foundry is 0 (pay-as-you-go,
+  all models and versions), so the chat model moved to OpenRouter (Messages
+  endpoint, key in Key Vault). The owner chose the free NVIDIA Nemotron 3 Ultra
+  despite the warning that free providers may train on visitors' data; Foundry
+  stays available with `MODEL_PROVIDER=foundry`.
 - Open: no manual screen-reader test yet; WCAG 2.2 AA conformance not established.

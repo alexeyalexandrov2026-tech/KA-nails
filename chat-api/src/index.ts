@@ -5,6 +5,7 @@ import { studioFacts } from "../../lib/studio-facts";
 import {
   emailNotifier,
   foundryMessages,
+  openRouterMessages,
   tableDailyCounter,
   tableRequestGuard,
   tableRequestStore,
@@ -50,7 +51,10 @@ const requestGuard = tableRequestGuard(
   credential,
   config.dailyRequestLimit,
 );
-const createMessage = foundryMessages(config.foundryResource, credential);
+const createMessage =
+  config.model.provider === "foundry"
+    ? foundryMessages(config.model.resource, credential)
+    : openRouterMessages(config.model.apiKey);
 const system = buildSystemPrompt(studioFacts);
 
 function deps(context: InvocationContext): HttpDeps {
@@ -71,7 +75,7 @@ function deps(context: InvocationContext): HttpDeps {
     chat: {
       facts: studioFacts,
       system,
-      model: config.foundryDeployment,
+      model: config.model.name,
       createMessage,
       store,
       notifiers,
