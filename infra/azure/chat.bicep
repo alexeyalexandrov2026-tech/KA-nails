@@ -163,7 +163,7 @@ resource claude 'Microsoft.CognitiveServices/accounts/deployments@2025-10-01-pre
     model: {
       format: 'Anthropic'
       name: 'claude-haiku-4-5'
-      version: '1'
+      version: '20251001'
     }
     // Accepts the Anthropic Marketplace offer for this organization. The
     // property is real (Azure-Samples/claude uses it) but missing from the
