@@ -330,6 +330,14 @@ test.describe("Studio facts", () => {
     expect(validateStudioFacts(FAKE)).toEqual(FAKE);
   });
 
+  test("the validator accepts prices with cents", () => {
+    // 19.99 * 100 is 1998.9999999999998 in floating point.
+    for (const amount of [19.99, 39.95, 0.29]) {
+      const facts = withFake((f) => (f.services[0]!.price.amount = amount));
+      expect(validateStudioFacts(facts), String(amount)).toEqual(facts);
+    }
+  });
+
   test("the validator rejects invalid data", () => {
     const cases: [string, unknown, RegExp][] = [
       [
@@ -356,6 +364,11 @@ test.describe("Studio facts", () => {
         "a negative price",
         withFake((f) => (f.services[0]!.price.amount = -5)),
         /price\.amount/,
+      ],
+      [
+        "a price with more than two decimals",
+        withFake((f) => (f.services[0]!.price.amount = 19.999)),
+        /price\.amount: positive, at most 2 decimals/,
       ],
       [
         "an unknown currency",

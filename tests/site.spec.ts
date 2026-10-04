@@ -80,7 +80,10 @@ test("salon → real platform service/availability → PostgreSQL confirmation",
     "Requires KA_BOOKING_TEST_URL (a disposable booking host)",
   );
   await page.goto("/");
-  await page.getByRole("link", { name: /Explore services/ }).click();
+  await page
+    .getByRole("navigation", { name: "Main navigation" })
+    .getByRole("link", { name: "Book an appointment" })
+    .click();
   const frame = page.frameLocator(
     'iframe[title="KA Nails appointment booking"]',
   );

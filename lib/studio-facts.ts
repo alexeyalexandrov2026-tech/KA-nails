@@ -195,7 +195,9 @@ export function validateStudioFacts(raw: unknown): StudioFacts {
           typeof price.amount !== "number" ||
           !Number.isFinite(price.amount) ||
           price.amount <= 0 ||
-          Math.round(price.amount * 100) !== price.amount * 100
+          // Whole cents, allowing for floating point (19.99 * 100 is
+          // 1998.9999999999998).
+          Math.abs(price.amount * 100 - Math.round(price.amount * 100)) > 1e-6
         ) {
           problems.push(`${where}.price.amount: positive, at most 2 decimals`);
         }
