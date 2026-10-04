@@ -557,7 +557,7 @@ describe("HTTP endpoint", () => {
       rateLimiter: new RateLimiter(2, 60_000),
       dailyCounter: { increment: async () => ++count },
       dailyLimit: 100,
-      verifyHuman: async () => true,
+      verifyHuman: async () => ({ ok: true }),
       chat: deps,
       log: (m) => logs.push(m),
       ...overrides,
@@ -599,9 +599,18 @@ describe("HTTP endpoint", () => {
     assert.equal((await handleChatHttp(post(), http)).status, 429);
   });
 
-  it("refuses visitors who fail the human check", async () => {
-    const { http } = httpDeps({ verifyHuman: async () => false });
-    assert.equal((await handleChatHttp(post(), http)).status, 403);
+  it("refuses visitors who fail the human check and says why", async () => {
+    const { http, logs } = httpDeps({
+      verifyHuman: async () => ({ ok: false, reason: "no-token" }),
+    });
+    const out = await handleChatHttp(post(), http);
+    assert.equal(out.status, 403);
+    assert.equal(out.headers["access-control-allow-origin"], ORIGIN);
+    assert.deepEqual(out.body, {
+      error: "verification failed, reload the page",
+      reason: "no-token",
+    });
+    assert.deepEqual(logs, ["human check failed"]);
   });
 
   it("stops calling the AI after the daily limit", async () => {
@@ -694,19 +703,48 @@ describe("outside services", () => {
   });
 
   it("requires Turnstile unless the human check is switched off", async () => {
-    const yes = (async () =>
-      Response.json({ success: true })) as unknown as typeof fetch;
-    const no = (async () =>
-      Response.json({ success: false })) as unknown as typeof fetch;
+    const sent: string[] = [];
+    const reply = (json: unknown, status = 200) =>
+      (async (_url: unknown, init?: RequestInit) => {
+        sent.push(String(init?.body));
+        return Response.json(json, { status });
+      }) as unknown as typeof fetch;
+    const yes = reply({ success: true });
     // No secret: refused, unless HUMAN_CHECK=off.
-    assert.equal(await verifyTurnstile(undefined, "t", undefined, yes), false);
-    assert.equal(
-      await verifyTurnstile(undefined, undefined, undefined, no, false),
-      true,
+    assert.deepEqual(await verifyTurnstile(undefined, "t", yes), {
+      ok: false,
+      reason: "no-secret",
+    });
+    assert.deepEqual(await verifyTurnstile(undefined, undefined, yes, false), {
+      ok: true,
+    });
+    assert.deepEqual(await verifyTurnstile("s", undefined, yes), {
+      ok: false,
+      reason: "no-token",
+    });
+    assert.deepEqual(await verifyTurnstile("s", "t", yes), { ok: true });
+    // The visitor's IP is not sent: Azure and Cloudflare can see different ones.
+    assert.equal(sent.at(-1), "secret=s&response=t");
+    // Cloudflare's reasons reach the caller.
+    assert.deepEqual(
+      await verifyTurnstile(
+        "s",
+        "t",
+        reply({ success: false, "error-codes": ["invalid-input-response"] }),
+      ),
+      { ok: false, reason: "invalid-input-response" },
     );
-    assert.equal(await verifyTurnstile("s", undefined, undefined, yes), false);
-    assert.equal(await verifyTurnstile("s", "t", "1.2.3.4", yes), true);
-    assert.equal(await verifyTurnstile("s", "t", "1.2.3.4", no), false);
+    assert.deepEqual(await verifyTurnstile("s", "t", reply({}, 500)), {
+      ok: false,
+      reason: "siteverify-http-500",
+    });
+    const down = (async () => {
+      throw new Error("offline");
+    }) as unknown as typeof fetch;
+    assert.deepEqual(await verifyTurnstile("s", "t", down), {
+      ok: false,
+      reason: "siteverify-unreachable",
+    });
   });
 
   it("reads settings and reports health without secret values", () => {

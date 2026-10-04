@@ -184,5 +184,21 @@ test.describe("Cloudflare Deployed Production QA - KA Nails", () => {
     expect(preflight.headers()["access-control-allow-origin"]).toBe(
       SITE_ORIGIN,
     );
+
+    // A message without a human-check token is refused before any AI call,
+    // with a reason and the CORS header the browser needs to read it.
+    const refused = await request.post(LIVE_CHAT, {
+      headers: { origin: SITE_ORIGIN },
+      data: {
+        language: "en",
+        messages: [{ role: "user", content: "Live check" }],
+        requestSent: false,
+      },
+    });
+    expect(refused.status()).toBe(403);
+    expect(refused.headers()["access-control-allow-origin"]).toBe(SITE_ORIGIN);
+    expect(((await refused.json()) as { reason?: string }).reason).toBe(
+      "no-token",
+    );
   });
 });
