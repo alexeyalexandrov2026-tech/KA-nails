@@ -20,6 +20,10 @@ read -rp "Studio email that receives requests: " email_to
 read -rp "Legal name of the business using Claude (for the Anthropic terms): " org_name
 read -rp "Country code of the business [US]: " country
 country="${country:-US}"
+# The API answers only these websites; add the studio domain (and its www
+# form) here, and as SITE_URL in GitHub, once it has one.
+read -rp "Website address(es) allowed to use the chat, comma-separated [https://ka-nails.pages.dev]: " origins
+origins="${origins:-https://ka-nails.pages.dev}"
 
 echo "Creating resource group $group in $location..."
 az group create --name "$group" --location "$location" --output none
@@ -29,7 +33,7 @@ outputs="$(az deployment group create \
   --resource-group "$group" \
   --name kanails-chat \
   --template-file "$here/chat.bicep" \
-  --parameters emailTo="$email_to" claudeOrganizationName="$org_name" claudeCountryCode="$country" \
+  --parameters emailTo="$email_to" claudeOrganizationName="$org_name" claudeCountryCode="$country" allowedOrigins="$origins" \
   --query properties.outputs --output json)"
 value() { echo "$outputs" | python3 -c "import json,sys; print(json.load(sys.stdin)['$1']['value'])"; }
 
@@ -66,8 +70,14 @@ fi
 az keyvault secret set --vault-name "$vault" -n telegram-bot-token --value "$tg_token" --output none
 az keyvault secret set --vault-name "$vault" -n telegram-chat-id --value "$chat_id" --output none
 
-read -rsp "Cloudflare Turnstile secret key (Enter to skip for now): " turnstile; echo
+echo
+echo "Cloudflare Turnstile is required: in the Cloudflare dashboard, add a Managed widget for the website address(es) above."
+read -rsp "Turnstile secret key (hidden while typing; Enter to add it later): " turnstile; echo
 az keyvault secret set --vault-name "$vault" -n turnstile-secret --value "${turnstile:-none}" --output none
+if [ -z "$turnstile" ]; then
+  echo "Note: the chat refuses every message until the Key Vault secret turnstile-secret is set"
+  echo "(then restart the Function App) and TURNSTILE_SITE_KEY is set in GitHub."
+fi
 
 # Re-read Key Vault references now that the secrets exist.
 az functionapp restart -g "$group" -n "$app_name" --output none
@@ -81,8 +91,10 @@ Done. Add these in GitHub (repository KA-nails -> Settings -> Secrets and variab
   AZURE_SUBSCRIPTION_ID  $(value subscriptionId)
   CHAT_FUNCTION_APP      $app_name
   CHAT_API_URL           $(value chatApiUrl)
+  TURNSTILE_SITE_KEY     the site key of the same Turnstile widget
 
 Then run Actions -> chat-api -> Run workflow, and re-run the latest "ci" run on main
 so the website shows the chat button.
 Requests are emailed from $(value emailSender) to $email_to.
+The chat answers only: $origins
 EOF

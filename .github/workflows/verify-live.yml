@@ -15,6 +15,7 @@ jobs:
     env:
       # The live checks expect the settings the site was deployed with.
       NEXT_PUBLIC_SITE_INDEXING: ${{ vars.SITE_INDEXING }}
+      NEXT_PUBLIC_SITE_URL: ${{ vars.SITE_URL }}
       NEXT_PUBLIC_CHAT_API_URL: ${{ vars.CHAT_API_URL }}
     steps:
       - uses: actions/checkout@v4

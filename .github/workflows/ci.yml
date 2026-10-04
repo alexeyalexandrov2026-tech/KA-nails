@@ -55,16 +55,19 @@ jobs:
           retention-days: 14
           if-no-files-found: error
 
-      # Second pass with the AI receptionist built in. Its API is faked in the
-      # tests (tests/chat.spec.ts); this export is never published.
+      # Second pass with the AI receptionist built in. Its API and Cloudflare
+      # Turnstile (Cloudflare's always-pass test key) are faked in the tests
+      # (tests/chat.spec.ts); this export is never published.
       - name: Build static export with the chat widget
         env:
           NEXT_PUBLIC_CHAT_API_URL: http://127.0.0.1:4173
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: 1x00000000000000000000AA
         run: npm run build
 
       - name: Run E2E tests with the chat widget
         env:
           NEXT_PUBLIC_CHAT_API_URL: http://127.0.0.1:4173
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: 1x00000000000000000000AA
         run: npx playwright test --grep-invert "Cloudflare Deployed Production QA"
 
   deploy:
@@ -93,6 +96,12 @@ jobs:
           else
             echo "available=true" >> "$GITHUB_OUTPUT"
           fi
+
+      # The chat API refuses messages without the human check (unless its
+      # HUMAN_CHECK setting is off), so the site needs the Turnstile site key.
+      - name: Check the chat settings
+        if: vars.CHAT_API_URL != '' && vars.TURNSTILE_SITE_KEY == ''
+        run: echo "::warning::CHAT_API_URL is set without TURNSTILE_SITE_KEY; the chat API refuses messages without the human check."
 
       - uses: actions/checkout@v4
         if: steps.credentials.outputs.available == 'true'
@@ -140,6 +149,7 @@ jobs:
     env:
       # The live checks expect the settings the site was deployed with.
       NEXT_PUBLIC_SITE_INDEXING: ${{ vars.SITE_INDEXING }}
+      NEXT_PUBLIC_SITE_URL: ${{ vars.SITE_URL }}
       NEXT_PUBLIC_CHAT_API_URL: ${{ vars.CHAT_API_URL }}
     steps:
       - uses: actions/checkout@v4

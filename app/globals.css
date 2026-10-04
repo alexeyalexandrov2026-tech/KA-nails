@@ -3361,6 +3361,13 @@ h2.section-title {
   color: var(--ink);
 }
 
+/* Shown only when Cloudflare asks the visitor to act (compact, 150px wide). */
+.chat-turnstile {
+  display: flex;
+  justify-content: center;
+  padding: 0 12px 12px;
+}
+
 .chat-turnstile:empty {
   display: none;
 }

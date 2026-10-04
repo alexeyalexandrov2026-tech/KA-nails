@@ -100,9 +100,14 @@ It knows only `content/studio-facts.json`, the same data the site shows.
 - `chat-api/`: an Azure Functions app (Node 22, TypeScript) with `POST /api/chat`
   and `GET /api/health`. The model is Claude Haiku 4.5 in Microsoft Foundry,
   called with the app's managed identity (no API key). Secrets (Telegram, the
-  optional Cloudflare Turnstile key) live in Key Vault. Limits: 20 messages per
-  visitor per 10 minutes, 500 per day for the whole site, 30 messages and 1,000
-  characters per message; CORS admits only the site's origins.
+  Cloudflare Turnstile key) live in Key Vault. Limits: 20 messages per visitor
+  per 10 minutes, 500 per day for the whole site, 30 messages and 1,000
+  characters per message; 20 booking requests a day and one per phone number
+  a day. CORS admits only the site's origins (`ALLOWED_ORIGINS`). The
+  Cloudflare Turnstile human check is required: without its secret the API
+  refuses every message, unless the app setting `HUMAN_CHECK` is `off` (not
+  recommended). A request counts as sent only once Telegram or email has
+  delivered it; otherwise the visitor is asked to write on WhatsApp or call.
 - `components/chat/chat-widget.tsx`: the widget. It is built in only when
   `NEXT_PUBLIC_CHAT_API_URL` is an https origin (loopback http for tests); without
   it there is no button and the site works as before. When a message fails, the
@@ -122,19 +127,25 @@ Setup, once:
    the master's account.
 2. In Azure Cloud Shell (Bash): `git clone` this repository, then
    `bash KA-nails/infra/azure/setup-chat.sh`. It asks for the studio email, the
-   business name and the bot token, creates everything and prints five values.
-3. Add those values as repository variables (`AZURE_CLIENT_ID`,
+   business name, the website address(es) the chat answers, the bot token and
+   the Turnstile secret, creates everything and prints the values for GitHub.
+3. Create the Cloudflare Turnstile widget first (Cloudflare dashboard →
+   Turnstile → Add widget, Managed mode, the site's hostnames). Invisible mode
+   would need a privacy policy that references Cloudflare's Turnstile Privacy
+   Addendum, which the site does not have yet. Its secret goes into Key Vault
+   (`turnstile-secret`, asked for by the script; restart the Function App after
+   changing it) and its site key into the variable `TURNSTILE_SITE_KEY`.
+4. Add the values as repository variables (`AZURE_CLIENT_ID`,
    `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `CHAT_FUNCTION_APP`,
-   `CHAT_API_URL`), run Actions → chat-api → Run workflow, then re-run the latest
-   `main` run of `ci` so the site shows the button.
-4. Optional: a Cloudflare Turnstile widget for the site; its secret goes into
-   Key Vault (`turnstile-secret`) and its site key into the variable
-   `TURNSTILE_SITE_KEY`.
+   `CHAT_API_URL`, `TURNSTILE_SITE_KEY`), run Actions → chat-api → Run
+   workflow, then re-run the latest `main` run of `ci` so the site shows the
+   button.
 
 The `chat-api` workflow tests every change to `chat-api/` and, on `main`,
 deploys it with GitHub's OIDC login; until the variables exist it only reports
 that deployment is skipped. CI runs the site's browser tests twice: without the
-chat and with it pointed at a local fake.
+chat and with it pointed at a local fake (Turnstile is faked too, under
+Cloudflare's always-pass test site key).
 
 ## Verification
 
@@ -190,4 +201,8 @@ variables → Actions → Variables): `SITE_INDEXING=index` opens the site to se
 engines, `SITE_URL` sets the public origin once the studio has its own domain, and
 `CHAT_API_URL` / `TURNSTILE_SITE_KEY` switch on the AI receptionist. After changing
 any of them, re-run the latest `main` run of the `ci` workflow so it is redeployed;
-`verify-live` expects the settings the site was deployed with.
+`verify-live` expects the settings the site was deployed with. When `SITE_URL`
+changes, add the new origin (and its www form) to the chat Function App's
+`ALLOWED_ORIGINS` setting too (re-run `infra/azure/setup-chat.sh` or edit the
+app setting), or the chat refuses visitors on the new domain; `verify-live`
+checks that the chat API admits the site's origin.

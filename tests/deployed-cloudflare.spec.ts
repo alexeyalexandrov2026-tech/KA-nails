@@ -7,6 +7,9 @@ import { studioFacts } from "../lib/studio-facts";
 const BASE_URL = "https://ka-nails.pages.dev";
 const LIVE_INDEXING = process.env.NEXT_PUBLIC_SITE_INDEXING === "index";
 const LIVE_CHAT = approvedChatApiUrl(process.env.NEXT_PUBLIC_CHAT_API_URL);
+// The site's public origin (SITE_URL once it has its own domain).
+const SITE_ORIGIN = new URL(process.env.NEXT_PUBLIC_SITE_URL || BASE_URL)
+  .origin;
 
 test.describe("Cloudflare Deployed Production QA - KA Nails", () => {
   test("Home page loads over HTTPS with 0 blocking console errors, 0 axe violations, and responsive layout", async ({
@@ -156,9 +159,27 @@ test.describe("Cloudflare Deployed Production QA - KA Nails", () => {
     const report = (await health.json()) as {
       status: string;
       channels: Record<string, boolean>;
+      humanCheck: string;
     };
     expect(report.status).toBe("ok");
     // At least one way to reach the master must be switched on.
     expect(Object.values(report.channels)).toContain(true);
+    // Without its Turnstile secret the API refuses every message.
+    expect(report.humanCheck).not.toBe("missing");
+
+    // The API must admit the site's own origin (ALLOWED_ORIGINS follows
+    // SITE_URL), or every visitor gets an error.
+    const preflight = await request.fetch(LIVE_CHAT, {
+      method: "OPTIONS",
+      headers: {
+        origin: SITE_ORIGIN,
+        "access-control-request-method": "POST",
+        "access-control-request-headers": "content-type",
+      },
+    });
+    expect(preflight.status()).toBe(204);
+    expect(preflight.headers()["access-control-allow-origin"]).toBe(
+      SITE_ORIGIN,
+    );
   });
 });
