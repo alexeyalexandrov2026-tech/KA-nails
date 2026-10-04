@@ -1,19 +1,21 @@
 import { randomUUID } from "node:crypto";
-import {
-  app,
-  type HttpRequest,
-  type InvocationContext,
-} from "@azure/functions";
+import { app, type InvocationContext } from "@azure/functions";
 import { DefaultAzureCredential } from "@azure/identity";
 import { studioFacts } from "../../lib/studio-facts";
 import {
   emailNotifier,
   foundryMessages,
   tableDailyCounter,
+  tableRequestGuard,
   tableRequestStore,
 } from "./azure";
 import { healthReport, readConfig } from "./config";
-import { handleChatHttp, type HttpDeps } from "./http";
+import {
+  forwardedClientIp,
+  handleChatHttp,
+  MAX_BODY_BYTES,
+  type HttpDeps,
+} from "./http";
 import { RateLimiter } from "./limits";
 import { telegramNotifier, type Notifier } from "./notify";
 import { buildSystemPrompt } from "./prompt";
@@ -43,6 +45,11 @@ if (config.email) {
 const rateLimiter = new RateLimiter(config.ratePerTenMinutes, 10 * 60 * 1000);
 const dailyCounter = tableDailyCounter(config.storageTableEndpoint, credential);
 const store = tableRequestStore(config.storageTableEndpoint, credential);
+const requestGuard = tableRequestGuard(
+  config.storageTableEndpoint,
+  credential,
+  config.dailyRequestLimit,
+);
 const createMessage = foundryMessages(config.foundryResource, credential);
 const system = buildSystemPrompt(studioFacts);
 
@@ -53,7 +60,13 @@ function deps(context: InvocationContext): HttpDeps {
     dailyCounter,
     dailyLimit: config.dailyLimit,
     verifyHuman: (token, ip) =>
-      verifyTurnstile(config.turnstileSecret, token, ip),
+      verifyTurnstile(
+        config.turnstileSecret,
+        token,
+        ip,
+        fetch,
+        config.requireHumanCheck,
+      ),
     log: (message, details) => context.warn(message, details ?? {}),
     chat: {
       facts: studioFacts,
@@ -62,16 +75,12 @@ function deps(context: InvocationContext): HttpDeps {
       createMessage,
       store,
       notifiers,
+      requestGuard,
       now: () => new Date(),
       newId: () => randomUUID().slice(0, 8),
+      log: (message, details) => context.error(message, details ?? {}),
     },
   };
-}
-
-function clientIp(request: HttpRequest): string | undefined {
-  const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0];
-  // Azure appends the port ("1.2.3.4:5678"); IPv6 addresses keep their colons.
-  return forwarded?.trim().replace(/^(\d+\.\d+\.\d+\.\d+):\d+$/, "$1");
 }
 
 app.http("chat", {
@@ -79,12 +88,21 @@ app.http("chat", {
   authLevel: "anonymous",
   route: "chat",
   handler: async (request, context) => {
+    const length = request.headers.get("content-length");
     const output = await handleChatHttp(
       {
         method: request.method,
         origin: request.headers.get("origin"),
-        ip: clientIp(request),
-        readJson: () => request.json(),
+        ip: forwardedClientIp(request.headers.get("x-forwarded-for")),
+        contentLength: length === null ? null : Number(length),
+        readJson: async () => {
+          const text = await request.text();
+          // Chunked bodies have no Content-Length; refuse big ones here.
+          if (Buffer.byteLength(text) > MAX_BODY_BYTES) {
+            throw new Error("body too large");
+          }
+          return JSON.parse(text);
+        },
       },
       deps(context),
     );

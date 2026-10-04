@@ -22,7 +22,7 @@ param location string = 'eastus2'
 @maxLength(10)
 param baseName string = 'kanails'
 
-@description('Website origins allowed to call the chat API, comma-separated.')
+@description('Website origins allowed to call the chat API, comma-separated. Add the studio domain (and its www form) when SITE_URL changes.')
 param allowedOrigins string = 'https://ka-nails.pages.dev'
 
 @description('Where request emails go (the studio mailbox).')
@@ -37,11 +37,14 @@ param claudeCountryCode string = 'US'
 @description('Industry of that organization (technology, finance, healthcare, education, retail, manufacturing, government, media, other).')
 param claudeIndustry string = 'other'
 
-@description('Claude Haiku capacity in thousands of tokens per minute.')
-param claudeCapacity int = 10
+@description('Claude Haiku capacity in thousands of tokens per minute. A turn with a booking request takes about 5K tokens; capacity costs nothing until used.')
+param claudeCapacity int = 50
 
 @description('Messages per UTC day after which the chat answers with a fallback.')
 param dailyMessageLimit int = 500
+
+@description('Booking requests per UTC day sent to the master (also one per phone number a day).')
+param dailyRequestLimit int = 20
 
 @description('GitHub repository allowed to deploy the Function App (owner/name).')
 param githubRepository string = 'alexeyalexandrov2026-tech/KA-nails'
@@ -240,6 +243,7 @@ resource app 'Microsoft.Web/sites@2024-04-01' = {
         { name: 'EMAIL_SENDER', value: 'DoNotReply@${emailDomain.properties.mailFromSenderDomain}' }
         { name: 'EMAIL_TO', value: emailTo }
         { name: 'DAILY_MESSAGE_LIMIT', value: string(dailyMessageLimit) }
+        { name: 'DAILY_REQUEST_LIMIT', value: string(dailyRequestLimit) }
         { name: 'TELEGRAM_BOT_TOKEN', value: '@Microsoft.KeyVault(${keyVaultRef};SecretName=telegram-bot-token)' }
         { name: 'TELEGRAM_CHAT_ID', value: '@Microsoft.KeyVault(${keyVaultRef};SecretName=telegram-chat-id)' }
         { name: 'TURNSTILE_SECRET', value: '@Microsoft.KeyVault(${keyVaultRef};SecretName=turnstile-secret)' }

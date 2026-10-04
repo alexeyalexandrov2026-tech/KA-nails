@@ -1,10 +1,11 @@
+import { createHash } from "node:crypto";
 import AnthropicFoundry from "@anthropic-ai/foundry-sdk";
 import type Anthropic from "@anthropic-ai/sdk";
 import { EmailClient } from "@azure/communication-email";
 import { TableClient } from "@azure/data-tables";
 import { getBearerTokenProvider, type TokenCredential } from "@azure/identity";
 import type { BookingRequest } from "./booking-request";
-import type { RequestStore } from "./chat";
+import type { RequestGuard, RequestStore } from "./chat";
 import type { DailyCounter } from "./limits";
 import type { Notifier, NotifyResult } from "./notify";
 
@@ -68,10 +69,14 @@ export function tableRequestStore(
   };
 }
 
-/** Messages per UTC day, shared by all instances (optimistic concurrency). */
+/**
+ * Counts per UTC day ("messages" by default), shared by all instances
+ * (optimistic concurrency).
+ */
 export function tableDailyCounter(
   endpoint: string,
   credential: TokenCredential,
+  partition = "messages",
 ): DailyCounter {
   const client = new TableClient(endpoint, "usage", credential);
   const ready = { done: false };
@@ -81,12 +86,12 @@ export function tableDailyCounter(
       for (let attempt = 0; attempt < 5; attempt++) {
         try {
           const entity = await client.getEntity<{ count: number }>(
-            "messages",
+            partition,
             day,
           );
           const count = (entity.count ?? 0) + 1;
           await client.updateEntity(
-            { partitionKey: "messages", rowKey: day, count },
+            { partitionKey: partition, rowKey: day, count },
             "Replace",
             { etag: entity.etag },
           );
@@ -96,7 +101,7 @@ export function tableDailyCounter(
           if (status === 404) {
             try {
               await client.createEntity({
-                partitionKey: "messages",
+                partitionKey: partition,
                 rowKey: day,
                 count: 1,
               });
@@ -113,6 +118,51 @@ export function tableDailyCounter(
       }
       throw new Error("usage counter is busy");
     },
+  };
+}
+
+/**
+ * Request limits in the usage table: a marker per phone number and UTC day
+ * (keyed by the number's SHA-256) and a daily count of requests.
+ */
+export function tableRequestGuard(
+  endpoint: string,
+  credential: TokenCredential,
+  dailyLimit: number,
+): RequestGuard {
+  const client = new TableClient(endpoint, "usage", credential);
+  const ready = { done: false };
+  const requests = tableDailyCounter(endpoint, credential, "requests");
+  const marker = (phone: string, day: string) => ({
+    partitionKey: `phone-${day}`,
+    rowKey: createHash("sha256").update(phone).digest("hex"),
+  });
+  async function release(phone: string, day: string) {
+    const { partitionKey, rowKey } = marker(phone, day);
+    try {
+      await client.deleteEntity(partitionKey, rowKey);
+    } catch {
+      // Already gone.
+    }
+  }
+  return {
+    async reserve(phone, day) {
+      await ensureTable(client, ready);
+      try {
+        await client.createEntity(marker(phone, day));
+      } catch (error) {
+        if ((error as { statusCode?: number }).statusCode === 409) {
+          return "duplicate";
+        }
+        throw error;
+      }
+      if ((await requests.increment(day)) > dailyLimit) {
+        await release(phone, day);
+        return "limit";
+      }
+      return "ok";
+    },
+    release,
   };
 }
 

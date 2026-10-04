@@ -6,6 +6,7 @@ import {
   validateBookingRequest,
   type BookingRequest,
 } from "./booking-request";
+import { utcDay } from "./limits";
 import {
   notifyAll,
   ownerMessage,
@@ -46,6 +47,16 @@ export interface RequestStore {
   ): Promise<void>;
 }
 
+/**
+ * Shared limits on requests, so a script cannot flood the master's Telegram
+ * and email: one request per phone number per UTC day and a daily total.
+ */
+export interface RequestGuard {
+  reserve(phone: string, day: string): Promise<"ok" | "duplicate" | "limit">;
+  /** Frees the phone number of a request that was not delivered. */
+  release(phone: string, day: string): Promise<void>;
+}
+
 export interface ChatDeps {
   facts: StudioFacts;
   system: string;
@@ -55,8 +66,10 @@ export interface ChatDeps {
   ): Promise<Anthropic.Message>;
   store: RequestStore;
   notifiers: Notifier[];
+  requestGuard: RequestGuard;
   now(): Date;
   newId(): string;
+  log(message: string, details?: Record<string, unknown>): void;
 }
 
 export const LIMITS = {
@@ -67,7 +80,7 @@ export const LIMITS = {
 };
 
 export const FALLBACK: Record<
-  "unavailable" | "refusal" | "deliveryFailed",
+  "unavailable" | "refusal" | "deliveryFailed" | "sent",
   Record<Language, string>
 > = {
   unavailable: {
@@ -81,6 +94,10 @@ export const FALLBACK: Record<
   deliveryFailed: {
     en: "The request could not be delivered.",
     ru: "Заявку не удалось отправить.",
+  },
+  sent: {
+    en: "Your request has been sent to the master, who will contact you to confirm the time. Nothing is booked yet.",
+    ru: "Заявка отправлена мастеру: мастер свяжется с вами, чтобы подтвердить время. Запись пока не подтверждена.",
   },
 };
 
@@ -173,22 +190,48 @@ async function runBookingTool(
       true,
     );
   }
-  const id = deps.newId();
+  const { request } = validation;
   const receivedAt = deps.now();
-  const { subject, text } = ownerMessage(
-    validation.request,
-    deps.facts,
-    id,
-    receivedAt,
-  );
-  const delivery = await notifyAll(deps.notifiers, subject, text);
-  let stored = true;
+  const day = utcDay(receivedAt);
+  let reservation: "ok" | "duplicate" | "limit" = "ok";
   try {
-    await deps.store.saveRequest(id, validation.request, receivedAt, delivery);
-  } catch {
-    stored = false;
+    reservation = await deps.requestGuard.reserve(request.phone, day);
+  } catch (error) {
+    // The limits stop abuse; a storage hiccup must not lose a real request.
+    deps.log("request limits unavailable", {
+      error: String(error).slice(0, 300),
+    });
   }
-  if (!stored && !delivery.some((d) => d.ok)) {
+  if (reservation === "duplicate") {
+    state.requestSent = true;
+    return result(
+      "A request with this phone number already reached the master today. Do not send another; tell the visitor the master will contact them, and offer WhatsApp or a call for changes.",
+    );
+  }
+  if (reservation === "limit") {
+    return result(
+      "Not sent: the studio takes no more online requests today. Ask the visitor to message the studio on WhatsApp or call instead.",
+      true,
+    );
+  }
+
+  const id = deps.newId();
+  const { subject, text } = ownerMessage(request, deps.facts, id, receivedAt);
+  const delivery = await notifyAll(deps.notifiers, subject, text);
+  try {
+    await deps.store.saveRequest(id, request, receivedAt, delivery);
+  } catch (error) {
+    deps.log("request not stored", { id, error: String(error).slice(0, 300) });
+  }
+  // The table is a record, not an inbox: only a message the master received
+  // counts as sent.
+  if (!delivery.some((d) => d.ok)) {
+    deps.log("request not delivered", { id, delivery });
+    try {
+      await deps.requestGuard.release(request.phone, day);
+    } catch {
+      // The visitor can still reach the studio on WhatsApp or by phone.
+    }
     return result(
       `${FALLBACK.deliveryFailed.en} Ask the visitor to message the studio on WhatsApp or call instead.`,
       true,
@@ -220,24 +263,44 @@ export async function handleChat(
     });
   }
 
+  // The tool stays defined on every call (the API refuses tool blocks in the
+  // history without it); once a request is sent the model may not use it.
+  const tools = [bookingTool(deps.facts)];
+  // A request sent in this turn is confirmed even if a later step fails.
+  const sentNow = () => state.requestSent && !body.requestSent;
+  const fallback = () =>
+    (sentNow() ? FALLBACK.sent : FALLBACK.unavailable)[body.language];
+
   for (let round = 0; round < LIMITS.toolRounds; round++) {
-    const response = await deps.createMessage({
-      model: deps.model,
-      max_tokens: 1024,
-      system,
-      ...(state.requestSent ? {} : { tools: [bookingTool(deps.facts)] }),
-      messages,
-    });
+    let response: Anthropic.Message;
+    try {
+      response = await deps.createMessage({
+        model: deps.model,
+        max_tokens: 1024,
+        system,
+        tools,
+        ...(state.requestSent
+          ? { tool_choice: { type: "none" as const } }
+          : {}),
+        messages,
+      });
+    } catch (error) {
+      if (!sentNow()) throw error;
+      deps.log("reply after a sent request failed", {
+        error: String(error).slice(0, 300),
+      });
+      return { reply: fallback(), requestSent: true };
+    }
 
     if (response.stop_reason === "refusal") {
       return {
-        reply: FALLBACK.refusal[body.language],
+        reply: (sentNow() ? FALLBACK.sent : FALLBACK.refusal)[body.language],
         requestSent: state.requestSent,
       };
     }
     if (response.stop_reason !== "tool_use") {
       return {
-        reply: replyText(response) || FALLBACK.unavailable[body.language],
+        reply: replyText(response) || fallback(),
         requestSent: state.requestSent,
       };
     }
@@ -251,8 +314,5 @@ export async function handleChat(
     messages.push({ role: "assistant", content: response.content });
     messages.push({ role: "user", content: results });
   }
-  return {
-    reply: FALLBACK.unavailable[body.language],
-    requestSent: state.requestSent,
-  };
+  return { reply: fallback(), requestSent: state.requestSent };
 }

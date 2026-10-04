@@ -9,6 +9,8 @@ import { channelHref, studioFacts } from "../lib/studio-facts";
 // preview origin); without it only the "no button" check applies.
 
 const CHAT = approvedChatApiUrl(process.env.NEXT_PUBLIC_CHAT_API_URL);
+// CI's chat pass also sets a Turnstile site key; the script itself is faked.
+const TURNSTILE = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 const WHATSAPP = studioFacts.channels
   .filter((c) => c.kind === "whatsapp")
   .map(channelHref)[0];
@@ -17,7 +19,40 @@ interface Sent {
   language: string;
   messages: { role: string; content: string }[];
   requestSent: boolean;
+  turnstileToken?: string;
 }
+
+// Stand-in for Cloudflare Turnstile: numbered tokens, and like the real one
+// it cannot run a widget whose element has left the page.
+const FAKE_TURNSTILE = `(() => {
+  let widgets = 0;
+  let tokens = 0;
+  const live = new Map();
+  window.__turnstileRenders = [];
+  window.turnstile = {
+    render(element, options) {
+      const id = "widget-" + ++widgets;
+      live.set(id, { element, options });
+      window.__turnstileRenders.push({
+        size: options.size,
+        appearance: options.appearance,
+        execution: options.execution,
+      });
+      return id;
+    },
+    reset() {},
+    remove(id) {
+      live.delete(id);
+    },
+    execute(id) {
+      const widget = live.get(id);
+      if (!widget || !widget.element.isConnected) {
+        throw new Error("Turnstile: the widget is gone");
+      }
+      setTimeout(() => widget.options.callback("token-" + ++tokens), 10);
+    },
+  };
+})();`;
 
 async function fakeApi(
   page: Page,
@@ -67,6 +102,18 @@ test.describe("AI receptionist", () => {
   test.describe("with the API configured", () => {
     test.skip(!CHAT, "build without NEXT_PUBLIC_CHAT_API_URL");
 
+    test.beforeEach(async ({ page }) => {
+      if (!TURNSTILE) return;
+      await page.route(
+        /^https:\/\/challenges\.cloudflare\.com\/turnstile\//,
+        (route) =>
+          route.fulfill({
+            contentType: "text/javascript",
+            body: FAKE_TURNSTILE,
+          }),
+      );
+    });
+
     test("a conversation sends the text history and shows the replies", async ({
       page,
     }) => {
@@ -96,6 +143,7 @@ test.describe("AI receptionist", () => {
           { role: "user", content: "How much is a classic pedicure?" },
         ],
         requestSent: false,
+        ...(TURNSTILE ? { turnstileToken: "token-1" } : {}),
       });
 
       await input.fill("Book me Saturday, Ann, 561 555 0100");
@@ -159,6 +207,48 @@ test.describe("AI receptionist", () => {
         /Hello!/,
       );
       expect(sent[1]!.messages).toEqual([{ role: "user", content: "Hi" }]);
+    });
+
+    test("every message gets a fresh human check, also after the chat is reopened", async ({
+      page,
+    }) => {
+      test.skip(!TURNSTILE, "build without NEXT_PUBLIC_TURNSTILE_SITE_KEY");
+      let replies = 0;
+      const sent = await fakeApi(page, (_body, route) =>
+        answer(route, `Answer ${++replies}.`),
+      );
+      await page.goto("/");
+      const launcher = page.locator(".chat-launcher");
+
+      await launcher.click();
+      await page.getByLabel("Your message").fill("Hi");
+      await page.getByLabel("Your message").press("Enter");
+      await expect(page.getByText("Answer 1.")).toBeVisible();
+
+      await page.keyboard.press("Escape");
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+      await launcher.click();
+      await page.getByLabel("Your message").fill("Are you there?");
+      await page.getByLabel("Your message").press("Enter");
+      await expect(page.getByText("Answer 2.")).toBeVisible();
+
+      expect(sent.map((body) => body.turnstileToken)).toEqual([
+        "token-1",
+        "token-2",
+      ]);
+      // A widget per opening; it stays out of sight unless a visitor must act.
+      const check = {
+        size: "compact",
+        appearance: "interaction-only",
+        execution: "execute",
+      };
+      expect(
+        await page.evaluate(
+          () =>
+            (window as unknown as { __turnstileRenders: unknown[] })
+              .__turnstileRenders,
+        ),
+      ).toEqual([check, check]);
     });
 
     test("Escape closes the chat and returns focus to the button", async ({

@@ -22,8 +22,10 @@ npx playwright test --grep-invert "Cloudflare Deployed Production QA"
 
 The last line is the local suite CI's `web` job runs (it needs a fresh `build`).
 CI runs it a second time on a build with
-`NEXT_PUBLIC_CHAT_API_URL=http://127.0.0.1:4173`, which turns on the chat tests in
-`tests/chat.spec.ts`. The chat API has its own checks:
+`NEXT_PUBLIC_CHAT_API_URL=http://127.0.0.1:4173` and
+`NEXT_PUBLIC_TURNSTILE_SITE_KEY=1x00000000000000000000AA` (Cloudflare's test key),
+which turns on the chat tests in `tests/chat.spec.ts`; they fake the API and
+Turnstile. The chat API has its own checks:
 `cd chat-api && npm ci && npm run typecheck && npm test`.
 
 - CI uses Node 24 (`engines: >=24 <25`); cloud containers have Node 22 / npm 10.
@@ -124,4 +126,14 @@ entries short and delete any that stop being true.
   Storage; it never confirms bookings. The owner chose Azure (not Google). It stays
   off until the `CHAT_API_URL` variable is set. Next: WhatsApp (ACS), then
   calendar booking through GORGONA.
+- 2026-10-04: Audit report in `docs/audit-2026-10-04.md` (Russian, with open
+  items). Fixed: the chat sends `tools` on every call (`tool_choice: none` after
+  a request; the API refuses tool blocks without tools), a request counts as sent
+  only when Telegram or email delivered it, 20 requests a day and one per phone a
+  day, Claude capacity 50K TPM.
+- 2026-10-04: The chat API requires Cloudflare Turnstile (`HUMAN_CHECK=off` opts
+  out). Use a Managed widget: Invisible mode needs a privacy policy that
+  references Cloudflare's Turnstile Privacy Addendum.
+- 2026-10-04: When `SITE_URL` changes, add the origin to the chat's
+  `ALLOWED_ORIGINS` too; `verify-live` checks the CORS preflight.
 - Open: no manual screen-reader test yet; WCAG 2.2 AA conformance not established.

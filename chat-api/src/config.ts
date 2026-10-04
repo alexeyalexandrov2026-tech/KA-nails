@@ -10,7 +10,10 @@ export interface ChatConfig {
   telegram?: { token: string; chatId: string };
   email?: { endpoint: string; sender: string; to: string };
   turnstileSecret?: string;
+  /** False only with HUMAN_CHECK=off; otherwise no secret means no chat. */
+  requireHumanCheck: boolean;
   dailyLimit: number;
+  dailyRequestLimit: number;
   ratePerTenMinutes: number;
 }
 
@@ -59,7 +62,9 @@ export function readConfig(env: NodeJS.ProcessEnv): ChatConfig {
         ? { endpoint: emailEndpoint, sender: emailSender, to: emailTo }
         : undefined,
     turnstileSecret: optional(env.TURNSTILE_SECRET),
+    requireHumanCheck: env.HUMAN_CHECK?.trim().toLowerCase() !== "off",
     dailyLimit: number(env.DAILY_MESSAGE_LIMIT, 500),
+    dailyRequestLimit: number(env.DAILY_REQUEST_LIMIT, 20),
     ratePerTenMinutes: number(env.RATE_LIMIT_PER_10_MIN, 20),
   };
 }
@@ -73,6 +78,12 @@ export function healthReport(config: ChatConfig) {
       telegram: Boolean(config.telegram),
       email: Boolean(config.email),
     },
-    humanCheck: Boolean(config.turnstileSecret),
+    // "missing": the check is required but has no secret, so every message
+    // is refused until turnstile-secret is set in Key Vault.
+    humanCheck: config.turnstileSecret
+      ? "on"
+      : config.requireHumanCheck
+        ? "missing"
+        : "off",
   };
 }

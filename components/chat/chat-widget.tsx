@@ -29,7 +29,8 @@ interface TurnstileApi {
     element: HTMLElement,
     options: {
       sitekey: string;
-      size: "invisible" | "flexible";
+      size: "compact";
+      appearance: "interaction-only";
       execution: "execute";
       callback(token: string): void;
       "error-callback"(): void;
@@ -37,6 +38,7 @@ interface TurnstileApi {
   ): string;
   execute(widgetId: string): void;
   reset(widgetId: string): void;
+  remove(widgetId: string): void;
 }
 
 interface TurnstileState {
@@ -87,7 +89,7 @@ export function ChatWidget({
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const logRef = useRef<HTMLDivElement>(null);
   const turnstileRef = useRef<HTMLDivElement>(null);
-  const tokenRef = useRef<TurnstileState | null>(null);
+  const checkRef = useRef<Promise<TurnstileState | null> | null>(null);
 
   const history = items.filter(
     (item): item is Item & { role: "user" | "assistant" } =>
@@ -115,50 +117,66 @@ export function ChatWidget({
     if (log) log.scrollTop = log.scrollHeight;
   }, [items, pending]);
 
-  // The human check loads only when the visitor opens the chat.
+  // The human check is set up when the panel opens and removed when it
+  // closes (its element goes with the panel), so a reopened chat gets a fresh
+  // widget. It stays out of sight unless Cloudflare asks the visitor to act;
+  // the compact size fits the panel on a 320px phone.
   useEffect(() => {
-    if (!open || !turnstileSiteKey || tokenRef.current) return;
+    if (!open || !turnstileSiteKey) return;
+    let state: TurnstileState | null = null;
     let cancelled = false;
-    loadTurnstile()
+    checkRef.current = loadTurnstile()
       .then((api) => {
-        if (cancelled || !turnstileRef.current) return;
-        const state: TurnstileState = { widget: "", api, waiting: null };
-        state.widget = api.render(turnstileRef.current, {
+        if (cancelled || !turnstileRef.current) return null;
+        const current: TurnstileState = { widget: "", api, waiting: null };
+        current.widget = api.render(turnstileRef.current, {
           sitekey: turnstileSiteKey,
-          size: "invisible",
+          size: "compact",
+          appearance: "interaction-only",
           execution: "execute",
           callback: (token) => {
-            state.waiting?.(token);
-            state.waiting = null;
+            current.waiting?.(token);
+            current.waiting = null;
           },
           "error-callback": () => {
-            state.waiting?.(undefined);
-            state.waiting = null;
+            current.waiting?.(undefined);
+            current.waiting = null;
           },
         });
-        tokenRef.current = state;
+        state = current;
+        return current;
       })
-      .catch(() => {
-        // Without the check the API refuses; the visitor sees the fallback.
-      });
+      // Without the check the API refuses; the visitor sees the fallback.
+      .catch(() => null);
     return () => {
       cancelled = true;
+      checkRef.current = null;
+      if (!state) return;
+      state.waiting?.(undefined);
+      state.waiting = null;
+      try {
+        state.api.remove(state.widget);
+      } catch {
+        // Already gone with the panel.
+      }
     };
   }, [open, turnstileSiteKey]);
 
-  const humanToken = (): Promise<string | undefined> => {
-    const state = tokenRef.current;
-    if (!turnstileSiteKey || !state) return Promise.resolve(undefined);
+  // A fresh token for every message: Cloudflare accepts each one only once.
+  const humanToken = async (): Promise<string | undefined> => {
+    const state = await checkRef.current;
+    if (!state) return undefined;
     return new Promise((resolve) => {
       state.waiting = resolve;
       state.api.reset(state.widget);
       state.api.execute(state.widget);
+      // Time enough to solve a challenge if Cloudflare shows one.
       setTimeout(() => {
         if (state.waiting === resolve) {
           state.waiting = null;
           resolve(undefined);
         }
-      }, 15_000);
+      }, 60_000);
     });
   };
 
