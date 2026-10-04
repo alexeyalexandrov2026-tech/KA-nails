@@ -498,6 +498,18 @@ describe("chat turn", () => {
     const reply = await handleChat(body({ language: "ru" }), deps);
     assert.equal(reply.reply, FALLBACK.refusal.ru);
   });
+
+  it("says why when the model wrote no text", async () => {
+    // A reasoning model can spend every token before it writes.
+    const { deps, logs } = fakeDeps([message([], "max_tokens")]);
+    const reply = await handleChat(body(), deps);
+    assert.deepEqual(reply, {
+      reply: FALLBACK.unavailable.en,
+      requestSent: false,
+      reason: "model-empty-max_tokens",
+    });
+    assert.deepEqual(logs, ["empty model reply"]);
+  });
 });
 
 describe("request body", () => {
@@ -625,6 +637,7 @@ describe("HTTP endpoint", () => {
     assert.deepEqual(out.body, {
       reply: FALLBACK.unavailable.en,
       requestSent: false,
+      reason: "daily-limit",
     });
     assert.equal(called, false);
   });
@@ -632,7 +645,7 @@ describe("HTTP endpoint", () => {
   it("falls back politely when the AI is unreachable", async () => {
     const { http, logs } = httpDeps();
     http.chat.createMessage = async () => {
-      throw new Error("503");
+      throw new Error("Connection error.");
     };
     const out = await handleChatHttp(
       post(ORIGIN, body({ language: "ru" })),
@@ -641,8 +654,27 @@ describe("HTTP endpoint", () => {
     assert.deepEqual(out.body, {
       reply: FALLBACK.unavailable.ru,
       requestSent: false,
+      reason: "model-error",
     });
     assert.deepEqual(logs, ["chat failed"]);
+  });
+
+  it("names the model's HTTP status when it refuses", async () => {
+    // Like the SDK's APIError: OpenRouter answers 402 for a paid model
+    // without credits.
+    const { http } = httpDeps();
+    http.chat.createMessage = async () => {
+      throw Object.assign(new Error("402 Insufficient credits"), {
+        status: 402,
+      });
+    };
+    const out = await handleChatHttp(post(), http);
+    assert.equal(out.status, 200);
+    assert.deepEqual(out.body, {
+      reply: FALLBACK.unavailable.en,
+      requestSent: false,
+      reason: "model-http-402",
+    });
   });
 
   it("rejects malformed bodies", async () => {
@@ -761,7 +793,8 @@ describe("outside services", () => {
     ]);
     // OpenRouter by default; without a key the model is not ready.
     assert.equal(config.model.provider, "openrouter");
-    assert.equal(config.model.name, "nvidia/nemotron-3-ultra-550b-a55b");
+    // The free endpoint: the id without ":free" is paid.
+    assert.equal(config.model.name, "nvidia/nemotron-3-ultra-550b-a55b:free");
     assert.equal(healthReport(config).modelReady, false);
     assert.equal(config.requireHumanCheck, true);
     assert.equal(config.dailyRequestLimit, 20);

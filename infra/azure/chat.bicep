@@ -22,8 +22,8 @@ targetScope = 'resourceGroup'
 @allowed(['openrouter', 'foundry'])
 param modelProvider string = 'openrouter'
 
-@description('Model id on OpenRouter (openrouter.ai/models). It must support tool calling.')
-param openRouterModel string = 'nvidia/nemotron-3-ultra-550b-a55b'
+@description('Model id on OpenRouter (openrouter.ai/models). It must support tool calling. Free endpoints end in ":free"; the same id without it is paid and needs credits.')
+param openRouterModel string = 'nvidia/nemotron-3-ultra-550b-a55b:free'
 
 @description('Region. Claude Haiku 4.5 in Foundry is offered in eastus2 and swedencentral.')
 param location string = 'eastus2'

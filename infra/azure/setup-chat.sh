@@ -20,7 +20,7 @@ here="$(cd "$(dirname "$0")" && pwd)"
 group="${RESOURCE_GROUP:-rg-kanails-chat}"
 location="${LOCATION:-eastus2}"
 provider="${MODEL_PROVIDER:-openrouter}"
-default_model="nvidia/nemotron-3-ultra-550b-a55b"
+default_model="nvidia/nemotron-3-ultra-550b-a55b:free"
 default_origins="https://ka-nails.pages.dev"
 
 # --- Questions ----------------------------------------------------------------
@@ -103,8 +103,18 @@ if [ "$provider" = "foundry" ]; then
   ask "Country code of the business" "${last_country:-US}"
   country="$answer"
 else
-  last_model="$(last_value parameters.openRouterModel)"
-  ask "OpenRouter model id (must support tool calling)" "${last_model:-$default_model}"
+  # The model the app runs now (it can be changed in the portal), else the
+  # last run's choice.
+  last_model=""
+  last_app="$(last_value outputs.functionAppName)"
+  if [ -n "$last_app" ]; then
+    last_model="$(az functionapp config appsettings list -g "$group" -n "$last_app" \
+      --query "[?name=='OPENROUTER_MODEL'].value | [0]" -o tsv 2>/dev/null || true)"
+  fi
+  [ -n "$last_model" ] || last_model="$(last_value parameters.openRouterModel)"
+  # Earlier runs offered this paid id as the free model.
+  [ "$last_model" != "nvidia/nemotron-3-ultra-550b-a55b" ] || last_model=""
+  ask "OpenRouter model id (must support tool calling; free ones end in :free)" "${last_model:-$default_model}"
   model="$answer"
 fi
 
