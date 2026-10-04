@@ -119,7 +119,10 @@ It knows only `content/studio-facts.json`, the same data the site shows.
 - `components/chat/chat-widget.tsx`: the widget. It is built in only when
   `NEXT_PUBLIC_CHAT_API_URL` is an https origin (loopback http for tests); without
   it there is no button and the site works as before. When a message fails, the
-  widget offers WhatsApp.
+  widget offers WhatsApp. To see why, check the browser console (Turnstile's
+  error code: 110100 a wrong site key, 110200 a domain missing from the
+  widget's hostnames) and the `reason` in the API's 403 response. Spaces pasted
+  into `TURNSTILE_SITE_KEY` are removed at build time.
 - `infra/azure/chat.bicep` and `infra/azure/setup-chat.sh`: the Azure resources
   (resource group `rg-kanails-chat`, region `eastus2`) and a one-time setup script
   for Azure Cloud Shell. Claude in Foundry (`MODEL_PROVIDER=foundry bash

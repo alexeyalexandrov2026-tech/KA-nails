@@ -24,7 +24,8 @@ interface Sent {
 }
 
 // Stand-in for Cloudflare Turnstile: numbered tokens, and like the real one
-// it cannot run a widget whose element has left the page.
+// it cannot run a widget whose element has left the page. A test can set
+// window.__turnstileError to make every check fail with that code.
 const FAKE_TURNSTILE = `(() => {
   let widgets = 0;
   let tokens = 0;
@@ -50,7 +51,11 @@ const FAKE_TURNSTILE = `(() => {
       if (!widget || !widget.element.isConnected) {
         throw new Error("Turnstile: the widget is gone");
       }
-      setTimeout(() => widget.options.callback("token-" + ++tokens), 10);
+      const error = window.__turnstileError;
+      setTimeout(() => {
+        if (error) widget.options["error-callback"](error);
+        else widget.options.callback("token-" + ++tokens);
+      }, 10);
     },
   };
 })();`;
@@ -262,6 +267,33 @@ test.describe("AI receptionist", () => {
               .__turnstileRenders,
         ),
       ).toEqual([check, check]);
+    });
+
+    test("a failed human check names Cloudflare's code in the console", async ({
+      page,
+    }) => {
+      test.skip(!TURNSTILE, "build without NEXT_PUBLIC_TURNSTILE_SITE_KEY");
+      const warnings: string[] = [];
+      page.on("console", (message) => {
+        if (message.type() === "warning") warnings.push(message.text());
+      });
+      // Like the live API, refuse a message that comes without a token.
+      const sent = await fakeApi(page, (_body, route) =>
+        route.fulfill({ status: 403, json: { reason: "no-token" } }),
+      );
+      await page.addInitScript(() => {
+        (window as unknown as { __turnstileError: string }).__turnstileError =
+          "110200";
+      });
+      await page.goto("/");
+      await page.locator(".chat-launcher").click();
+      await page.getByLabel("Your message").fill("Hi");
+      await page.getByLabel("Your message").press("Enter");
+      await expect(page.locator(".chat-message-notice")).toContainText(
+        "The message was not sent",
+      );
+      expect(sent[0]!.turnstileToken).toBeUndefined();
+      expect(warnings).toContain("Turnstile error 110200");
     });
 
     test("Escape closes the chat and returns focus to the button", async ({
