@@ -66,12 +66,19 @@ print(node.get("value", "") if isinstance(node, dict) else "")' "$1"
 }
 
 vault="$(last_value outputs.keyVaultName)"
-# saved NAME: the key is in Key Vault already (not missing, not "none").
-saved() {
-  local current
-  [ -n "$vault" ] || return 1
-  current="$(az keyvault secret show --vault-name "$vault" -n "$1" --query value -o tsv 2>/dev/null || true)"
-  [ -n "$current" ] && [ "$current" != "none" ]
+# key_state NAME: "saved", "missing", or "unknown" when Key Vault cannot be
+# read (no access yet). Enter never writes a key, so "unknown" stays as it is.
+key_state() {
+  local out
+  if [ -z "$vault" ]; then
+    echo missing
+  elif out="$(az keyvault secret show --vault-name "$vault" -n "$1" --query value -o tsv --only-show-errors 2>&1)"; then
+    if [ -n "$out" ] && [ "$out" != none ]; then echo saved; else echo missing; fi
+  elif [[ "$out" == *SecretNotFound* ]]; then
+    echo missing
+  else
+    echo unknown
+  fi
 }
 
 echo "KA Nails AI receptionist setup"
@@ -107,25 +114,26 @@ last_origins="$(last_value parameters.allowedOrigins)"
 ask "Website address(es) allowed to use the chat, comma-separated" "${last_origins:-$default_origins}"
 origins="$answer"
 
-# An empty value below means "keep what Key Vault has"; "none" switches off.
+# Enter never writes: an empty answer leaves Key Vault as it is.
 openrouter_key=""
 refused=""
 if [ "$provider" != "foundry" ]; then
   echo
   echo "OpenRouter key: openrouter.ai -> Settings -> Keys. It starts with sk-or-."
+  state="$(key_state openrouter-api-key)"
   while :; do
-    if saved openrouter-api-key; then
-      ask_secret "OpenRouter API key (hidden; Enter keeps the saved key): "
-      if [ -z "$answer" ]; then
-        echo "Keeping the saved OpenRouter key."
-        break
-      fi
-    else
-      ask_secret "OpenRouter API key (hidden while typing): "
-      if [ -z "$answer" ]; then
+    case "$state" in
+      saved) ask_secret "OpenRouter API key (hidden; Enter keeps the saved key): " ;;
+      unknown) ask_secret "OpenRouter API key (hidden; Enter keeps whatever Key Vault has): " ;;
+      *) ask_secret "OpenRouter API key (hidden while typing): " ;;
+    esac
+    if [ -z "$answer" ]; then
+      if [ "$state" = missing ]; then
         echo "The chat cannot answer without this key. Paste it, or press Ctrl+C to stop."
         continue
       fi
+      echo "Keeping the saved OpenRouter key."
+      break
     fi
     if [[ "$answer" != sk-or-* ]]; then
       echo "That is not an OpenRouter key (it starts with sk-or-). Copy it again."
@@ -157,21 +165,26 @@ echo
 echo "Telegram: the bot from @BotFather. In BotFather's message, tap the token to copy only it."
 tg_token=""
 chat_id=""
+token_state="$(key_state telegram-bot-token)"
+chat_state="$(key_state telegram-chat-id)"
+if [ "$token_state" = saved ] && [ "$chat_state" = saved ]; then
+  tg_hint="Enter keeps the saved bot, off switches Telegram off"
+elif [ "$token_state" = unknown ] || [ "$chat_state" = unknown ]; then
+  tg_hint="Enter keeps whatever Key Vault has, off switches Telegram off"
+else
+  tg_hint="Enter skips Telegram, requests go by email only"
+fi
 while :; do
-  if saved telegram-bot-token && saved telegram-chat-id; then
-    ask_secret "Telegram bot token (hidden; Enter keeps the saved bot): "
-    if [ -z "$answer" ]; then
-      echo "Keeping the saved Telegram bot."
-      break
-    fi
-  else
-    ask_secret "Telegram bot token (hidden; Enter skips Telegram, requests go by email only): "
-    if [ -z "$answer" ]; then
-      tg_token="none"
-      chat_id="none"
-      echo "Skipping Telegram."
-      break
-    fi
+  ask_secret "Telegram bot token (hidden; $tg_hint): "
+  if [ -z "$answer" ]; then
+    echo "Leaving Telegram as it is."
+    break
+  fi
+  if [ "$answer" = off ]; then
+    tg_token="none"
+    chat_id="none"
+    echo "Telegram will be switched off; requests go by email only."
+    break
   fi
   if ! [[ "$answer" =~ ^[0-9]{5,}:[A-Za-z0-9_-]{30,}$ ]]; then
     echo "That is not a bot token (digits, a colon, then letters, like 1234567890:AAH...). Copy only the token."
@@ -193,7 +206,8 @@ print(reply.get("result", {}).get("username", "") if reply.get("ok") else "")')"
   break
 done
 
-# Requests go to the chat that last wrote to the bot (its /start).
+# Requests go to the chat that sent /start most recently. Anyone who finds
+# the bot can press Start, so the person running this confirms the chat.
 if [ -n "$tg_token" ] && [ "$tg_token" != none ]; then
   while :; do
     found="$(tg "$tg_token" getUpdates | python3 -c '
@@ -203,16 +217,25 @@ try:
 except ValueError:
     updates = []
 for update in reversed(updates):
-    chat = (update.get("message") or update.get("my_chat_member") or {}).get("chat")
-    if chat:
-        print(chat["id"], chat.get("first_name") or chat.get("title") or "")
+    message = update.get("message") or {}
+    if (message.get("text") or "").startswith("/start"):
+        chat = message["chat"]
+        name = " ".join(filter(None, [chat.get("first_name"), chat.get("last_name")]))
+        print(chat["id"], chat.get("type", "?"), name or chat.get("title") or "?")
         break')"
     if [ -n "$found" ]; then
-      chat_id="${found%% *}"
-      echo "Requests will go to the Telegram chat of ${found#* } (chat id $chat_id)."
-      break
+      read -r found_id found_type found_name <<<"$found"
+      ask "Send requests to the Telegram $found_type chat of $found_name? y/n" "y"
+      if [[ "$answer" != [Nn]* ]]; then
+        chat_id="$found_id"
+        echo "Requests will go to $found_name (chat id $chat_id)."
+        break
+      fi
+      prompt="From the Telegram that should get requests, open @$bot and send /start, then press Enter here (or type a chat id)"
+    else
+      prompt="Nobody has sent /start to @$bot yet. From the Telegram that should get requests, open @$bot and press Start, then press Enter here (or type a chat id)"
     fi
-    ask "Nobody has written to @$bot yet. From the Telegram that should get requests, open @$bot and press Start, then press Enter here (or type a chat id)" ""
+    ask "$prompt" ""
     if [[ "$answer" =~ ^-?[0-9]+$ ]]; then
       chat_id="$answer"
       break
@@ -223,20 +246,20 @@ fi
 echo
 echo "Cloudflare Turnstile (required): Cloudflare -> Turnstile -> the site's widget -> Secret key."
 turnstile=""
+state="$(key_state turnstile-secret)"
 while :; do
-  if saved turnstile-secret; then
-    ask_secret "Turnstile secret key (hidden; Enter keeps the saved key): "
-    if [ -z "$answer" ]; then
-      echo "Keeping the saved Turnstile key."
-      break
-    fi
-  else
-    ask_secret "Turnstile secret key (hidden; Enter to add it later): "
-    if [ -z "$answer" ]; then
-      turnstile="none"
+  case "$state" in
+    saved) ask_secret "Turnstile secret key (hidden; Enter keeps the saved key): " ;;
+    unknown) ask_secret "Turnstile secret key (hidden; Enter keeps whatever Key Vault has): " ;;
+    *) ask_secret "Turnstile secret key (hidden; Enter to add it later): " ;;
+  esac
+  if [ -z "$answer" ]; then
+    if [ "$state" = missing ]; then
       echo "Note: the chat refuses every message until this key is saved (run the script again then)."
-      break
+    else
+      echo "Keeping the saved Turnstile key."
     fi
+    break
   fi
   verdict="$(curl -sS --max-time 20 https://challenges.cloudflare.com/turnstile/v0/siteverify \
     --data-urlencode "secret=$answer" --data-urlencode "response=setup-check" 2>/dev/null || true)"

@@ -138,7 +138,7 @@ Setup, once:
    `bash KA-nails/infra/azure/setup-chat.sh`. It first asks for the studio
    email, the website address(es) the chat answers, the OpenRouter model and
    API key (openrouter.ai → Settings → Keys), the bot token (Enter skips
-   Telegram) and the Turnstile secret, and checks each key with its service;
+   Telegram; you confirm the chat that pressed Start) and the Turnstile secret, and checks each key with its service;
    then it creates everything, stores the keys and prints the values for
    GitHub. On a re-run every answer defaults to the last one and Enter keeps a
    saved key.
