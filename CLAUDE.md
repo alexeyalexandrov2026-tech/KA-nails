@@ -141,4 +141,12 @@ entries short and delete any that stop being true.
   endpoint, key in Key Vault). The owner chose the free NVIDIA Nemotron 3 Ultra
   despite the warning that free providers may train on visitors' data; Foundry
   stays available with `MODEL_PROVIDER=foundry`.
+- 2026-10-04: Cloud Shell gotchas from the first setup: an `az` extension
+  command inside `$(...)` waits on an invisible install prompt, and keys typed
+  during a wait answer the next question. `setup-chat.sh` now uses no CLI
+  extension, asks and checks every key before deploying, flushes typed-ahead
+  input, and Enter keeps saved keys.
+- 2026-10-04: GitHub signs this repository's Actions tokens with numeric IDs
+  (`repo:alexeyalexandrov2026-tech@299272810/KA-nails@1396999477:ref:refs/heads/main`);
+  the Azure deployer identity trusts that subject and the plain one.
 - Open: no manual screen-reader test yet; WCAG 2.2 AA conformance not established.
