@@ -130,6 +130,13 @@ It knows only `content/studio-facts.json`, the same data the site shows.
   model without credits), `model-http-404` (no endpoint, such as a free model
   blocked by the privacy setting), `model-http-429` (rate limit),
   `model-empty-max_tokens` (the model wrote no text) or `daily-limit`.
+  Some free providers (the free NVIDIA endpoint) replace names and phone
+  numbers with placeholders such as `[PERSON_NAME]`; the booking tool refuses
+  them, so no request without a real name reaches the master, and the log says
+  "masked contact". The widget asks Turnstile for its token while the visitor
+  types, so sending does not wait for the check; the rest of a reply's time is
+  the model (free reasoning models take seconds) and, after a quiet spell, the
+  Function App's cold start.
 - `infra/azure/chat.bicep` and `infra/azure/setup-chat.sh`: the Azure resources
   (resource group `rg-kanails-chat`, region `eastus2`) and a one-time setup script
   for Azure Cloud Shell. Claude in Foundry (`MODEL_PROVIDER=foundry bash

@@ -161,4 +161,10 @@ entries short and delete any that stop being true.
   fallback (402, no credits). Free endpoints also need OpenRouter's privacy
   setting "Enable free endpoints that may train on inputs". Fallback replies
   now carry a `reason` (`model-http-402` and the like).
+- 2026-10-04: The free NVIDIA endpoint masks personal data (`[PERSON_NAME]`,
+  `[ADDRESS]`, `[PHONE]`), so a live request reached Karina without a name; the
+  booking tool now refuses placeholders. Use a model whose provider passes
+  names through. The widget prefetches the Turnstile token while the visitor
+  types. Don't run the human check and the daily counter in parallel: failed
+  checks would then use up the daily cap.
 - Open: no manual screen-reader test yet; WCAG 2.2 AA conformance not established.

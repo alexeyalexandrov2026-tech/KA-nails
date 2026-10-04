@@ -187,6 +187,9 @@ async function runBookingTool(
     deps.facts,
   );
   if (!validation.ok) {
+    if (validation.errors.some((error) => error.includes("was hidden"))) {
+      deps.log("masked contact", { model: deps.model });
+    }
     return result(
       `Not sent. Fix with the visitor: ${validation.errors.join("; ")}.`,
       true,

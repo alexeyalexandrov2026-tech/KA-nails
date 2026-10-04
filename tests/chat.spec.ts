@@ -47,6 +47,7 @@ const FAKE_TURNSTILE = `(() => {
       live.delete(id);
     },
     execute(id) {
+      window.__turnstileExecutes = (window.__turnstileExecutes || 0) + 1;
       const widget = live.get(id);
       if (!widget || !widget.element.isConnected) {
         throw new Error("Turnstile: the widget is gone");
@@ -267,6 +268,40 @@ test.describe("AI receptionist", () => {
               .__turnstileRenders,
         ),
       ).toEqual([check, check]);
+    });
+
+    test("the human check runs while the visitor types, not after Send", async ({
+      page,
+    }) => {
+      test.skip(!TURNSTILE, "build without NEXT_PUBLIC_TURNSTILE_SITE_KEY");
+      const sent = await fakeApi(page, (_body, route) =>
+        answer(route, "Sure, ask away."),
+      );
+      await page.goto("/");
+      await page.locator(".chat-launcher").click();
+      const input = page.getByLabel("Your message");
+      await input.fill("Hi");
+      // The token is requested before the message is sent.
+      await expect
+        .poll(() =>
+          page.evaluate(
+            () =>
+              (window as unknown as { __turnstileExecutes?: number })
+                .__turnstileExecutes ?? 0,
+          ),
+        )
+        .toBe(1);
+      expect(sent).toHaveLength(0);
+      await input.press("Enter");
+      await expect(page.getByText("Sure, ask away.")).toBeVisible();
+      await input.fill("And a pedicure?");
+      await input.press("Enter");
+      await expect.poll(() => sent.length).toBe(2);
+      // Still one fresh token per message.
+      expect(sent.map((body) => body.turnstileToken)).toEqual([
+        "token-1",
+        "token-2",
+      ]);
     });
 
     test("a failed human check names Cloudflare's code in the console", async ({

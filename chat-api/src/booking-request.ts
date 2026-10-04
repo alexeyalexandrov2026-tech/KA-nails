@@ -77,6 +77,9 @@ export function normalizePhone(raw: string): string | null {
 export type Validation =
   { ok: true; request: BookingRequest } | { ok: false; errors: string[] };
 
+/** A placeholder like [PERSON_NAME] or [PHONE] that stands for hidden data. */
+export const MASKED = /^\[[A-Z][A-Z_]*\]$/;
+
 export function validateBookingRequest(
   input: unknown,
   facts: StudioFacts,
@@ -131,8 +134,21 @@ export function validateBookingRequest(
   const preferredTime = text("preferred_time", true);
   const name = text("name", true);
   const phoneRaw = text("phone", true);
-  const phone = phoneRaw ? normalizePhone(phoneRaw) : null;
-  if (phoneRaw && !phone) {
+  // Some free model providers replace personal data with placeholders such
+  // as [PERSON_NAME] before the model sees it; such a request is useless.
+  for (const [key, value] of [
+    ["name", name],
+    ["phone", phoneRaw],
+  ]) {
+    if (MASKED.test(value!)) {
+      errors.push(
+        `${key} was hidden by the model provider (${value}); do not guess it, ask the visitor to message the studio on WhatsApp or call instead`,
+      );
+    }
+  }
+  const phone =
+    phoneRaw && !MASKED.test(phoneRaw) ? normalizePhone(phoneRaw) : null;
+  if (phoneRaw && !MASKED.test(phoneRaw) && !phone) {
     errors.push(
       "phone is not a valid number (US numbers need 10 digits; others need a country code with +)",
     );
