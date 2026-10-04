@@ -134,10 +134,14 @@ Setup, once:
 
 1. In Telegram, create the studio bot with @BotFather and send it `/start` from
    the master's account.
-2. In Azure Cloud Shell (Bash): `git clone` this repository, then
-   `bash KA-nails/infra/azure/setup-chat.sh`. It asks for the studio email, the
-   website address(es) the chat answers, the OpenRouter model and API key
-   (openrouter.ai → Settings → Keys), the bot token and the Turnstile secret, creates everything and prints the values for GitHub.
+2. In Azure Cloud Shell (shell.azure.com): `git clone` this repository, then
+   `bash KA-nails/infra/azure/setup-chat.sh`. It first asks for the studio
+   email, the website address(es) the chat answers, the OpenRouter model and
+   API key (openrouter.ai → Settings → Keys), the bot token (Enter skips
+   Telegram) and the Turnstile secret, and checks each key with its service;
+   then it creates everything, stores the keys and prints the values for
+   GitHub. On a re-run every answer defaults to the last one and Enter keeps a
+   saved key.
 3. Create the Cloudflare Turnstile widget first (Cloudflare dashboard →
    Turnstile → Add widget, Managed mode, the site's hostnames). Invisible mode
    would need a privacy policy that references Cloudflare's Turnstile Privacy
