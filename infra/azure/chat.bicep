@@ -59,6 +59,10 @@ param dailyRequestLimit int = 20
 @description('GitHub repository allowed to deploy the Function App (owner/name).')
 param githubRepository string = 'alexeyalexandrov2026-tech/KA-nails'
 
+@description('Numeric IDs of that GitHub account and repository (api.github.com/repos/owner/name: owner.id and id). GitHub signs Actions tokens for this repository as repo:owner@ownerId/name@repoId:...')
+param githubOwnerId string = '299272810'
+param githubRepositoryId string = '1396999477'
+
 var suffix = uniqueString(resourceGroup().id)
 var storageName = take('${baseName}chat${suffix}', 24)
 var functionAppName = '${baseName}-chat-${take(suffix, 6)}'
@@ -356,6 +360,20 @@ resource deployerFromMain 'Microsoft.ManagedIdentity/userAssignedIdentities/fede
     subject: 'repo:${githubRepository}:ref:refs/heads/main'
     audiences: ['api://AzureADTokenExchange']
   }
+}
+
+// The same main branch in the subject format with IDs, which GitHub uses for
+// this repository (AADSTS700213 without it).
+resource deployerFromMainIds 'Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials@2023-01-31' = {
+  parent: deployer
+  name: 'github-main-ids'
+  properties: {
+    issuer: 'https://token.actions.githubusercontent.com'
+    subject: 'repo:${split(githubRepository, '/')[0]}@${githubOwnerId}/${split(githubRepository, '/')[1]}@${githubRepositoryId}:ref:refs/heads/main'
+    audiences: ['api://AzureADTokenExchange']
+  }
+  // Azure refuses parallel credential writes on one identity.
+  dependsOn: [deployerFromMain]
 }
 
 resource deployerWebsite 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
