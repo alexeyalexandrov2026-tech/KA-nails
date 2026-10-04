@@ -90,6 +90,11 @@ export function ChatWidget({
   const logRef = useRef<HTMLDivElement>(null);
   const turnstileRef = useRef<HTMLDivElement>(null);
   const checkRef = useRef<Promise<TurnstileState | null> | null>(null);
+  // A token fetched while the visitor types, so sending need not wait for it.
+  const readyRef = useRef<{
+    token: Promise<string | undefined>;
+    at: number;
+  } | null>(null);
 
   const history = items.filter(
     (item): item is Item & { role: "user" | "assistant" } =>
@@ -154,6 +159,7 @@ export function ChatWidget({
     return () => {
       cancelled = true;
       checkRef.current = null;
+      readyRef.current = null;
       if (!state) return;
       state.waiting?.(undefined);
       state.waiting = null;
@@ -183,6 +189,21 @@ export function ChatWidget({
     });
   };
 
+  // Started on the first keystroke of a message. Tokens last 300 seconds;
+  // one older than four minutes is not used.
+  const prefetchToken = () => {
+    if (!turnstileSiteKey || readyRef.current) return;
+    readyRef.current = { token: humanToken(), at: Date.now() };
+  };
+
+  const takeToken = async (): Promise<string | undefined> => {
+    const ready = readyRef.current;
+    readyRef.current = null;
+    const token =
+      ready && Date.now() - ready.at < 240_000 ? await ready.token : undefined;
+    return token ?? (await humanToken());
+  };
+
   async function send(event?: React.FormEvent) {
     event?.preventDefault();
     const text = draft.trim();
@@ -202,7 +223,7 @@ export function ChatWidget({
             content: item.text,
           })),
           requestSent,
-          turnstileToken: await humanToken(),
+          turnstileToken: await takeToken(),
         }),
       });
       if (!response.ok) throw new Error(String(response.status));
@@ -324,7 +345,10 @@ export function ChatWidget({
               value={draft}
               placeholder={dict.placeholder}
               disabled={atLimit}
-              onChange={(event) => setDraft(event.target.value)}
+              onChange={(event) => {
+                setDraft(event.target.value);
+                if (event.target.value.trim()) prefetchToken();
+              }}
               onKeyDown={(event) => {
                 if (event.key === "Enter" && !event.shiftKey) {
                   event.preventDefault();

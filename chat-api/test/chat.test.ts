@@ -239,6 +239,28 @@ describe("booking request", () => {
     assert.match(result.errors.join(";"), /name is missing/);
   });
 
+  it("refuses a name or phone the model provider replaced with a placeholder", () => {
+    // Some free providers mask personal data before the model sees it.
+    const result = validateBookingRequest(
+      { ...GOOD_INPUT, name: "[PERSON_NAME]", phone: "[PHONE]" },
+      studioFacts,
+    );
+    assert.ok(!result.ok);
+    assert.match(result.errors.join(";"), /name was hidden/);
+    assert.match(result.errors.join(";"), /phone was hidden/);
+    assert.ok(
+      !validateBookingRequest({ ...GOOD_INPUT, name: "[ADDRESS]" }, studioFacts)
+        .ok,
+    );
+    // Ordinary brackets in a name are fine.
+    assert.ok(
+      validateBookingRequest(
+        { ...GOOD_INPUT, name: "Ann [Annie]" },
+        studioFacts,
+      ).ok,
+    );
+  });
+
   it("allows a visitor who has not chosen a service yet", () => {
     const result = validateBookingRequest(
       { ...GOOD_INPUT, service_id: "not_sure" },
@@ -361,6 +383,23 @@ describe("chat turn", () => {
     )[0]!;
     assert.equal(result.is_error, true);
     assert.match(String(result.content), /phone/);
+  });
+
+  it("never sends a request whose name the provider masked, and logs it", async () => {
+    const { deps, calls, sent, saved, logs } = fakeDeps([
+      message([toolUse({ ...GOOD_INPUT, name: "[ADDRESS]" })], "tool_use"),
+      message([text("Please message the studio on WhatsApp.")], "end_turn"),
+    ]);
+    const reply = await handleChat(body(), deps);
+    assert.equal(reply.requestSent, false);
+    assert.equal(sent.length, 0);
+    assert.equal(saved.length, 0);
+    assert.deepEqual(logs, ["masked contact"]);
+    const result = (
+      calls[1]!.messages.at(-1)!.content as Anthropic.ToolResultBlockParam[]
+    )[0]!;
+    assert.equal(result.is_error, true);
+    assert.match(String(result.content), /WhatsApp/);
   });
 
   it("uses the visitor's language from the page, not from the model", async () => {
