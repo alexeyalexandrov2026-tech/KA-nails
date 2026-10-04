@@ -31,8 +31,12 @@ function optional(value: string | undefined): string | undefined {
   return clean;
 }
 
-/** NVIDIA Nemotron 3 Ultra, free on OpenRouter (the owner's choice). */
-export const DEFAULT_OPENROUTER_MODEL = "nvidia/nemotron-3-ultra-550b-a55b";
+/**
+ * NVIDIA Nemotron 3 Ultra on OpenRouter's free endpoint (the owner's choice).
+ * The id without ":free" is a paid endpoint: without credits it answers 402.
+ */
+export const DEFAULT_OPENROUTER_MODEL =
+  "nvidia/nemotron-3-ultra-550b-a55b:free";
 
 function number(value: string | undefined, fallback: number): number {
   const parsed = Number(value);

@@ -123,6 +123,7 @@ export async function handleChatHttp(
     return json(200, {
       reply: FALLBACK.unavailable[body.language],
       requestSent: body.requestSent,
+      reason: "daily-limit",
     });
   }
 
@@ -133,6 +134,14 @@ export async function handleChatHttp(
     return json(200, {
       reply: FALLBACK.unavailable[body.language],
       requestSent: body.requestSent,
+      reason: failureReason(error),
     });
   }
+}
+
+// The model API's HTTP status (402: no credits for a paid model, 404: no
+// endpoint for the model, 429: rate limit) without the error's details.
+function failureReason(error: unknown): string {
+  const status = (error as { status?: unknown } | null)?.status;
+  return typeof status === "number" ? `model-http-${status}` : "model-error";
 }

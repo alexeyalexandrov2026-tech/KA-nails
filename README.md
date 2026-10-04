@@ -100,12 +100,15 @@ It knows only `content/studio-facts.json`, the same data the site shows.
 - `chat-api/`: an Azure Functions app (Node 22, TypeScript) with `POST /api/chat`
   and `GET /api/health`. The model runs on OpenRouter through its
   Anthropic-compatible Messages endpoint; it is the free NVIDIA Nemotron 3 Ultra
-  (`nvidia/nemotron-3-ultra-550b-a55b`) unless the app setting
-  `OPENROUTER_MODEL` names another model with tool calling. Free OpenRouter
-  models are rate-limited (20 requests a minute, 50 a day until $10 of credits
-  is bought, then 1,000), and free providers may log or train on prompts, which
-  include visitors' names and phone numbers: check the account's privacy
-  settings. `MODEL_PROVIDER=foundry` switches to Claude Haiku 4.5 in Microsoft
+  (`nvidia/nemotron-3-ultra-550b-a55b:free`; the id without `:free` is a paid
+  endpoint that refuses with 402 while the account has no credits) unless the
+  app setting `OPENROUTER_MODEL` names another model with tool calling. Free
+  OpenRouter models are rate-limited (20 requests a minute, 50 a day until $10
+  of credits is bought, then 1,000), and free providers may log or train on
+  prompts, which include visitors' names and phone numbers. OpenRouter uses
+  such endpoints only while "Enable free endpoints that may train on inputs" is
+  on (openrouter.ai/settings/privacy); otherwise it answers 404.
+  `MODEL_PROVIDER=foundry` switches to Claude Haiku 4.5 in Microsoft
   Foundry with the app's managed identity, once the subscription has Claude
   quota. Secrets (the OpenRouter key, Telegram, the Cloudflare Turnstile key)
   live in Key Vault. Limits: 20 messages per visitor
@@ -122,7 +125,11 @@ It knows only `content/studio-facts.json`, the same data the site shows.
   widget offers WhatsApp. To see why, check the browser console (Turnstile's
   error code: 110100 a wrong site key, 110200 a domain missing from the
   widget's hostnames) and the `reason` in the API's 403 response. Spaces pasted
-  into `TURNSTILE_SITE_KEY` are removed at build time.
+  into `TURNSTILE_SITE_KEY` are removed at build time. A fallback answer ("the
+  assistant is unavailable") carries a `reason` too: `model-http-402` (a paid
+  model without credits), `model-http-404` (no endpoint, such as a free model
+  blocked by the privacy setting), `model-http-429` (rate limit),
+  `model-empty-max_tokens` (the model wrote no text) or `daily-limit`.
 - `infra/azure/chat.bicep` and `infra/azure/setup-chat.sh`: the Azure resources
   (resource group `rg-kanails-chat`, region `eastus2`) and a one-time setup script
   for Azure Cloud Shell. Claude in Foundry (`MODEL_PROVIDER=foundry bash

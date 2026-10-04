@@ -156,4 +156,9 @@ entries short and delete any that stop being true.
   Turnstile refuse the key, so every chat message got 403 `no-token`; the build
   now keeps only the characters a site key uses (`lib/turnstile-site-key.ts`),
   and the chat prints Turnstile's error codes as console warnings.
+- 2026-10-04: The free Nemotron is `nvidia/nemotron-3-ultra-550b-a55b:free`;
+  the id without `:free` is a paid endpoint, so every live reply was the
+  fallback (402, no credits). Free endpoints also need OpenRouter's privacy
+  setting "Enable free endpoints that may train on inputs". Fallback replies
+  now carry a `reason` (`model-http-402` and the like).
 - Open: no manual screen-reader test yet; WCAG 2.2 AA conformance not established.

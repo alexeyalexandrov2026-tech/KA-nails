@@ -36,6 +36,8 @@ export interface ChatRequestBody {
 export interface ChatReply {
   reply: string;
   requestSent: boolean;
+  /** Why the reply is a fallback; shows in the browser's network panel. */
+  reason?: string;
 }
 
 export interface RequestStore {
@@ -299,9 +301,14 @@ export async function handleChat(
       };
     }
     if (response.stop_reason !== "tool_use") {
+      const reply = replyText(response);
+      if (reply) return { reply, requestSent: state.requestSent };
+      // A reasoning model can spend every token before it writes.
+      deps.log("empty model reply", { stopReason: response.stop_reason });
       return {
-        reply: replyText(response) || fallback(),
+        reply: fallback(),
         requestSent: state.requestSent,
+        reason: `model-empty-${response.stop_reason ?? "none"}`,
       };
     }
     const toolUses = response.content.filter(
