@@ -149,4 +149,7 @@ entries short and delete any that stop being true.
 - 2026-10-04: GitHub signs this repository's Actions tokens with numeric IDs
   (`repo:alexeyalexandrov2026-tech@299272810/KA-nails@1396999477:ref:refs/heads/main`);
   the Azure deployer identity trusts that subject and the plain one.
+- 2026-10-04: The Function App's platform CORS overrides the chat API's own CORS
+  headers, so `chat.bicep` lists the site origins in `siteConfig.cors` too; a
+  domain change updates both (re-run the setup script).
 - Open: no manual screen-reader test yet; WCAG 2.2 AA conformance not established.

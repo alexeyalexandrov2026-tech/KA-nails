@@ -216,6 +216,6 @@ engines, `SITE_URL` sets the public origin once the studio has its own domain, a
 any of them, re-run the latest `main` run of the `ci` workflow so it is redeployed;
 `verify-live` expects the settings the site was deployed with. When `SITE_URL`
 changes, add the new origin (and its www form) to the chat Function App's
-`ALLOWED_ORIGINS` setting too (re-run `infra/azure/setup-chat.sh` or edit the
-app setting), or the chat refuses visitors on the new domain; `verify-live`
-checks that the chat API admits the site's origin.
+`ALLOWED_ORIGINS` setting and its platform CORS list too (re-run
+`infra/azure/setup-chat.sh`, which sets both), or the chat refuses visitors on
+the new domain; `verify-live` checks that the chat API admits the site's origin.
