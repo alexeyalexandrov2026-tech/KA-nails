@@ -6,6 +6,7 @@ import { preload } from "react-dom";
 import { LanguageSwitcher } from "./language-switcher";
 import { ChatWidget } from "./chat/chat-widget";
 import { approvedChatApiUrl } from "../lib/chat-api-url";
+import { turnstileSiteKey } from "../lib/turnstile-site-key";
 import { getDictionary, getLocalizedPath, type Locale } from "../lib/locales";
 import { getGalleryItems } from "../lib/gallery-data";
 import { nailSalonJsonLd, serializeJsonLd } from "../lib/structured-data";
@@ -180,9 +181,9 @@ export function SiteLayout({ locale, children }: SiteLayoutProps) {
             locale={locale}
             endpoint={chatEndpoint}
             whatsappHref={whatsapp ? channelHref(whatsapp) : null}
-            turnstileSiteKey={
-              process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || undefined
-            }
+            turnstileSiteKey={turnstileSiteKey(
+              process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
+            )}
           />
         )}
       </body>

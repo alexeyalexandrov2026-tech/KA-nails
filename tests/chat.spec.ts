@@ -2,6 +2,7 @@ import { expect, test, type Page, type Route } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { approvedChatApiUrl } from "../lib/chat-api-url";
 import { channelHref, studioFacts } from "../lib/studio-facts";
+import { turnstileSiteKey } from "../lib/turnstile-site-key";
 
 // The AI receptionist widget. The API (chat-api/, Azure) is replaced by a
 // fake here: these tests check what the page sends and shows. They need a
@@ -88,6 +89,18 @@ test.describe("AI receptionist", () => {
     ]) {
       expect(approvedChatApiUrl(bad), bad).toBeNull();
     }
+  });
+
+  test("the Turnstile site key loses what was pasted with it", () => {
+    expect(turnstileSiteKey(undefined)).toBeUndefined();
+    expect(turnstileSiteKey(" \n")).toBeUndefined();
+    expect(turnstileSiteKey("1x00000000000000000000AA")).toBe(
+      "1x00000000000000000000AA",
+    );
+    // A space inside the key once made every chat message fail (403).
+    expect(turnstileSiteKey(" 0x4 AAAAAAAbc-De_F12​\r\n")).toBe(
+      "0x4AAAAAAAbc-De_F12",
+    );
   });
 
   test("the chat button appears only when the API address is configured", async ({
