@@ -1,13 +1,14 @@
-// Cloudflare Turnstile: an invisible check that the visitor is a person.
-// Skipped when no secret is configured (local development).
+// Cloudflare Turnstile: a check that the visitor is a person. Required unless
+// switched off (HUMAN_CHECK=off): without a secret every message is refused.
 
 export async function verifyTurnstile(
   secret: string | undefined,
   token: string | undefined,
   remoteIp: string | undefined,
   fetchImpl: typeof fetch = fetch,
+  required = true,
 ): Promise<boolean> {
-  if (!secret) return true;
+  if (!secret) return !required;
   if (!token) return false;
   const form = new URLSearchParams({ secret, response: token });
   if (remoteIp) form.set("remoteip", remoteIp);

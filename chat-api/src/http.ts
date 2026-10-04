@@ -4,11 +4,26 @@ import { utcDay, type DailyCounter, type RateLimiter } from "./limits";
 // The HTTP contract of POST /api/chat, independent of the Azure runtime so it
 // can be tested directly. CORS allows only the website's own origins.
 
+/** Bodies above this are refused unread; a full conversation is far smaller. */
+export const MAX_BODY_BYTES = 256 * 1024;
+
 export interface HttpInput {
   method: string;
   origin: string | null;
   ip: string | undefined;
+  /** The Content-Length header, when the client sent one. */
+  contentLength: number | null;
   readJson(): Promise<unknown>;
+}
+
+/**
+ * The visitor's address for the rate limit: the right-most X-Forwarded-For
+ * entry, which the platform's front end appends. Entries to its left come
+ * from the client and can be anything. Azure adds the port to IPv4.
+ */
+export function forwardedClientIp(header: string | null): string | undefined {
+  const last = header?.split(",").at(-1)?.trim();
+  return last ? last.replace(/^(\d+\.\d+\.\d+\.\d+):\d+$/, "$1") : undefined;
 }
 
 export interface HttpOutput {
@@ -65,6 +80,9 @@ export async function handleChatHttp(
   }
   if (input.method === "OPTIONS") return { status: 204, headers: cors };
   if (input.method !== "POST") return json(405, { error: "use POST" });
+  if (input.contentLength !== null && input.contentLength > MAX_BODY_BYTES) {
+    return json(413, { error: "message too large" });
+  }
 
   const now = deps.chat.now();
   if (!deps.rateLimiter.allow(input.ip ?? "unknown", now.getTime())) {

@@ -14,9 +14,15 @@ import {
   parseChatBody,
   type ChatDeps,
   type ChatRequestBody,
+  type RequestGuard,
 } from "../src/chat";
 import { healthReport, readConfig } from "../src/config";
-import { handleChatHttp, type HttpDeps } from "../src/http";
+import {
+  forwardedClientIp,
+  handleChatHttp,
+  MAX_BODY_BYTES,
+  type HttpDeps,
+} from "../src/http";
 import { RateLimiter } from "../src/limits";
 import { ownerMessage, telegramNotifier, type Notifier } from "../src/notify";
 import { buildSystemPrompt } from "../src/prompt";
@@ -62,10 +68,32 @@ const GOOD_INPUT = {
   language: "en",
 };
 
+/** The shared request limits, in memory, with the same rules as Azure's. */
+function memoryGuard(limit = 20): RequestGuard {
+  const phones = new Set<string>();
+  let count = 0;
+  return {
+    async reserve(phone, day) {
+      const key = `${day} ${phone}`;
+      if (phones.has(key)) return "duplicate";
+      phones.add(key);
+      if (++count > limit) {
+        phones.delete(key);
+        return "limit";
+      }
+      return "ok";
+    },
+    async release(phone, day) {
+      phones.delete(`${day} ${phone}`);
+    },
+  };
+}
+
 function fakeDeps(replies: Anthropic.Message[]) {
   const calls: Anthropic.MessageCreateParamsNonStreaming[] = [];
   const sent: { channel: string; subject: string; text: string }[] = [];
   const saved: string[] = [];
+  const logs: string[] = [];
   const notifier = (channel: string, fail = false): Notifier => ({
     channel,
     async send(subject, body) {
@@ -80,6 +108,19 @@ function fakeDeps(replies: Anthropic.Message[]) {
     async createMessage(params) {
       // Snapshot: the handler keeps appending to the same arrays.
       calls.push(structuredClone(params));
+      // Like the real Messages API: tool blocks in the history need tools.
+      const toolBlocks = params.messages.some(
+        (m) =>
+          Array.isArray(m.content) &&
+          m.content.some(
+            (b) => b.type === "tool_use" || b.type === "tool_result",
+          ),
+      );
+      if (toolBlocks && !params.tools?.length) {
+        throw new Error(
+          "400 Requests which include `tool_use` or `tool_result` blocks must define tools.",
+        );
+      }
       const reply = replies.shift();
       if (!reply) throw new Error("no scripted reply left");
       return reply;
@@ -90,11 +131,19 @@ function fakeDeps(replies: Anthropic.Message[]) {
       },
     },
     notifiers: [notifier("telegram"), notifier("email")],
+    requestGuard: memoryGuard(),
     now: () => new Date("2026-10-04T12:00:00Z"),
     newId: () => "abc12345",
+    log: (message) => logs.push(message),
   };
-  return { deps, calls, sent, saved, notifier };
+  return { deps, calls, sent, saved, logs, notifier };
 }
+
+const PHONE = "+15615550100";
+const DAY = "2026-10-04";
+
+const lastToolResult = (params: Anthropic.MessageCreateParamsNonStreaming) =>
+  (params.messages.at(-1)!.content as Anthropic.ToolResultBlockParam[])[0]!;
 
 const body = (overrides: Partial<ChatRequestBody> = {}): ChatRequestBody => ({
   language: "en",
@@ -236,6 +285,7 @@ describe("chat turn", () => {
       (params.tools?.[0] as Anthropic.Tool | undefined)?.name,
       TOOL_NAME,
     );
+    assert.equal(params.tool_choice, undefined);
     const system = params.system as Anthropic.TextBlockParam[];
     assert.deepEqual(system[0]!.cache_control, { type: "ephemeral" });
   });
@@ -261,6 +311,20 @@ describe("chat turn", () => {
     assert.equal(result.tool_use_id, "toolu_1");
     assert.equal(result.is_error, undefined);
     assert.equal(second.messages.at(-2)!.role, "assistant");
+    // The API refuses tool blocks without tools; the tool may not be used.
+    assert.equal((second.tools?.[0] as Anthropic.Tool).name, TOOL_NAME);
+    assert.deepEqual(second.tool_choice, { type: "none" });
+  });
+
+  it("confirms a sent request even when the reply after it fails", async () => {
+    const { deps, sent, logs } = fakeDeps([
+      message([toolUse(GOOD_INPUT)], "tool_use"),
+      // No scripted second reply: the follow-up call fails.
+    ]);
+    const reply = await handleChat(body({ language: "ru" }), deps);
+    assert.deepEqual(reply, { reply: FALLBACK.sent.ru, requestSent: true });
+    assert.equal(sent.length, 2);
+    assert.deepEqual(logs, ["reply after a sent request failed"]);
   });
 
   it("returns validation errors to the model without sending anything", async () => {
@@ -294,7 +358,7 @@ describe("chat turn", () => {
     ]);
     const reply = await handleChat(body({ requestSent: true }), deps);
     assert.equal(reply.requestSent, true);
-    assert.equal(calls[0]!.tools, undefined);
+    assert.deepEqual(calls[0]!.tool_choice, { type: "none" });
     assert.equal((calls[0]!.system as Anthropic.TextBlockParam[]).length, 2);
     assert.equal(sent.length, 0);
   });
@@ -331,6 +395,82 @@ describe("chat turn", () => {
       calls[1]!.messages.at(-1)!.content as Anthropic.ToolResultBlockParam[]
     )[0]!;
     assert.equal(result.is_error, true);
+  });
+
+  it("does not call a stored request sent when no channel delivered it", async () => {
+    for (const notifiers of [
+      [] as Notifier[],
+      [{ channel: "telegram", send: () => Promise.reject(new Error("down")) }],
+    ]) {
+      const guard = memoryGuard();
+      const { deps, calls, saved, logs } = fakeDeps([
+        message([toolUse(GOOD_INPUT)], "tool_use"),
+        message([text("Please write on WhatsApp.")], "end_turn"),
+      ]);
+      deps.notifiers = notifiers;
+      deps.requestGuard = guard;
+      const reply = await handleChat(body(), deps);
+      assert.equal(reply.requestSent, false);
+      // Kept on record, but the visitor is told to write or call instead.
+      assert.deepEqual(saved, ["abc12345"]);
+      assert.equal(lastToolResult(calls[1]!).is_error, true);
+      assert.deepEqual(logs, ["request not delivered"]);
+      // The number is free again for a later try.
+      assert.equal(await guard.reserve(PHONE, DAY), "ok");
+    }
+  });
+
+  it("sends one request per phone number a day, across conversations", async () => {
+    const guard = memoryGuard();
+    const first = fakeDeps([
+      message([toolUse(GOOD_INPUT)], "tool_use"),
+      message([text("Sent.")], "end_turn"),
+    ]);
+    first.deps.requestGuard = guard;
+    assert.equal((await handleChat(body(), first.deps)).requestSent, true);
+
+    // A new conversation (the page says nothing was sent) with the same phone.
+    const second = fakeDeps([
+      message([toolUse(GOOD_INPUT)], "tool_use"),
+      message([text("Karina already has your request.")], "end_turn"),
+    ]);
+    second.deps.requestGuard = guard;
+    const reply = await handleChat(body(), second.deps);
+    assert.equal(reply.requestSent, true);
+    assert.equal(second.sent.length, 0);
+    const result = lastToolResult(second.calls[1]!);
+    assert.equal(result.is_error, undefined);
+    assert.match(String(result.content), /already reached the master today/);
+  });
+
+  it("stops sending requests after the daily limit", async () => {
+    const { deps, calls, sent, saved } = fakeDeps([
+      message([toolUse(GOOD_INPUT)], "tool_use"),
+      message([text("Please write on WhatsApp.")], "end_turn"),
+    ]);
+    deps.requestGuard = memoryGuard(0);
+    const reply = await handleChat(body(), deps);
+    assert.equal(reply.requestSent, false);
+    assert.equal(sent.length, 0);
+    assert.equal(saved.length, 0);
+    const result = lastToolResult(calls[1]!);
+    assert.equal(result.is_error, true);
+    assert.match(String(result.content), /no more online requests today/);
+  });
+
+  it("still sends a request when the limits storage is down", async () => {
+    const { deps, sent, logs } = fakeDeps([
+      message([toolUse(GOOD_INPUT)], "tool_use"),
+      message([text("Sent.")], "end_turn"),
+    ]);
+    deps.requestGuard = {
+      reserve: () => Promise.reject(new Error("storage down")),
+      release: async () => {},
+    };
+    const reply = await handleChat(body(), deps);
+    assert.equal(reply.requestSent, true);
+    assert.equal(sent.length, 2);
+    assert.deepEqual(logs, ["request limits unavailable"]);
   });
 
   it("answers a refusal with a polite fallback", async () => {
@@ -409,6 +549,7 @@ describe("HTTP endpoint", () => {
     method: "POST",
     origin,
     ip: "203.0.113.7",
+    contentLength: null,
     readJson: async () => json,
   });
 
@@ -480,6 +621,34 @@ describe("HTTP endpoint", () => {
     const out = await handleChatHttp(post(ORIGIN, { messages: "hi" }), http);
     assert.equal(out.status, 400);
   });
+
+  it("refuses oversized bodies without reading them", async () => {
+    const { http } = httpDeps();
+    let read = false;
+    const out = await handleChatHttp(
+      {
+        ...post(),
+        contentLength: MAX_BODY_BYTES + 1,
+        readJson: async () => {
+          read = true;
+          return body();
+        },
+      },
+      http,
+    );
+    assert.equal(out.status, 413);
+    assert.equal(read, false);
+  });
+
+  it("limits by the address the platform appended, not the client's", () => {
+    assert.equal(forwardedClientIp("203.0.113.7:51234"), "203.0.113.7");
+    assert.equal(
+      forwardedClientIp("1.2.3.4, 203.0.113.7:51234"),
+      "203.0.113.7",
+    );
+    assert.equal(forwardedClientIp("2001:db8::1"), "2001:db8::1");
+    assert.equal(forwardedClientIp(null), undefined);
+  });
 });
 
 describe("outside services", () => {
@@ -504,13 +673,15 @@ describe("outside services", () => {
     await assert.rejects(telegramNotifier("T", "1", failing).send("s", "x"));
   });
 
-  it("checks Turnstile only when a secret is configured", async () => {
+  it("requires Turnstile unless the human check is switched off", async () => {
     const yes = (async () =>
       Response.json({ success: true })) as unknown as typeof fetch;
     const no = (async () =>
       Response.json({ success: false })) as unknown as typeof fetch;
+    // No secret: refused, unless HUMAN_CHECK=off.
+    assert.equal(await verifyTurnstile(undefined, "t", undefined, yes), false);
     assert.equal(
-      await verifyTurnstile(undefined, undefined, undefined, no),
+      await verifyTurnstile(undefined, undefined, undefined, no, false),
       true,
     );
     assert.equal(await verifyTurnstile("s", undefined, undefined, yes), false);
@@ -531,9 +702,29 @@ describe("outside services", () => {
       "http://127.0.0.1:4173",
     ]);
     assert.equal(config.foundryDeployment, "claude-haiku-4-5");
+    assert.equal(config.requireHumanCheck, true);
+    assert.equal(config.dailyRequestLimit, 20);
     const health = healthReport(config);
     assert.deepEqual(health.channels, { telegram: true, email: false });
+    // Required but without a secret: the chat refuses every message.
+    assert.equal(health.humanCheck, "missing");
     assert.ok(!JSON.stringify(health).includes("secret-token"));
+    const base = {
+      ALLOWED_ORIGINS: "https://ka-nails.pages.dev",
+      FOUNDRY_RESOURCE: "kanails-ai",
+      STORAGE_TABLE_ENDPOINT: "https://kanails.table.core.windows.net",
+    };
+    assert.equal(
+      healthReport(readConfig({ ...base, TURNSTILE_SECRET: "s" })).humanCheck,
+      "on",
+    );
+    const off = readConfig({ ...base, HUMAN_CHECK: "off" });
+    assert.equal(off.requireHumanCheck, false);
+    assert.equal(healthReport(off).humanCheck, "off");
+    assert.equal(
+      readConfig({ ...base, DAILY_REQUEST_LIMIT: "5" }).dailyRequestLimit,
+      5,
+    );
     assert.throws(() => readConfig({}), /ALLOWED_ORIGINS/);
     // Secrets that are not created yet do not switch anything on.
     const pending = readConfig({
