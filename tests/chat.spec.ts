@@ -2,6 +2,7 @@ import { expect, test, type Page, type Route } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { approvedChatApiUrl } from "../lib/chat-api-url";
 import { channelHref, studioFacts } from "../lib/studio-facts";
+import { turnstileSiteKey } from "../lib/turnstile-site-key";
 
 // The AI receptionist widget. The API (chat-api/, Azure) is replaced by a
 // fake here: these tests check what the page sends and shows. They need a
@@ -23,7 +24,8 @@ interface Sent {
 }
 
 // Stand-in for Cloudflare Turnstile: numbered tokens, and like the real one
-// it cannot run a widget whose element has left the page.
+// it cannot run a widget whose element has left the page. A test can set
+// window.__turnstileError to make every check fail with that code.
 const FAKE_TURNSTILE = `(() => {
   let widgets = 0;
   let tokens = 0;
@@ -49,7 +51,11 @@ const FAKE_TURNSTILE = `(() => {
       if (!widget || !widget.element.isConnected) {
         throw new Error("Turnstile: the widget is gone");
       }
-      setTimeout(() => widget.options.callback("token-" + ++tokens), 10);
+      const error = window.__turnstileError;
+      setTimeout(() => {
+        if (error) widget.options["error-callback"](error);
+        else widget.options.callback("token-" + ++tokens);
+      }, 10);
     },
   };
 })();`;
@@ -88,6 +94,18 @@ test.describe("AI receptionist", () => {
     ]) {
       expect(approvedChatApiUrl(bad), bad).toBeNull();
     }
+  });
+
+  test("the Turnstile site key loses what was pasted with it", () => {
+    expect(turnstileSiteKey(undefined)).toBeUndefined();
+    expect(turnstileSiteKey(" \n")).toBeUndefined();
+    expect(turnstileSiteKey("1x00000000000000000000AA")).toBe(
+      "1x00000000000000000000AA",
+    );
+    // A space inside the key once made every chat message fail (403).
+    expect(turnstileSiteKey(" 0x4 AAAAAAAbc-De_F12​\r\n")).toBe(
+      "0x4AAAAAAAbc-De_F12",
+    );
   });
 
   test("the chat button appears only when the API address is configured", async ({
@@ -249,6 +267,33 @@ test.describe("AI receptionist", () => {
               .__turnstileRenders,
         ),
       ).toEqual([check, check]);
+    });
+
+    test("a failed human check names Cloudflare's code in the console", async ({
+      page,
+    }) => {
+      test.skip(!TURNSTILE, "build without NEXT_PUBLIC_TURNSTILE_SITE_KEY");
+      const warnings: string[] = [];
+      page.on("console", (message) => {
+        if (message.type() === "warning") warnings.push(message.text());
+      });
+      // Like the live API, refuse a message that comes without a token.
+      const sent = await fakeApi(page, (_body, route) =>
+        route.fulfill({ status: 403, json: { reason: "no-token" } }),
+      );
+      await page.addInitScript(() => {
+        (window as unknown as { __turnstileError: string }).__turnstileError =
+          "110200";
+      });
+      await page.goto("/");
+      await page.locator(".chat-launcher").click();
+      await page.getByLabel("Your message").fill("Hi");
+      await page.getByLabel("Your message").press("Enter");
+      await expect(page.locator(".chat-message-notice")).toContainText(
+        "The message was not sent",
+      );
+      expect(sent[0]!.turnstileToken).toBeUndefined();
+      expect(warnings).toContain("Turnstile error 110200");
     });
 
     test("Escape closes the chat and returns focus to the button", async ({

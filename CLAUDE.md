@@ -152,4 +152,8 @@ entries short and delete any that stop being true.
 - 2026-10-04: The Function App's platform CORS overrides the chat API's own CORS
   headers, so `chat.bicep` lists the site origins in `siteConfig.cors` too; a
   domain change updates both (re-run the setup script).
+- 2026-10-04: A space pasted inside the `TURNSTILE_SITE_KEY` variable made
+  Turnstile refuse the key, so every chat message got 403 `no-token`; the build
+  now keeps only the characters a site key uses (`lib/turnstile-site-key.ts`),
+  and the chat prints Turnstile's error codes as console warnings.
 - Open: no manual screen-reader test yet; WCAG 2.2 AA conformance not established.

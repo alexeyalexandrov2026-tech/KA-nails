@@ -33,7 +33,7 @@ interface TurnstileApi {
       appearance: "interaction-only";
       execution: "execute";
       callback(token: string): void;
-      "error-callback"(): void;
+      "error-callback"(code: string): void;
     },
   ): string;
   execute(widgetId: string): void;
@@ -138,7 +138,10 @@ export function ChatWidget({
             current.waiting?.(token);
             current.waiting = null;
           },
-          "error-callback": () => {
+          "error-callback": (code) => {
+            // Cloudflare's code names the cause: 110100 a wrong site key,
+            // 110200 a domain missing from the widget's hostnames.
+            console.warn("Turnstile error", code);
             current.waiting?.(undefined);
             current.waiting = null;
           },
