@@ -1,21 +1,31 @@
 // KA Nails AI receptionist (chat-api/) in Azure.
 //
 // One resource group holds everything the chat needs:
-// - Microsoft Foundry account with a Claude Haiku 4.5 deployment (Hosted on
-//   Azure, billed through Azure Marketplace);
+// - the model: on OpenRouter (default; its API key is in Key Vault), or a
+//   Microsoft Foundry account with Claude Haiku 4.5 (modelProvider=foundry,
+//   needs Claude quota on the subscription);
 // - a Flex Consumption Function App running chat-api (scales to zero);
 // - a storage account for the Functions host, the deployment package and the
 //   requests/usage tables;
-// - Key Vault for the Telegram bot token, chat id and Turnstile secret;
+// - Key Vault for the Telegram bot token, chat id, Turnstile secret and the
+//   OpenRouter API key;
 // - Communication Services with an Azure-managed email domain;
 // - a deployment identity that GitHub Actions uses without passwords (OIDC).
 //
-// Every service is reached with managed identities; no keys are stored.
+// Azure services are reached with managed identities; the only keys are the
+// secrets in Key Vault.
 // Deploy with infra/azure/setup-chat.sh (Azure Cloud Shell).
 
 targetScope = 'resourceGroup'
 
-@description('Region. Claude Haiku 4.5 is offered in eastus2 and swedencentral.')
+@description('Where the model runs. openrouter: the API key in Key Vault (openrouter-api-key). foundry: Claude Haiku 4.5 in Microsoft Foundry, which needs Claude quota.')
+@allowed(['openrouter', 'foundry'])
+param modelProvider string = 'openrouter'
+
+@description('Model id on OpenRouter (openrouter.ai/models). It must support tool calling.')
+param openRouterModel string = 'nvidia/nemotron-3-ultra-550b-a55b'
+
+@description('Region. Claude Haiku 4.5 in Foundry is offered in eastus2 and swedencentral.')
 param location string = 'eastus2'
 
 @description('Short prefix for resource names.')
@@ -28,8 +38,8 @@ param allowedOrigins string = 'https://ka-nails.pages.dev'
 @description('Where request emails go (the studio mailbox).')
 param emailTo string
 
-@description('Legal name of the organization using Claude (Anthropic Marketplace attestation).')
-param claudeOrganizationName string
+@description('Foundry only: legal name of the organization using Claude (Anthropic Marketplace attestation).')
+param claudeOrganizationName string = ''
 
 @description('Two-letter country code of that organization.')
 param claudeCountryCode string = 'US'
@@ -55,6 +65,7 @@ var functionAppName = '${baseName}-chat-${take(suffix, 6)}'
 var foundryName = '${baseName}-ai-${take(suffix, 6)}'
 var keyVaultName = take('${baseName}-kv-${suffix}', 24)
 var claudeDeploymentName = 'claude-haiku-4-5'
+var useFoundry = modelProvider == 'foundry'
 
 // Built-in role definition IDs.
 var roles = {
@@ -127,9 +138,9 @@ resource vault 'Microsoft.KeyVault/vaults@2023-07-01' = {
   }
 }
 
-// --- Claude in Microsoft Foundry --------------------------------------------------
+// --- Claude in Microsoft Foundry (modelProvider=foundry only) ----------------------
 
-resource foundry 'Microsoft.CognitiveServices/accounts@2025-10-01-preview' = {
+resource foundry 'Microsoft.CognitiveServices/accounts@2025-10-01-preview' = if (useFoundry) {
   name: foundryName
   location: location
   kind: 'AIServices'
@@ -144,7 +155,7 @@ resource foundry 'Microsoft.CognitiveServices/accounts@2025-10-01-preview' = {
   }
 }
 
-resource foundryProject 'Microsoft.CognitiveServices/accounts/projects@2025-10-01-preview' = {
+resource foundryProject 'Microsoft.CognitiveServices/accounts/projects@2025-10-01-preview' = if (useFoundry) {
   parent: foundry
   name: '${baseName}-chat'
   location: location
@@ -152,7 +163,7 @@ resource foundryProject 'Microsoft.CognitiveServices/accounts/projects@2025-10-0
   properties: {}
 }
 
-resource claude 'Microsoft.CognitiveServices/accounts/deployments@2025-10-01-preview' = {
+resource claude 'Microsoft.CognitiveServices/accounts/deployments@2025-10-01-preview' = if (useFoundry) {
   parent: foundry
   name: claudeDeploymentName
   sku: {
@@ -221,6 +232,17 @@ resource plan 'Microsoft.Web/serverfarms@2024-04-01' = {
 }
 
 var keyVaultRef = 'VaultName=${vault.name}'
+var modelSettings = useFoundry
+  ? [
+      { name: 'MODEL_PROVIDER', value: 'foundry' }
+      { name: 'FOUNDRY_RESOURCE', value: foundryName }
+      { name: 'FOUNDRY_DEPLOYMENT', value: claudeDeploymentName }
+    ]
+  : [
+      { name: 'MODEL_PROVIDER', value: 'openrouter' }
+      { name: 'OPENROUTER_MODEL', value: openRouterModel }
+      { name: 'OPENROUTER_API_KEY', value: '@Microsoft.KeyVault(${keyVaultRef};SecretName=openrouter-api-key)' }
+    ]
 
 resource app 'Microsoft.Web/sites@2024-04-01' = {
   name: functionAppName
@@ -232,12 +254,10 @@ resource app 'Microsoft.Web/sites@2024-04-01' = {
     httpsOnly: true
     siteConfig: {
       minTlsVersion: '1.2'
-      appSettings: [
+      appSettings: concat(modelSettings, [
         { name: 'AzureWebJobsStorage__accountName', value: storage.name }
         { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: insights.properties.ConnectionString }
         { name: 'ALLOWED_ORIGINS', value: allowedOrigins }
-        { name: 'FOUNDRY_RESOURCE', value: foundry.name }
-        { name: 'FOUNDRY_DEPLOYMENT', value: claude.name }
         { name: 'STORAGE_TABLE_ENDPOINT', value: storage.properties.primaryEndpoints.table }
         { name: 'ACS_ENDPOINT', value: 'https://${communication.properties.hostName}' }
         { name: 'EMAIL_SENDER', value: 'DoNotReply@${emailDomain.properties.mailFromSenderDomain}' }
@@ -247,7 +267,7 @@ resource app 'Microsoft.Web/sites@2024-04-01' = {
         { name: 'TELEGRAM_BOT_TOKEN', value: '@Microsoft.KeyVault(${keyVaultRef};SecretName=telegram-bot-token)' }
         { name: 'TELEGRAM_CHAT_ID', value: '@Microsoft.KeyVault(${keyVaultRef};SecretName=telegram-chat-id)' }
         { name: 'TURNSTILE_SECRET', value: '@Microsoft.KeyVault(${keyVaultRef};SecretName=turnstile-secret)' }
-      ]
+      ])
     }
     functionAppConfig: {
       deployment: {
@@ -311,7 +331,7 @@ resource appSecrets 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   }
 }
 
-resource appClaude 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+resource appClaude 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (useFoundry) {
   name: guid(foundry.id, app.id, roles.cognitiveServicesUser)
   scope: foundry
   properties: {

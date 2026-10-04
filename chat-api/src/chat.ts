@@ -311,7 +311,14 @@ export async function handleChat(
     for (const block of toolUses) {
       results.push(await runBookingTool(block, deps, state, body.language));
     }
-    messages.push({ role: "assistant", content: response.content });
+    // Only text and tool calls go back: other models may add reasoning
+    // blocks that a later call cannot take.
+    messages.push({
+      role: "assistant",
+      content: response.content.filter(
+        (block) => block.type === "text" || block.type === "tool_use",
+      ),
+    });
     messages.push({ role: "user", content: results });
   }
   return { reply: fallback(), requestSent: state.requestSent };

@@ -4,8 +4,10 @@
 
 export interface ChatConfig {
   allowedOrigins: string[];
-  foundryResource: string;
-  foundryDeployment: string;
+  /** Where the model runs: OpenRouter (an API key) or Microsoft Foundry. */
+  model:
+    | { provider: "openrouter"; name: string; apiKey?: string }
+    | { provider: "foundry"; name: string; resource: string };
   storageTableEndpoint: string;
   telegram?: { token: string; chatId: string };
   email?: { endpoint: string; sender: string; to: string };
@@ -29,6 +31,9 @@ function optional(value: string | undefined): string | undefined {
   return clean;
 }
 
+/** NVIDIA Nemotron 3 Ultra, free on OpenRouter (the owner's choice). */
+export const DEFAULT_OPENROUTER_MODEL = "nvidia/nemotron-3-ultra-550b-a55b";
+
 function number(value: string | undefined, fallback: number): number {
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
@@ -50,8 +55,18 @@ export function readConfig(env: NodeJS.ProcessEnv): ChatConfig {
       .split(",")
       .map((origin) => origin.trim())
       .filter(Boolean),
-    foundryResource: required("FOUNDRY_RESOURCE"),
-    foundryDeployment: env.FOUNDRY_DEPLOYMENT?.trim() || "claude-haiku-4-5",
+    model:
+      env.MODEL_PROVIDER?.trim().toLowerCase() === "foundry"
+        ? {
+            provider: "foundry",
+            name: env.FOUNDRY_DEPLOYMENT?.trim() || "claude-haiku-4-5",
+            resource: required("FOUNDRY_RESOURCE"),
+          }
+        : {
+            provider: "openrouter",
+            name: env.OPENROUTER_MODEL?.trim() || DEFAULT_OPENROUTER_MODEL,
+            apiKey: optional(env.OPENROUTER_API_KEY),
+          },
     storageTableEndpoint: required("STORAGE_TABLE_ENDPOINT"),
     telegram:
       telegramToken && telegramChat
@@ -73,7 +88,11 @@ export function readConfig(env: NodeJS.ProcessEnv): ChatConfig {
 export function healthReport(config: ChatConfig) {
   return {
     status: "ok",
-    model: config.foundryDeployment,
+    provider: config.model.provider,
+    model: config.model.name,
+    // False: OpenRouter has no API key yet, so every reply is the fallback.
+    modelReady:
+      config.model.provider === "foundry" || Boolean(config.model.apiKey),
     channels: {
       telegram: Boolean(config.telegram),
       email: Boolean(config.email),

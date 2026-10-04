@@ -316,6 +316,26 @@ describe("chat turn", () => {
     assert.deepEqual(second.tool_choice, { type: "none" });
   });
 
+  it("sends back only text and tool calls, not another model's reasoning", async () => {
+    const thinking = {
+      type: "thinking",
+      thinking: "The visitor wants a pedicure.",
+      signature: "",
+    } as Anthropic.ThinkingBlock;
+    const { deps, calls } = fakeDeps([
+      message([thinking, text("Sending."), toolUse(GOOD_INPUT)], "tool_use"),
+      message([thinking, text("Sent!")], "end_turn"),
+    ]);
+    const reply = await handleChat(body(), deps);
+    assert.equal(reply.reply, "Sent!");
+    const echoed = calls[1]!.messages.at(-2)!
+      .content as Anthropic.ContentBlockParam[];
+    assert.deepEqual(
+      echoed.map((b) => b.type),
+      ["text", "tool_use"],
+    );
+  });
+
   it("confirms a sent request even when the reply after it fails", async () => {
     const { deps, sent, logs } = fakeDeps([
       message([toolUse(GOOD_INPUT)], "tool_use"),
@@ -701,7 +721,10 @@ describe("outside services", () => {
       "https://ka-nails.pages.dev",
       "http://127.0.0.1:4173",
     ]);
-    assert.equal(config.foundryDeployment, "claude-haiku-4-5");
+    // OpenRouter by default; without a key the model is not ready.
+    assert.equal(config.model.provider, "openrouter");
+    assert.equal(config.model.name, "nvidia/nemotron-3-ultra-550b-a55b");
+    assert.equal(healthReport(config).modelReady, false);
     assert.equal(config.requireHumanCheck, true);
     assert.equal(config.dailyRequestLimit, 20);
     const health = healthReport(config);
@@ -726,6 +749,30 @@ describe("outside services", () => {
       5,
     );
     assert.throws(() => readConfig({}), /ALLOWED_ORIGINS/);
+    const routed = readConfig({
+      ...base,
+      OPENROUTER_API_KEY: "sk-or-secret",
+      OPENROUTER_MODEL: "vendor/other-model",
+    });
+    assert.deepEqual(healthReport(routed).model, "vendor/other-model");
+    assert.equal(healthReport(routed).modelReady, true);
+    assert.ok(!JSON.stringify(healthReport(routed)).includes("sk-or-secret"));
+    const foundry = readConfig({ ...base, MODEL_PROVIDER: "foundry" });
+    assert.deepEqual(foundry.model, {
+      provider: "foundry",
+      name: "claude-haiku-4-5",
+      resource: "kanails-ai",
+    });
+    assert.equal(healthReport(foundry).provider, "foundry");
+    assert.throws(
+      () =>
+        readConfig({
+          ALLOWED_ORIGINS: "https://ka-nails.pages.dev",
+          STORAGE_TABLE_ENDPOINT: "https://kanails.table.core.windows.net",
+          MODEL_PROVIDER: "foundry",
+        }),
+      /FOUNDRY_RESOURCE/,
+    );
     // Secrets that are not created yet do not switch anything on.
     const pending = readConfig({
       ALLOWED_ORIGINS: "https://ka-nails.pages.dev",

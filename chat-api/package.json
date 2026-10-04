@@ -2,7 +2,7 @@
   "name": "ka-nails-chat-api",
   "version": "0.1.0",
   "private": true,
-  "description": "KA Nails AI receptionist: Azure Functions + Claude in Microsoft Foundry",
+  "description": "KA Nails AI receptionist: Azure Functions + a model on OpenRouter or Claude in Microsoft Foundry",
   "main": "dist/index.js",
   "engines": {
     "node": ">=22"
