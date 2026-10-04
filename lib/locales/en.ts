@@ -271,6 +271,26 @@ export const enLocale: LocaleDictionary = {
     lookOnWhatsAppAria: (title) => `Book ${title} on WhatsApp`,
     sendLooks: "Send these looks on WhatsApp",
   },
+  chat: {
+    launcher: "Ask or book",
+    title: "KA Nails assistant",
+    close: "Close chat",
+    greeting:
+      "Hello! I can tell you about our pedicures and prices and pass an appointment request to the master. How can I help?",
+    inputLabel: "Your message",
+    placeholder: "Ask about services or request a time…",
+    send: "Send",
+    typing: "The assistant is writing…",
+    you: "You",
+    assistant: "Assistant",
+    privacy:
+      "Replies are written by AI. Your contact details go only to the studio.",
+    whatsapp: "Write on WhatsApp instead",
+    error:
+      "The message was not sent. Check your connection and try again, or write to the studio on WhatsApp.",
+    limit:
+      "This conversation is long enough for the assistant. Please continue on WhatsApp or by phone.",
+  },
   lightbox: {
     dialogAriaLabel: (title, current, total) =>
       `${title} — Artwork ${current} of ${total}`,

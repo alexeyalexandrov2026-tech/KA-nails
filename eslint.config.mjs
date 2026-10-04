@@ -11,5 +11,7 @@ export default defineConfig([
     "test-results/**",
     "playwright-report/**",
     "next-env.d.ts",
+    // Checked by its own typecheck and tests (chat-api/package.json).
+    "chat-api/**",
   ]),
 ]);

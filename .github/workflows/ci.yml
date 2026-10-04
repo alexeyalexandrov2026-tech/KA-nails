@@ -14,7 +14,7 @@ concurrency:
 jobs:
   web:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
@@ -54,6 +54,18 @@ jobs:
           path: out/
           retention-days: 14
           if-no-files-found: error
+
+      # Second pass with the AI receptionist built in. Its API is faked in the
+      # tests (tests/chat.spec.ts); this export is never published.
+      - name: Build static export with the chat widget
+        env:
+          NEXT_PUBLIC_CHAT_API_URL: http://127.0.0.1:4173
+        run: npm run build
+
+      - name: Run E2E tests with the chat widget
+        env:
+          NEXT_PUBLIC_CHAT_API_URL: http://127.0.0.1:4173
+        run: npx playwright test --grep-invert "Cloudflare Deployed Production QA"
 
   deploy:
     needs: web
@@ -97,12 +109,16 @@ jobs:
 
       # Repository variables (Settings > Secrets and variables > Actions >
       # Variables): SITE_INDEXING=index opens the site to search engines;
-      # SITE_URL sets the public origin once the studio has its own domain.
+      # SITE_URL sets the public origin once the studio has its own domain;
+      # CHAT_API_URL (from infra/azure/setup-chat.sh) shows the AI
+      # receptionist, and TURNSTILE_SITE_KEY its human check.
       - name: Build static export
         if: steps.credentials.outputs.available == 'true'
         env:
           NEXT_PUBLIC_SITE_INDEXING: ${{ vars.SITE_INDEXING }}
           NEXT_PUBLIC_SITE_URL: ${{ vars.SITE_URL }}
+          NEXT_PUBLIC_CHAT_API_URL: ${{ vars.CHAT_API_URL }}
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
         run: npm run build
 
       - name: Deploy to Cloudflare Pages
@@ -122,8 +138,9 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     env:
-      # The live checks expect the robots setting the site was deployed with.
+      # The live checks expect the settings the site was deployed with.
       NEXT_PUBLIC_SITE_INDEXING: ${{ vars.SITE_INDEXING }}
+      NEXT_PUBLIC_CHAT_API_URL: ${{ vars.CHAT_API_URL }}
     steps:
       - uses: actions/checkout@v4
 

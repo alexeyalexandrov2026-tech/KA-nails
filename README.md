@@ -27,6 +27,8 @@ Build-time switches (all optional):
   (`index, follow`, a sitemap link in `robots.txt`, all ten pages in
   `sitemap.xml`). Without it every page stays `noindex, nofollow`.
 - `NEXT_PUBLIC_GORGONA_BOOKING_URL`: see "Booking boundary".
+- `NEXT_PUBLIC_CHAT_API_URL` and `NEXT_PUBLIC_TURNSTILE_SITE_KEY`: see "AI
+  receptionist".
 
 Asset tools (run by hand; their output is committed):
 
@@ -86,6 +88,54 @@ The original PNG lives at `public/assets/ka-nails-logo.png` with SHA-256
 It is not redrawn, recolored or cropped. The acceptance suite verifies its served
 bytes. The design specification and tokens are in `design/`.
 
+## AI receptionist
+
+A chat button on every page opens the studio's AI receptionist. It answers
+questions about the pedicure menu, prices and the master in English or Russian,
+and collects a booking request (service, preferred time, name, phone). The request
+goes to the master by Telegram and email and is stored in Azure Table Storage. The
+receptionist never confirms an appointment: the master confirms the time personally.
+It knows only `content/studio-facts.json`, the same data the site shows.
+
+- `chat-api/`: an Azure Functions app (Node 22, TypeScript) with `POST /api/chat`
+  and `GET /api/health`. The model is Claude Haiku 4.5 in Microsoft Foundry,
+  called with the app's managed identity (no API key). Secrets (Telegram, the
+  optional Cloudflare Turnstile key) live in Key Vault. Limits: 20 messages per
+  visitor per 10 minutes, 500 per day for the whole site, 30 messages and 1,000
+  characters per message; CORS admits only the site's origins.
+- `components/chat/chat-widget.tsx`: the widget. It is built in only when
+  `NEXT_PUBLIC_CHAT_API_URL` is an https origin (loopback http for tests); without
+  it there is no button and the site works as before. When a message fails, the
+  widget offers WhatsApp.
+- `infra/azure/chat.bicep` and `infra/azure/setup-chat.sh`: the Azure resources
+  (resource group `rg-kanails-chat`, region `eastus2`) and a one-time setup script
+  for Azure Cloud Shell. Claude in Foundry needs a paid (pay-as-you-go) Azure
+  subscription.
+
+```sh
+cd chat-api && npm ci && npm run typecheck && npm test && npm run build
+```
+
+Setup, once:
+
+1. In Telegram, create the studio bot with @BotFather and send it `/start` from
+   the master's account.
+2. In Azure Cloud Shell (Bash): `git clone` this repository, then
+   `bash KA-nails/infra/azure/setup-chat.sh`. It asks for the studio email, the
+   business name and the bot token, creates everything and prints five values.
+3. Add those values as repository variables (`AZURE_CLIENT_ID`,
+   `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `CHAT_FUNCTION_APP`,
+   `CHAT_API_URL`), run Actions → chat-api → Run workflow, then re-run the latest
+   `main` run of `ci` so the site shows the button.
+4. Optional: a Cloudflare Turnstile widget for the site; its secret goes into
+   Key Vault (`turnstile-secret`) and its site key into the variable
+   `TURNSTILE_SITE_KEY`.
+
+The `chat-api` workflow tests every change to `chat-api/` and, on `main`,
+deploys it with GitHub's OIDC login; until the variables exist it only reports
+that deployment is skipped. CI runs the site's browser tests twice: without the
+chat and with it pointed at a local fake.
+
 ## Verification
 
 For an unconfigured export:
@@ -137,6 +187,7 @@ download the artifact of the `main` run, upload its contents in Cloudflare
 
 The deployed build reads two repository variables (Settings → Secrets and
 variables → Actions → Variables): `SITE_INDEXING=index` opens the site to search
-engines and `SITE_URL` sets the public origin once the studio has its own domain.
-After changing either, re-run the latest `main` run of the `ci` workflow so it is
-redeployed; `verify-live` expects the robots setting the site was deployed with.
+engines, `SITE_URL` sets the public origin once the studio has its own domain, and
+`CHAT_API_URL` / `TURNSTILE_SITE_KEY` switch on the AI receptionist. After changing
+any of them, re-run the latest `main` run of the `ci` workflow so it is redeployed;
+`verify-live` expects the settings the site was deployed with.

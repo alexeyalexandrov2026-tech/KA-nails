@@ -1,0 +1,124 @@
+name: chat-api
+
+# The AI receptionist (chat-api/) on Azure Functions. Tests run on every change
+# to it; on main it is deployed to Azure with GitHub's OIDC token (no stored
+# password). Deployment stays off until infra/azure/setup-chat.sh has run and
+# its values are saved as repository variables.
+
+on:
+  push:
+    paths:
+      - "chat-api/**"
+      - "content/studio-facts.json"
+      - "lib/studio-facts.ts"
+      - "infra/azure/**"
+      - ".github/workflows/chat-api.yml"
+  pull_request:
+    paths:
+      - "chat-api/**"
+      - "content/studio-facts.json"
+      - "lib/studio-facts.ts"
+      - "infra/azure/**"
+      - ".github/workflows/chat-api.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: chat-api-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: chat-api
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: chat-api/package-lock.json
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+      - name: Check the Azure template
+        working-directory: .
+        run: az bicep build --file infra/azure/chat.bicep --stdout > /dev/null
+
+  deploy:
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      CHAT_FUNCTION_APP: ${{ vars.CHAT_FUNCTION_APP }}
+      CHAT_API_URL: ${{ vars.CHAT_API_URL }}
+    steps:
+      - name: Check Azure settings
+        id: settings
+        run: |
+          if [ -z "$AZURE_CLIENT_ID" ] || [ -z "$CHAT_FUNCTION_APP" ]; then
+            echo "::notice::chat-api deployment skipped: run infra/azure/setup-chat.sh and add its repository variables first."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.settings.outputs.ready == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.settings.outputs.ready == 'true'
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: chat-api/package-lock.json
+
+      - name: Build the package
+        if: steps.settings.outputs.ready == 'true'
+        working-directory: chat-api
+        run: |
+          npm ci
+          npm run build
+          npm prune --omit=dev
+
+      - uses: azure/login@v2
+        if: steps.settings.outputs.ready == 'true'
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy to Azure Functions
+        if: steps.settings.outputs.ready == 'true'
+        uses: Azure/functions-action@v1
+        with:
+          app-name: ${{ vars.CHAT_FUNCTION_APP }}
+          package: chat-api
+          sku: flexconsumption
+
+      - name: Check the live API
+        if: steps.settings.outputs.ready == 'true' && env.CHAT_API_URL != ''
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            if curl -fsS "$CHAT_API_URL/api/health" | tee /tmp/health.json | grep -q '"status":"ok"'; then
+              cat /tmp/health.json
+              exit 0
+            fi
+            sleep 20
+          done
+          echo "::error::$CHAT_API_URL/api/health did not answer"
+          exit 1
