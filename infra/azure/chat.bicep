@@ -258,6 +258,12 @@ resource app 'Microsoft.Web/sites@2024-04-01' = {
     httpsOnly: true
     siteConfig: {
       minTlsVersion: '1.2'
+      // Azure answers CORS itself and then ignores the app's own CORS headers,
+      // so the site's origins are listed here as well as in ALLOWED_ORIGINS.
+      cors: {
+        allowedOrigins: filter(map(split(allowedOrigins, ','), origin => trim(origin)), origin => !empty(origin))
+        supportCredentials: false
+      }
       appSettings: concat(modelSettings, [
         { name: 'AzureWebJobsStorage__accountName', value: storage.name }
         { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: insights.properties.ConnectionString }

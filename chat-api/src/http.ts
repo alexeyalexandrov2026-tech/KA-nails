@@ -1,5 +1,6 @@
 import { FALLBACK, handleChat, parseChatBody, type ChatDeps } from "./chat";
 import { utcDay, type DailyCounter, type RateLimiter } from "./limits";
+import type { HumanCheck } from "./turnstile";
 
 // The HTTP contract of POST /api/chat, independent of the Azure runtime so it
 // can be tested directly. CORS allows only the website's own origins.
@@ -37,10 +38,7 @@ export interface HttpDeps {
   rateLimiter: RateLimiter;
   dailyCounter: DailyCounter;
   dailyLimit: number;
-  verifyHuman(
-    token: string | undefined,
-    ip: string | undefined,
-  ): Promise<boolean>;
+  verifyHuman(token: string | undefined): Promise<HumanCheck>;
   chat: ChatDeps;
   log(message: string, details?: Record<string, unknown>): void;
 }
@@ -101,8 +99,15 @@ export async function handleChatHttp(
   if (!parsed.ok) return json(400, { error: parsed.error });
   const { body } = parsed;
 
-  if (!(await deps.verifyHuman(body.turnstileToken, input.ip))) {
-    return json(403, { error: "verification failed, reload the page" });
+  const check = await deps.verifyHuman(body.turnstileToken);
+  if (!check.ok) {
+    // The reason (Cloudflare's error codes, or no-token when the browser had
+    // none) shows in the browser's network panel and in the logs.
+    deps.log("human check failed", { reason: check.reason });
+    return json(403, {
+      error: "verification failed, reload the page",
+      reason: check.reason,
+    });
   }
   let count = 0;
   try {

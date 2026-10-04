@@ -63,11 +63,10 @@ function deps(context: InvocationContext): HttpDeps {
     rateLimiter,
     dailyCounter,
     dailyLimit: config.dailyLimit,
-    verifyHuman: (token, ip) =>
+    verifyHuman: (token) =>
       verifyTurnstile(
         config.turnstileSecret,
         token,
-        ip,
         fetch,
         config.requireHumanCheck,
       ),
