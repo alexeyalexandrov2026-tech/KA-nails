@@ -59,13 +59,15 @@ export interface RequestGuard {
   release(phone: string, day: string): Promise<void>;
 }
 
+export type ModelReply = Pick<Anthropic.Message, "content" | "stop_reason">;
+
 export interface ChatDeps {
   facts: StudioFacts;
   system: string;
   model: string;
   createMessage(
     params: Anthropic.MessageCreateParamsNonStreaming,
-  ): Promise<Anthropic.Message>;
+  ): Promise<ModelReply>;
   store: RequestStore;
   notifiers: Notifier[];
   requestGuard: RequestGuard;
@@ -154,7 +156,7 @@ export function parseChatBody(raw: unknown): ParsedBody {
   };
 }
 
-function replyText(message: Anthropic.Message): string {
+function replyText(message: ModelReply): string {
   return message.content
     .filter((block): block is Anthropic.TextBlock => block.type === "text")
     .map((block) => block.text)
@@ -277,7 +279,7 @@ export async function handleChat(
     (sentNow() ? FALLBACK.sent : FALLBACK.unavailable)[body.language];
 
   for (let round = 0; round < LIMITS.toolRounds; round++) {
-    let response: Anthropic.Message;
+    let response: ModelReply;
     try {
       response = await deps.createMessage({
         model: deps.model,

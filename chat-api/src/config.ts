@@ -4,9 +4,14 @@
 
 export interface ChatConfig {
   allowedOrigins: string[];
-  /** Where the model runs: OpenRouter (an API key) or Microsoft Foundry. */
   model:
     | { provider: "openrouter"; name: string; apiKey?: string }
+    | {
+        provider: "cloudflare";
+        name: string;
+        accountId?: string;
+        apiKey?: string;
+      }
     | { provider: "foundry"; name: string; resource: string };
   storageTableEndpoint: string;
   telegram?: { token: string; chatId: string };
@@ -37,10 +42,41 @@ function optional(value: string | undefined): string | undefined {
  */
 export const DEFAULT_OPENROUTER_MODEL =
   "nvidia/nemotron-3-ultra-550b-a55b:free";
+export const DEFAULT_CLOUDFLARE_MODEL = "@cf/google/gemma-4-26b-a4b-it";
 
 function number(value: string | undefined, fallback: number): number {
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function readModel(env: NodeJS.ProcessEnv): ChatConfig["model"] {
+  switch (env.MODEL_PROVIDER?.trim().toLowerCase()) {
+    case "cloudflare": {
+      const accountId = optional(env.CLOUDFLARE_ACCOUNT_ID);
+      return {
+        provider: "cloudflare",
+        name: optional(env.CLOUDFLARE_MODEL) ?? DEFAULT_CLOUDFLARE_MODEL,
+        accountId:
+          accountId && /^[a-f\d]{32}$/i.test(accountId) ? accountId : undefined,
+        apiKey: optional(env.CLOUDFLARE_AI_API_TOKEN),
+      };
+    }
+    case "foundry": {
+      const resource = env.FOUNDRY_RESOURCE?.trim();
+      if (!resource) throw new Error("missing setting FOUNDRY_RESOURCE");
+      return {
+        provider: "foundry",
+        name: env.FOUNDRY_DEPLOYMENT?.trim() || "claude-haiku-4-5",
+        resource,
+      };
+    }
+    default:
+      return {
+        provider: "openrouter",
+        name: env.OPENROUTER_MODEL?.trim() || DEFAULT_OPENROUTER_MODEL,
+        apiKey: optional(env.OPENROUTER_API_KEY),
+      };
+  }
 }
 
 export function readConfig(env: NodeJS.ProcessEnv): ChatConfig {
@@ -59,18 +95,7 @@ export function readConfig(env: NodeJS.ProcessEnv): ChatConfig {
       .split(",")
       .map((origin) => origin.trim())
       .filter(Boolean),
-    model:
-      env.MODEL_PROVIDER?.trim().toLowerCase() === "foundry"
-        ? {
-            provider: "foundry",
-            name: env.FOUNDRY_DEPLOYMENT?.trim() || "claude-haiku-4-5",
-            resource: required("FOUNDRY_RESOURCE"),
-          }
-        : {
-            provider: "openrouter",
-            name: env.OPENROUTER_MODEL?.trim() || DEFAULT_OPENROUTER_MODEL,
-            apiKey: optional(env.OPENROUTER_API_KEY),
-          },
+    model: readModel(env),
     storageTableEndpoint: required("STORAGE_TABLE_ENDPOINT"),
     telegram:
       telegramToken && telegramChat
@@ -90,13 +115,16 @@ export function readConfig(env: NodeJS.ProcessEnv): ChatConfig {
 
 /** What /api/health reports: which parts are switched on, never the values. */
 export function healthReport(config: ChatConfig) {
+  const { model } = config;
   return {
     status: "ok",
     provider: config.model.provider,
     model: config.model.name,
-    // False: OpenRouter has no API key yet, so every reply is the fallback.
     modelReady:
-      config.model.provider === "foundry" || Boolean(config.model.apiKey),
+      model.provider === "foundry" ||
+      Boolean(
+        model.apiKey && (model.provider !== "cloudflare" || model.accountId),
+      ),
     channels: {
       telegram: Boolean(config.telegram),
       email: Boolean(config.email),

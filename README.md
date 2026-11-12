@@ -98,7 +98,9 @@ receptionist never confirms an appointment: the master confirms the time persona
 It knows only `content/studio-facts.json`, the same data the site shows.
 
 - `chat-api/`: an Azure Functions app (Node 22, TypeScript) with `POST /api/chat`
-  and `GET /api/health`. The model runs on OpenRouter through its
+  and `GET /api/health`. Set `MODEL_PROVIDER=cloudflare` to use Workers AI
+  through Chat Completions, with Gemma 4 26B A4B by default.
+  The existing OpenRouter configuration uses its
   Anthropic-compatible Messages endpoint; it is the free NVIDIA Nemotron 3 Ultra
   (`nvidia/nemotron-3-ultra-550b-a55b:free`; the id without `:free` is a paid
   endpoint that refuses with 402 while the account has no credits) unless the
@@ -110,7 +112,7 @@ It knows only `content/studio-facts.json`, the same data the site shows.
   on (openrouter.ai/settings/privacy); otherwise it answers 404.
   `MODEL_PROVIDER=foundry` switches to Claude Haiku 4.5 in Microsoft
   Foundry with the app's managed identity, once the subscription has Claude
-  quota. Secrets (the OpenRouter key, Telegram, the Cloudflare Turnstile key)
+  quota. Secrets (model API tokens, Telegram, the Cloudflare Turnstile key)
   live in Key Vault. Limits: 20 messages per visitor
   per 10 minutes, 500 per day for the whole site, 30 messages and 1,000
   characters per message; 20 booking requests a day and one per phone number
@@ -176,6 +178,26 @@ deploys it with GitHub's OIDC login; until the variables exist it only reports
 that deployment is skipped. CI runs the site's browser tests twice: without the
 chat and with it pointed at a local fake (Turnstile is faked too, under
 Cloudflare's always-pass test site key).
+
+### Switch an existing chat to Workers AI
+
+1. In Cloudflare, open Workers AI → Use REST API and create a Workers AI API
+   token scoped to the account. Copy its Account ID.
+2. In the existing chat's Azure Key Vault, save the token as the
+   `cloudflare-ai-api-token` secret. Deploy the updated chat API to the existing
+   Function App. If Azure reports the app is stopped, start it before the
+   workflow's live health check.
+3. In the Function App's environment variables, set
+   `CLOUDFLARE_AI_API_TOKEN=@Microsoft.KeyVault(VaultName=<vault-name>;SecretName=cloudflare-ai-api-token)`,
+   `CLOUDFLARE_ACCOUNT_ID` to the account ID, and `MODEL_PROVIDER=cloudflare`.
+   `CLOUDFLARE_MODEL` is optional and defaults to
+   `@cf/google/gemma-4-26b-a4b-it`. The Azure provisioning script configures
+   the legacy providers. Apply these settings again if that script is rerun.
+4. Check `/api/health` for `provider: "cloudflare"`, `modelReady: true`,
+   `channels.telegram: true`, and `humanCheck: "on"`. This checks
+   configuration. Ask for a published pedicure price from the live widget in
+   English and Russian to verify inference. Confirm Telegram delivery with a
+   test request coordinated with the studio.
 
 ## Verification
 

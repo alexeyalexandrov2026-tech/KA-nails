@@ -10,6 +10,7 @@ import {
   tableRequestGuard,
   tableRequestStore,
 } from "./azure";
+import { cloudflareMessages } from "./cloudflare";
 import { healthReport, readConfig } from "./config";
 import {
   forwardedClientIp,
@@ -51,10 +52,17 @@ const requestGuard = tableRequestGuard(
   credential,
   config.dailyRequestLimit,
 );
-const createMessage =
-  config.model.provider === "foundry"
-    ? foundryMessages(config.model.resource, credential)
-    : openRouterMessages(config.model.apiKey);
+function createModelClient(model: typeof config.model) {
+  switch (model.provider) {
+    case "cloudflare":
+      return cloudflareMessages(model.accountId, model.apiKey);
+    case "foundry":
+      return foundryMessages(model.resource, credential);
+    case "openrouter":
+      return openRouterMessages(model.apiKey);
+  }
+}
+const createMessage = createModelClient(config.model);
 const system = buildSystemPrompt(studioFacts);
 
 function deps(context: InvocationContext): HttpDeps {
