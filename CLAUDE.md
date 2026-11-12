@@ -167,4 +167,7 @@ entries short and delete any that stop being true.
   names through. The widget prefetches the Turnstile token while the visitor
   types. Don't run the human check and the daily counter in parallel: failed
   checks would then use up the daily cap.
+- 2026-11-11: Workers AI adapter uses Gemma 4 26B A4B by default and reuses
+  the Azure chat's existing Telegram delivery, Turnstile and request storage.
+  The production Azure Function App returned `403` (stopped) during the audit.
 - Open: no manual screen-reader test yet; WCAG 2.2 AA conformance not established.

@@ -16,6 +16,7 @@ import {
   type ChatRequestBody,
   type RequestGuard,
 } from "../src/chat";
+import { cloudflareMessages } from "../src/cloudflare";
 import { healthReport, readConfig } from "../src/config";
 import {
   forwardedClientIp,
@@ -67,6 +68,141 @@ const GOOD_INPUT = {
   phone: "(561) 555-0100",
   language: "en",
 };
+
+describe("Cloudflare Workers AI", () => {
+  const accountId = "a".repeat(32);
+  const token = "cloudflare-test-token";
+  const model = "@cf/google/gemma-4-26b-a4b-it";
+
+  it("sends an appointment request through the existing channels and relays the tool result", async () => {
+    const { deps, sent, saved } = fakeDeps([]);
+    const requests: Record<string, unknown>[] = [];
+    const request: typeof fetch = async (url, options) => {
+      assert.equal(
+        url,
+        `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/v1/chat/completions`,
+      );
+      assert.equal(
+        new Headers(options?.headers).get("Authorization"),
+        `Bearer ${token}`,
+      );
+      requests.push(JSON.parse(String(options?.body)));
+      if (requests.length === 1) {
+        return Response.json({
+          choices: [
+            {
+              finish_reason: "tool_calls",
+              message: {
+                content: null,
+                tool_calls: [
+                  {
+                    id: "call_1",
+                    type: "function",
+                    function: {
+                      name: TOOL_NAME,
+                      arguments: JSON.stringify(GOOD_INPUT),
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        });
+      }
+      return Response.json({
+        choices: [
+          {
+            finish_reason: "stop",
+            message: {
+              content: "The master will contact you to confirm the time.",
+            },
+          },
+        ],
+      });
+    };
+    deps.model = model;
+    deps.createMessage = cloudflareMessages(accountId, token, request);
+
+    assert.deepEqual(await handleChat(body(), deps), {
+      reply: "The master will contact you to confirm the time.",
+      requestSent: true,
+    });
+    assert.ok(sent.some(({ channel }) => channel === "telegram"));
+    assert.deepEqual(saved, ["abc12345"]);
+    assert.equal(requests.length, 2);
+    const [first, second] = requests;
+    assert.equal(first?.model, model);
+    assert.equal(first?.tool_choice, "auto");
+    assert.deepEqual(first?.tools, [
+      {
+        type: "function",
+        function: {
+          name: TOOL_NAME,
+          description: bookingTool(studioFacts).description,
+          parameters: bookingTool(studioFacts).input_schema,
+        },
+      },
+    ]);
+    assert.equal(second?.tool_choice, "none");
+    const messages = second?.messages as {
+      role: string;
+      tool_call_id?: string;
+      content: string;
+    }[];
+    assert.equal(messages[0]?.role, "system");
+    assert.deepEqual(
+      messages.slice(-2).map(({ role }) => role),
+      ["assistant", "tool"],
+    );
+    assert.equal(messages.at(-1)?.tool_call_id, "call_1");
+    assert.match(messages.at(-1)!.content, /Sent to the master/);
+  });
+
+  it("rejects malformed tool arguments before notifying anyone", async () => {
+    const { deps, sent } = fakeDeps([]);
+    deps.createMessage = cloudflareMessages(accountId, token, async () =>
+      Response.json({
+        choices: [
+          {
+            finish_reason: "tool_calls",
+            message: {
+              tool_calls: [
+                {
+                  id: "call_1",
+                  type: "function",
+                  function: { name: TOOL_NAME, arguments: "{" },
+                },
+              ],
+            },
+          },
+        ],
+      }),
+    );
+    await assert.rejects(handleChat(body(), deps), /invalid tool arguments/);
+    assert.deepEqual(sent, []);
+  });
+
+  it("requires both an account and a resolved token without exposing them", () => {
+    const settings = {
+      ALLOWED_ORIGINS: "https://ka-nails.pages.dev",
+      STORAGE_TABLE_ENDPOINT: "https://kanails.table.core.windows.net",
+      MODEL_PROVIDER: "cloudflare",
+      CLOUDFLARE_ACCOUNT_ID: accountId,
+    };
+    assert.equal(healthReport(readConfig(settings)).modelReady, false);
+    const health = healthReport(
+      readConfig({
+        ...settings,
+        CLOUDFLARE_AI_API_TOKEN: token,
+      }),
+    );
+    assert.equal(health.provider, "cloudflare");
+    assert.equal(health.model, model);
+    assert.equal(health.modelReady, true);
+    assert.ok(!JSON.stringify(health).includes(token));
+    assert.ok(!JSON.stringify(health).includes(accountId));
+  });
+});
 
 /** The shared request limits, in memory, with the same rules as Azure's. */
 function memoryGuard(limit = 20): RequestGuard {
