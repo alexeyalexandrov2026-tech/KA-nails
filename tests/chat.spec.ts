@@ -57,6 +57,12 @@ const FAKE_TURNSTILE = `(() => {
       }
       const error = window.__turnstileError;
       if (window.__turnstileInteractive) {
+        // Real Turnstile can leave its success UI attached after the callback.
+        const verifiedAtExecute = widget.element.hasAttribute("data-verified");
+        const marker = document.createElement("div");
+        marker.textContent = "Turnstile status";
+        marker.dataset.verifiedAtExecute = String(verifiedAtExecute);
+        widget.element.replaceChildren(marker);
         widget.options["before-interactive-callback"]?.();
         window.__completeTurnstile = () => {
           widget.options["after-interactive-callback"]?.();
@@ -338,6 +344,11 @@ test.describe("AI receptionist", () => {
       await expect(
         page.getByText(/Завершите проверку Cloudflare/),
       ).toBeVisible();
+      await expect(page.getByText("Turnstile status")).toBeVisible();
+      await expect(page.getByText("Turnstile status")).toHaveAttribute(
+        "data-verified-at-execute",
+        "false",
+      );
       expect(sent).toHaveLength(0);
       await page.evaluate(() => {
         (
@@ -347,9 +358,27 @@ test.describe("AI receptionist", () => {
       await expect(
         page.getByText("Классический педикюр стоит 75 $."),
       ).toBeVisible();
+      await expect(page.getByText("Turnstile status")).toBeHidden();
+      await input.fill("Что входит в услугу?");
+      await input.press("Enter");
+      await expect(page.getByText("Turnstile status")).toBeVisible();
+      await expect(page.getByText("Turnstile status")).toHaveAttribute(
+        "data-verified-at-execute",
+        "false",
+      );
+      await page.evaluate(() => {
+        (
+          window as typeof window & { __completeTurnstile?: () => void }
+        ).__completeTurnstile?.();
+      });
+      await expect(page.locator(".chat-message-assistant")).toHaveCount(3);
+      await expect(page.getByText("Turnstile status")).toBeHidden();
       expect(
         sent.map(({ language, turnstileToken }) => [language, turnstileToken]),
-      ).toEqual([["ru", "token-1"]]);
+      ).toEqual([
+        ["ru", "token-1"],
+        ["ru", "token-2"],
+      ]);
     });
 
     test("a rejected token prompts another verification and preserves the draft", async ({

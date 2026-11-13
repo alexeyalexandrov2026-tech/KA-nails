@@ -137,7 +137,7 @@ export function ChatWidget({
   useEffect(() => {
     const log = logRef.current;
     if (log) log.scrollTop = log.scrollHeight;
-  }, [items, pending]);
+  }, [items, pending, interactive]);
 
   // The human check is set up when the panel opens and removed when it
   // closes (its element goes with the panel), so a reopened chat gets a fresh
@@ -149,14 +149,16 @@ export function ChatWidget({
     let cancelled = false;
     checkRef.current = loadTurnstile()
       .then((api) => {
-        if (cancelled || !turnstileRef.current) return null;
+        const container = turnstileRef.current;
+        if (cancelled || !container) return null;
         const current: TurnstileState = { widget: "", api, waiting: null };
         const finish = (token?: string) => {
           if (cancelled) return;
+          if (token && current.waiting) container.dataset.verified = "true";
           setInteractive(false);
           current.waiting?.(token);
         };
-        current.widget = api.render(turnstileRef.current, {
+        current.widget = api.render(container, {
           sitekey: turnstileSiteKey,
           size: "compact",
           appearance: "interaction-only",
@@ -213,6 +215,7 @@ export function ChatWidget({
         finish();
       }, VERIFICATION_TIMEOUT_MS);
       try {
+        turnstileRef.current?.removeAttribute("data-verified");
         state.api.reset(state.widget);
         state.waiting = finish;
         state.api.execute(state.widget);
