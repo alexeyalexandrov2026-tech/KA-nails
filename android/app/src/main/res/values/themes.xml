@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">KA Nails</string>
+    <!-- Cream ground of the KA Nails logo (app/globals.css, ka-cream). -->
+    <color name="ka_cream">#FDF8F2</color>
+
+    <style name="Theme.KANails" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/ka_cream</item>
+    </style>
+</resources>
