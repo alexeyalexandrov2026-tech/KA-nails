@@ -133,6 +133,54 @@ describe("visitor-owned booking contact", () => {
       phone: "+15615550100",
     });
   });
+  it("recognizes and masks explicit self-contact in a longer request", () => {
+    for (const [message, name, service, time] of [
+      [
+        "I'd like a Classic Pedicure on Tuesday. My name is Alice Example and my phone number is (561) 555-0100. Mornings are best.",
+        "Alice Example",
+        "Classic Pedicure",
+        "Tuesday",
+      ],
+      [
+        "Хочу классический педикюр во вторник. Меня зовут Анна Примерова, мой телефон (561) 555-0100. После обеда.",
+        "Анна Примерова",
+        "классический педикюр",
+        "вторник",
+      ],
+    ] as const) {
+      const { contact, messages, instruction } = prepareBookingContact([
+        user(message),
+      ]);
+      assert.deepEqual(contact, { name, phone: "+15615550100" });
+      const prompt = messages[0]!.content;
+      assert.ok(!prompt.includes(name));
+      assert.ok(!prompt.includes("555-0100"));
+      assert.ok(prompt.includes(service) && prompt.includes(time));
+      assert.match(instruction!, /supplied \[PERSON_NAME\] and \[PHONE\]/);
+    }
+  });
+  it("does not pair a visitor's name with a third party's phone", () => {
+    for (const message of [
+      "My name is Alice and my friend's phone is 561-555-0100",
+      "My name is Alice Example, and Bob's phone number is (561) 555-0100.",
+      "My name is Alice Example and my phone number is (561) 555-0100 but that is actually Bob's phone.",
+      "Меня зовут Анна Примерова, телефон Боба (561) 555-0100.",
+    ]) {
+      const { contact, messages } = prepareBookingContact([user(message)]);
+      assert.equal(contact.phone, undefined);
+      assert.ok(!messages[0]!.content.includes("555-0100"));
+    }
+  });
+  it("clears the old phone after an invalid embedded correction", () => {
+    const result = prepareBookingContact([
+      user("Alice Example +15615550100"),
+      assistant("Is that correct?"),
+      user(
+        "We can keep Tuesday. My name is Alice Example and my phone number is 12345.",
+      ),
+    ]);
+    assert.equal(result.contact.phone, undefined);
+  });
   it("redacts contact echoes and superseded values in assistant history", () => {
     const result = prepareBookingContact([
       user("Alice (561) 555-0100"),
