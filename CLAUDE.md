@@ -8,8 +8,9 @@ verification and deployment specifics.
 ## What this is
 
 A static Next.js 16 export (`output: "export"`, trailing slashes) of the KA Nails
-public site in English and Russian. Online booking is GORGONA's hosted `/book/`
-wizard in a sandboxed iframe; this repo has no backend. Platform code belongs to
+public site in English and Russian. The AI receptionist runs in `chat-api/` on
+Cloudflare Workers and stores requests in Supabase. Online booking uses GORGONA's
+hosted `/book/` wizard in a sandboxed iframe. Platform code belongs to
 `alexeyalexandrov2026-tech/-GORGONA-Booking-Platform`: never import or copy it.
 
 ## Commands
@@ -120,52 +121,14 @@ entries short and delete any that stop being true.
   pedicures, 5 add-ons ("+" prices), 2 notes. It gives no durations, so
   `durationMinutes` became optional; the PDF also says Hollywood, Florida, which
   is not on the site yet.
-- 2026-10-04: AI receptionist: Claude Haiku 4.5 in Microsoft Foundry (eastus2,
-  keyless) behind Azure Functions; requests go to Telegram and email and Table
-  Storage; it never confirms bookings. The owner chose Azure (not Google). It stays
-  off until the `CHAT_API_URL` variable is set. Next: WhatsApp (ACS), then
-  calendar booking through GORGONA.
-- 2026-10-04: Audit report in `docs/audit-2026-10-04.md` (Russian, with open
-  items). Fixed: the chat sends `tools` on every call (`tool_choice: none` after
-  a request; the API refuses tool blocks without tools), a request counts as sent
-  only when Telegram or email delivered it, 20 requests a day and one per phone a
-  day, Claude capacity 50K TPM.
-- 2026-10-04: The chat API requires Cloudflare Turnstile (`HUMAN_CHECK=off` opts
-  out). Use a Managed widget: Invisible mode needs a privacy policy that
-  references Cloudflare's Turnstile Privacy Addendum.
-- 2026-10-04: When `SITE_URL` changes, add the origin to the chat's
-  `ALLOWED_ORIGINS` too; `verify-live` checks the CORS preflight.
-- 2026-10-04: The subscription's Claude quota in Foundry is 0 (pay-as-you-go,
-  all models and versions), so the chat model moved to OpenRouter (Messages
-  endpoint, key in Key Vault). The owner chose the free NVIDIA Nemotron 3 Ultra
-  despite the warning that free providers may train on visitors' data; Foundry
-  stays available with `MODEL_PROVIDER=foundry`.
-- 2026-10-04: Cloud Shell gotchas from the first setup: an `az` extension
-  command inside `$(...)` waits on an invisible install prompt, and keys typed
-  during a wait answer the next question. `setup-chat.sh` now uses no CLI
-  extension, asks and checks every key before deploying, flushes typed-ahead
-  input, and Enter keeps saved keys.
-- 2026-10-04: GitHub signs this repository's Actions tokens with numeric IDs
-  (`repo:alexeyalexandrov2026-tech@299272810/KA-nails@1396999477:ref:refs/heads/main`);
-  the Azure deployer identity trusts that subject and the plain one.
-- 2026-10-04: The Function App's platform CORS overrides the chat API's own CORS
-  headers, so `chat.bicep` lists the site origins in `siteConfig.cors` too; a
-  domain change updates both (re-run the setup script).
-- 2026-10-04: A space pasted inside the `TURNSTILE_SITE_KEY` variable made
-  Turnstile refuse the key, so every chat message got 403 `no-token`; the build
-  now keeps only the characters a site key uses (`lib/turnstile-site-key.ts`),
-  and the chat prints Turnstile's error codes as console warnings.
-- 2026-10-04: The free Nemotron is `nvidia/nemotron-3-ultra-550b-a55b:free`;
-  the id without `:free` is a paid endpoint, so every live reply was the
-  fallback (402, no credits). Free endpoints also need OpenRouter's privacy
-  setting "Enable free endpoints that may train on inputs". Fallback replies
-  now carry a `reason` (`model-http-402` and the like).
-- 2026-10-04: The free NVIDIA endpoint masks personal data (`[PERSON_NAME]`,
-  `[ADDRESS]`, `[PHONE]`), so a live request reached Karina without a name; the
-  booking tool now refuses placeholders. Use a model whose provider passes
-  names through. The widget prefetches the Turnstile token while the visitor
-  types. Don't run the human check and the daily counter in parallel: failed
-  checks would then use up the daily cap.
+- 2026-10-04: [Historical audit](https://github.com/alexeyalexandrov2026-tech/KA-nails/blob/efb2b605a2172c6d8b46f359cf21f58a5c27ed85/docs/audit-2026-10-04.md)
+  records findings for the October release.
+- 2026-11-13: Cloudflare Pages serves the public site. The chat Worker uses
+  Workers AI and a dedicated Supabase database. See README for deployment,
+  booking request delivery, and model evaluation.
+- 2026-11-13: The chat uses Managed Turnstile. The widget requests a token
+  while the visitor types, and the Worker checks it before consuming daily quota.
+  The build normalizes `TURNSTILE_SITE_KEY`, and the widget reports provider
+  error codes. When `SITE_URL` changes, update the allowed Turnstile hostname
+  and Worker `ALLOWED_ORIGINS`. Live checks verify the CORS preflight.
 - Open: no manual screen-reader test yet; WCAG 2.2 AA conformance not established.
-
-- 2026-11-13: The receptionist API moved to Cloudflare Workers with Workers AI and a dedicated Supabase database. See README for deployment and the Azure archive.
