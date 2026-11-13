@@ -86,7 +86,9 @@ Turnstile. The chat API has its own checks:
 and `verify-live`. Without the `CLOUDFLARE_API_TOKEN` secret, deploy is skipped and
 the tested `out/` is uploaded as artifact `ka-nails-out-<sha>` for a manual upload;
 `verify-live.yml` can then be run by hand. Treat a push to `main` as a production
-release.
+release. The `android` job runs beside `web` (unit tests, lint, debug and release
+builds of `android/`) and keeps the debug APK as `ka-nails-android-debug-<sha>`;
+it does not gate `deploy`.
 
 ## Keeping this memory
 
@@ -131,4 +133,6 @@ entries short and delete any that stop being true.
   The build normalizes `TURNSTILE_SITE_KEY`, and the widget reports provider
   error codes. When `SITE_URL` changes, update the allowed Turnstile hostname
   and Worker `ALLOWED_ORIGINS`. Live checks verify the CORS preflight.
+- 2026-11-13: CI job `android` checks the Android client on every push; a site
+  change that breaks its generated catalog fails there, not in `web`.
 - Open: no manual screen-reader test yet; WCAG 2.2 AA conformance not established.

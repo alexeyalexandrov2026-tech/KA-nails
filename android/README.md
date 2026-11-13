@@ -42,6 +42,10 @@ $env:ANDROID_SERIAL = 'emulator-5568'
 
 The debug APK is `app/build/outputs/apk/debug/app-debug.apk`.
 
+CI (the `android` job in `.github/workflows/ci.yml`) runs the same unit tests,
+lint and both builds on every push, and keeps the debug APK for 14 days as the
+artifact `ka-nails-android-debug-<commit>`.
+
 Judge start-up speed on a release build: release uses R8, and a debug build
 spends several times longer composing its first frame. To try a release build
 on an emulator without release keys, sign it locally with the debug key:
