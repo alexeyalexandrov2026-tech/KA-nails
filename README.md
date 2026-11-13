@@ -115,10 +115,10 @@ npm run build
    The schema is private. The RPCs are executable by the server role only.
 2. Set `SUPABASE_SECRET_KEY` and `TURNSTILE_SECRET` as Worker secrets. The matching
    Turnstile widget is in Managed mode and allows the site's hostname.
-3. To send email, verify the studio's destination in Cloudflare Email Service
-   and set `EMAIL_TO` as a Worker secret. The sender domain and binding are
-   configured in `chat-api/wrangler.jsonc`. To enable Telegram, configure the
-   studio's bot and set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` as Worker secrets.
+3. Enable Cloudflare Email Sending on the sender domain configured in
+   `chat-api/wrangler.jsonc`. Set the studio's approved recipient as the
+   `EMAIL_TO` Worker secret. To enable Telegram, configure the studio's bot
+   and set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` as Worker secrets.
 4. Deploy the Worker with `npm exec -- wrangler deploy` from `chat-api/`. Check
    `/api/health`, the site's CORS preflight and the bilingual chat before
    switching the website. Verify a synthetic booking through the configured
