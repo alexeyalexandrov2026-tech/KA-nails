@@ -388,6 +388,29 @@ test("foreign return references cannot reconcile a different deposit", async () 
   assert.equal(inspections, 1);
 });
 
+test("a verified pending refund can arrive before the first paid event", async () => {
+  const d = await offer(1250);
+  const a = await attach(d, "stripe");
+  const paymentId = `payment-${a.id}`;
+  await store.observe(
+    d.id,
+    a.id,
+    { state: "refund_pending", paymentId, refundId: "refund-early" },
+    "refund-first",
+  );
+  const pending = await state(d.hash);
+  assert.equal(pending.state, "refund_pending");
+  assert.equal(pending.attempt?.payment_id, paymentId);
+  await paid(d, a.id);
+  assert.equal((await state(d.hash)).state, "refund_pending");
+  await store.observe(d.id, a.id, {
+    state: "refunded",
+    paymentId,
+    refundId: "refund-early",
+  });
+  assert.equal((await state(d.hash)).state, "refunded");
+});
+
 test("staff Eastern time rejects DST gaps and requires an explicit offset at an overlap", () => {
   assert.equal(parseStudioTime("2027-03-14T02:30", ""), null);
   assert.equal(parseStudioTime("2027-11-07T01:30", ""), null);

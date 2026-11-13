@@ -331,9 +331,12 @@ begin
     update ka_nails.deposit_attempts set state = 'paid', payment_id = p_payment_id,
       refund_id = coalesce(p_refund_id, refund_id) where id = p_attempt;
     update ka_nails.deposits set state = p_result where id = p_id and state <> 'refunded';
-  elsif p_result = 'refund_pending' and a.state = 'paid'
-    and d.state in ('booked', 'retained', 'refund_due', 'refund_pending', 'review') then
-    update ka_nails.deposit_attempts set refund_id = coalesce(p_refund_id, refund_id) where id = p_attempt;
+  elsif p_result = 'refund_pending' and p_payment_id is not null and (
+    (a.state = 'paid' and d.state in ('booked', 'retained', 'refund_due', 'refund_pending', 'review'))
+    or (a.state in ('open', 'closing', 'capturing', 'processing') and d.state = 'awaiting')
+  ) then
+    update ka_nails.deposit_attempts set state = 'paid', payment_id = p_payment_id,
+      refund_id = coalesce(p_refund_id, refund_id) where id = p_attempt;
     update ka_nails.deposits set state = 'refund_pending',
       cancel_at = coalesce(cancel_at, clock_timestamp()),
       cancel_reason = coalesce(cancel_reason, 'studio') where id = p_id;
