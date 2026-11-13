@@ -5,6 +5,36 @@ import type { HumanCheck } from "./turnstile";
 export const MAX_BODY_BYTES = 256 * 1024;
 export class BodyTooLarge extends Error {}
 
+export async function readBoundedText(
+  request: Request,
+  limit = MAX_BODY_BYTES,
+  preserveBom = false,
+) {
+  const reader = request.body?.getReader();
+  if (!reader) throw new Error("Missing body");
+  const decoder = new TextDecoder("utf-8", {
+    fatal: true,
+    ignoreBOM: preserveBom,
+  });
+  let body = "";
+  let bytes = 0;
+  try {
+    for (;;) {
+      const chunk = await reader.read();
+      if (chunk.done) break;
+      bytes += chunk.value.byteLength;
+      if (bytes > limit) throw new BodyTooLarge();
+      body += decoder.decode(chunk.value, { stream: true });
+    }
+    return body + decoder.decode();
+  } catch (error) {
+    void reader.cancel().catch(() => {});
+    throw error;
+  } finally {
+    reader.releaseLock();
+  }
+}
+
 export interface HttpInput {
   method: string;
   origin: string | null;
@@ -29,7 +59,7 @@ export interface HttpDeps {
   log(message: string, details?: Record<string, unknown>): void;
 }
 
-function corsHeaders(
+export function corsHeaders(
   origin: string | null,
   allowed: string[],
 ): Record<string, string> {

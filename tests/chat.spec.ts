@@ -148,6 +148,60 @@ test.describe("AI receptionist", () => {
       );
     });
 
+    test("shows a private payment link only after the worker releases the offer", async ({
+      page,
+    }) => {
+      const token = "a".repeat(64);
+      const sent = await fakeApi(page, (_body, route) =>
+        route.fulfill({
+          json: {
+            reply: "The studio will contact you.",
+            requestSent: true,
+            depositAccess: token,
+          },
+        }),
+      );
+      let checks = 0;
+      let payable = false;
+      await page.route("**/api/deposit/view", (route) => {
+        expect(route.request().postDataJSON()).toEqual({ token });
+        checks++;
+        return route.fulfill({
+          json: payable
+            ? {
+                status: "payable",
+                startsAt: "2030-01-02T17:00:00Z",
+                holdUntil: "2030-01-02T16:00:00Z",
+                amount: 750,
+                total: 7500,
+                checkoutOpen: true,
+              }
+            : { status: "waiting" },
+        });
+      });
+      await page.goto("/");
+      const launcher = page.locator(".chat-launcher");
+      await launcher.click();
+      const input = page.getByLabel("Your message");
+      await input.fill("Please send my request");
+      await input.press("Enter");
+      await expect.poll(() => checks).toBeGreaterThan(0);
+      const payment = page.getByRole("link", {
+        name: "Pay appointment deposit",
+      });
+      await expect(payment).toHaveCount(0);
+      payable = true;
+      await page.getByRole("button", { name: "Close chat" }).click();
+      await launcher.click();
+      await expect(payment).toHaveAttribute("href", `/pay/#${token}`);
+      expect(JSON.stringify(sent)).not.toContain(token);
+      await payment.click();
+      await expect(
+        page.getByRole("heading", { name: "Appointment deposit" }),
+      ).toBeVisible();
+      await expect(page.getByText("$7.50", { exact: true })).toBeVisible();
+    });
+
     test("a conversation sends the text history and shows the replies", async ({
       page,
     }) => {

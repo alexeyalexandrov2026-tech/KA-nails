@@ -19,3 +19,15 @@
 # Photos keep their names when re-rendered (tools/process-photos.mjs), so cache briefly.
 /photos/*
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/pay/
+  X-Robots-Tag: noindex, nofollow
+  Cache-Control: no-store
+  ! Referrer-Policy
+  Referrer-Policy: no-referrer
+
+/ru/pay/
+  X-Robots-Tag: noindex, nofollow
+  Cache-Control: no-store
+  ! Referrer-Policy
+  Referrer-Policy: no-referrer

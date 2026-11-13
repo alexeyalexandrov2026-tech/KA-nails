@@ -1,11 +1,13 @@
 "use client";
 
 import React, { useCallback, useEffect, useId, useRef, useState } from "react";
+import { depositHref, isDepositToken } from "../../lib/deposit";
 import { getDictionary, type Locale } from "../../lib/locales";
+import { fetchDepositView } from "../pay/deposit-payment";
 
 // The AI receptionist: a chat button on every page that opens a panel.
 // The conversation lives only in this page; each message is sent with the
-// text history to the receptionist API (chat-api/), which
+// text history to the receptionist API (chat-api/, Cloudflare Worker), which
 // answers from the studio's facts and can pass a request to the master.
 
 interface ChatWidgetProps {
@@ -63,6 +65,7 @@ const MAX_MESSAGES = 30;
 const MAX_CHARS = 1000;
 const SCRIPT_TIMEOUT_MS = 15_000;
 const VERIFICATION_TIMEOUT_MS = 120_000;
+const paymentSessionKey = "ka-nails-chat-payment";
 
 function loadTurnstile(): Promise<TurnstileApi> {
   if (window.turnstile) return Promise.resolve(window.turnstile);
@@ -93,7 +96,7 @@ export function ChatWidget({
   whatsappHref,
   turnstileSiteKey,
 }: ChatWidgetProps) {
-  const dict = getDictionary(locale).chat;
+  const { chat: dict, deposit: payment } = getDictionary(locale);
   const id = useId();
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<Item[]>([]);
@@ -101,6 +104,8 @@ export function ChatWidget({
   const [pending, setPending] = useState<"verification" | "reply" | null>(null);
   const [interactive, setInteractive] = useState(false);
   const [requestSent, setRequestSent] = useState(false);
+  const [depositAccess, setDepositAccess] = useState<string | null>(null);
+  const [paymentReady, setPaymentReady] = useState(false);
   const launcherRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const logRef = useRef<HTMLDivElement>(null);
@@ -137,7 +142,42 @@ export function ChatWidget({
   useEffect(() => {
     const log = logRef.current;
     if (log) log.scrollTop = log.scrollHeight;
-  }, [items, pending, interactive]);
+  }, [items, pending, interactive, paymentReady]);
+
+  useEffect(() => {
+    if (!open || !depositAccess) return;
+    const abort = new AbortController();
+    const check = () => {
+      void fetchDepositView(endpoint, depositAccess, abort.signal)
+        .then((view) => {
+          if (!abort.signal.aborted)
+            setPaymentReady(view?.checkoutOpen === true);
+        })
+        .catch(() => {
+          if (!abort.signal.aborted) setPaymentReady(false);
+        });
+    };
+    check();
+    const timer = window.setInterval(check, 15000);
+    return () => {
+      abort.abort();
+      window.clearInterval(timer);
+    };
+  }, [depositAccess, endpoint, open]);
+
+  function toggle() {
+    if (open) {
+      close();
+      return;
+    }
+    try {
+      const token = sessionStorage.getItem(paymentSessionKey);
+      if (isDepositToken(token)) setDepositAccess(token);
+    } catch {
+      // This tab can still use an in-memory token.
+    }
+    setOpen(true);
+  }
 
   // The human check is set up when the panel opens and removed when it
   // closes (its element goes with the panel), so a reopened chat gets a fresh
@@ -283,6 +323,7 @@ export function ChatWidget({
       const data = (await response.json()) as {
         reply?: unknown;
         requestSent?: unknown;
+        depositAccess?: unknown;
       };
       if (typeof data.reply !== "string" || data.reply.trim() === "") {
         throw new Error("empty reply");
@@ -292,6 +333,15 @@ export function ChatWidget({
         { role: "assistant", text: data.reply as string },
       ]);
       if (data.requestSent === true) setRequestSent(true);
+      if (isDepositToken(data.depositAccess)) {
+        setPaymentReady(false);
+        setDepositAccess(data.depositAccess);
+        try {
+          sessionStorage.setItem(paymentSessionKey, data.depositAccess);
+        } catch {
+          // The link is still available for this conversation.
+        }
+      }
     } catch {
       // The visitor's message stays visible but leaves the history, so the
       // conversation sent next time still alternates visitor/assistant.
@@ -372,6 +422,13 @@ export function ChatWidget({
                   )}
                 </li>
               ))}
+              {paymentReady && depositAccess && (
+                <li className="chat-message chat-message-assistant">
+                  <a href={depositHref(locale, depositAccess)}>
+                    {payment.action}
+                  </a>
+                </li>
+              )}
               {pending && (
                 <li className="chat-message chat-message-assistant chat-typing">
                   {pending === "verification" ? dict.verifying : dict.typing}
@@ -442,7 +499,7 @@ export function ChatWidget({
         className="chat-launcher"
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
-        onClick={() => (open ? close() : setOpen(true))}
+        onClick={toggle}
       >
         <span aria-hidden="true" className="chat-launcher-dot" />
         {dict.launcher}
