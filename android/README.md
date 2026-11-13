@@ -42,6 +42,19 @@ $env:ANDROID_SERIAL = 'emulator-5568'
 
 The debug APK is `app/build/outputs/apk/debug/app-debug.apk`.
 
+Judge start-up speed on a release build: release uses R8, and a debug build
+spends several times longer composing its first frame. To try a release build
+on an emulator without release keys, sign it locally with the debug key:
+
+```powershell
+.\gradlew.bat :app:assembleRelease "-Pandroid.injected.signing.store.file=$env:USERPROFILE\.android\debug.keystore" `
+  -Pandroid.injected.signing.store.password=android `
+  -Pandroid.injected.signing.key.alias=androiddebugkey -Pandroid.injected.signing.key.password=android
+```
+
+`connectedDebugAndroidTest` uninstalls the app when it finishes; install the
+APK again before checking by hand.
+
 ## Not decided yet
 
 - The application ID `com.kanails.app` is a placeholder until the owner

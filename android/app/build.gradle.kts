@@ -71,6 +71,15 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    buildTypes {
+        release {
+            // R8 shrinks and optimizes Compose; debug builds start several times slower.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+        }
+    }
+
     buildFeatures {
         compose = true
     }
@@ -86,7 +95,6 @@ android {
 
     lint {
         abortOnError = true
-        textReport = true
     }
 }
 
