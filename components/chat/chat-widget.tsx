@@ -34,8 +34,14 @@ interface TurnstileApi {
       size: "compact";
       appearance: "interaction-only";
       execution: "execute";
+      language: Locale;
+      retry: "never";
+      "refresh-timeout": "never";
       callback(token: string): void;
       "error-callback"(code: string): void;
+      "before-interactive-callback"(): void;
+      "after-interactive-callback"(): void;
+      "timeout-callback"(): void;
     },
   ): string;
   execute(widgetId: string): void;
@@ -57,6 +63,8 @@ declare global {
 
 const MAX_MESSAGES = 30;
 const MAX_CHARS = 1000;
+const SCRIPT_TIMEOUT_MS = 15_000;
+const VERIFICATION_TIMEOUT_MS = 120_000;
 const paymentSessionKey = "ka-nails-chat-payment";
 
 function loadTurnstile(): Promise<TurnstileApi> {
@@ -66,11 +74,18 @@ function loadTurnstile(): Promise<TurnstileApi> {
     script.src =
       "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
     script.async = true;
-    script.onload = () =>
-      window.turnstile
-        ? resolve(window.turnstile)
-        : reject(new Error("turnstile"));
-    script.onerror = () => reject(new Error("turnstile"));
+    const fail = () => {
+      clearTimeout(timeout);
+      script.remove();
+      reject(new Error("Turnstile failed to load"));
+    };
+    const timeout = setTimeout(fail, SCRIPT_TIMEOUT_MS);
+    script.onload = () => {
+      clearTimeout(timeout);
+      if (window.turnstile) resolve(window.turnstile);
+      else fail();
+    };
+    script.onerror = fail;
     document.head.appendChild(script);
   });
 }
@@ -86,7 +101,8 @@ export function ChatWidget({
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<Item[]>([]);
   const [draft, setDraft] = useState("");
-  const [pending, setPending] = useState(false);
+  const [pending, setPending] = useState<"verification" | "reply" | null>(null);
+  const [interactive, setInteractive] = useState(false);
   const [requestSent, setRequestSent] = useState(false);
   const [depositAccess, setDepositAccess] = useState<string | null>(null);
   const [paymentReady, setPaymentReady] = useState(false);
@@ -109,6 +125,7 @@ export function ChatWidget({
 
   const close = useCallback(() => {
     setOpen(false);
+    setInteractive(false);
     launcherRef.current?.focus();
   }, []);
 
@@ -125,7 +142,7 @@ export function ChatWidget({
   useEffect(() => {
     const log = logRef.current;
     if (log) log.scrollTop = log.scrollHeight;
-  }, [items, pending, paymentReady]);
+  }, [items, pending, interactive, paymentReady]);
 
   useEffect(() => {
     if (!open || !depositAccess) return;
@@ -172,29 +189,42 @@ export function ChatWidget({
     let cancelled = false;
     checkRef.current = loadTurnstile()
       .then((api) => {
-        if (cancelled || !turnstileRef.current) return null;
+        const container = turnstileRef.current;
+        if (cancelled || !container) return null;
         const current: TurnstileState = { widget: "", api, waiting: null };
-        current.widget = api.render(turnstileRef.current, {
+        const finish = (token?: string) => {
+          if (cancelled) return;
+          if (token && current.waiting) container.dataset.verified = "true";
+          setInteractive(false);
+          current.waiting?.(token);
+        };
+        current.widget = api.render(container, {
           sitekey: turnstileSiteKey,
           size: "compact",
           appearance: "interaction-only",
           execution: "execute",
-          callback: (token) => {
-            current.waiting?.(token);
-            current.waiting = null;
-          },
+          language: locale,
+          retry: "never",
+          "refresh-timeout": "never",
+          callback: finish,
           "error-callback": (code) => {
             // Cloudflare's code names the cause: 110100 a wrong site key,
             // 110200 a domain missing from the widget's hostnames.
             console.warn("Turnstile error", code);
-            current.waiting?.(undefined);
-            current.waiting = null;
+            finish();
           },
+          "before-interactive-callback": () => {
+            if (!cancelled && current.waiting) setInteractive(true);
+          },
+          "after-interactive-callback": () => {
+            if (!cancelled) setInteractive(false);
+          },
+          "timeout-callback": () => finish(),
         });
         state = current;
         return current;
       })
-      // Without the check the API refuses; the visitor sees the fallback.
+      // If the widget fails to load, the next send shows the verification error.
       .catch(() => null);
     return () => {
       cancelled = true;
@@ -202,46 +232,52 @@ export function ChatWidget({
       readyRef.current = null;
       if (!state) return;
       state.waiting?.(undefined);
-      state.waiting = null;
       try {
         state.api.remove(state.widget);
       } catch {
         // Already gone with the panel.
       }
     };
-  }, [open, turnstileSiteKey]);
+  }, [open, turnstileSiteKey, locale]);
 
   // A fresh token for every message: Cloudflare accepts each one only once.
   const humanToken = async (): Promise<string | undefined> => {
     const state = await checkRef.current;
     if (!state) return undefined;
     return new Promise((resolve) => {
-      state.waiting = resolve;
-      state.api.reset(state.widget);
-      state.api.execute(state.widget);
-      // Time enough to solve a challenge if Cloudflare shows one.
-      setTimeout(() => {
-        if (state.waiting === resolve) {
-          state.waiting = null;
-          resolve(undefined);
-        }
-      }, 60_000);
+      const finish = (token?: string) => {
+        clearTimeout(timeout);
+        state.waiting = null;
+        resolve(token);
+      };
+      const timeout = setTimeout(() => {
+        setInteractive(false);
+        finish();
+      }, VERIFICATION_TIMEOUT_MS);
+      try {
+        turnstileRef.current?.removeAttribute("data-verified");
+        state.api.reset(state.widget);
+        state.waiting = finish;
+        state.api.execute(state.widget);
+      } catch {
+        finish();
+      }
     });
   };
 
   // Started on the first keystroke of a message. Tokens last 300 seconds;
   // one older than four minutes is not used.
   const prefetchToken = () => {
-    if (!turnstileSiteKey || readyRef.current) return;
+    if (!turnstileSiteKey || pending || readyRef.current) return;
     readyRef.current = { token: humanToken(), at: Date.now() };
   };
 
   const takeToken = async (): Promise<string | undefined> => {
     const ready = readyRef.current;
     readyRef.current = null;
-    const token =
-      ready && Date.now() - ready.at < 240_000 ? await ready.token : undefined;
-    return token ?? (await humanToken());
+    return ready && Date.now() - ready.at < 240_000
+      ? ready.token
+      : humanToken();
   };
 
   async function send(event?: React.FormEvent) {
@@ -251,8 +287,15 @@ export function ChatWidget({
     const outgoing = [...history, { role: "user" as const, text }];
     setItems((current) => [...current, { role: "user", text }]);
     setDraft("");
-    setPending(true);
+    setPending(turnstileSiteKey ? "verification" : "reply");
+    let failure = dict.error;
     try {
+      const turnstileToken = turnstileSiteKey ? await takeToken() : undefined;
+      if (turnstileSiteKey && !turnstileToken) {
+        failure = dict.verificationError;
+        throw new Error("Turnstile did not return a token");
+      }
+      setPending("reply");
       const response = await fetch(endpoint, {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -263,10 +306,20 @@ export function ChatWidget({
             content: item.text,
           })),
           requestSent,
-          turnstileToken: await takeToken(),
+          turnstileToken,
         }),
       });
-      if (!response.ok) throw new Error(String(response.status));
+      if (!response.ok) {
+        if (response.status === 403) {
+          const problem = (await response.json().catch(() => null)) as {
+            error?: unknown;
+          } | null;
+          if (problem?.error === "verification failed, reload the page") {
+            failure = dict.verificationError;
+          }
+        }
+        throw new Error(String(response.status));
+      }
       const data = (await response.json()) as {
         reply?: unknown;
         requestSent?: unknown;
@@ -297,11 +350,11 @@ export function ChatWidget({
         const last = next.at(-1);
         if (last?.role === "user")
           next[next.length - 1] = { ...last, failed: true };
-        return [...next, { role: "notice", text: dict.error }];
+        return [...next, { role: "notice", text: failure }];
       });
-      setDraft(text);
+      setDraft((current) => current || text);
     } finally {
-      setPending(false);
+      setPending(null);
     }
   }
 
@@ -378,7 +431,7 @@ export function ChatWidget({
               )}
               {pending && (
                 <li className="chat-message chat-message-assistant chat-typing">
-                  {dict.typing}
+                  {pending === "verification" ? dict.verifying : dict.typing}
                 </li>
               )}
               {atLimit && (
@@ -416,13 +469,13 @@ export function ChatWidget({
             <button
               type="submit"
               className="button chat-send"
-              disabled={pending || atLimit || draft.trim() === ""}
+              disabled={pending !== null || atLimit || draft.trim() === ""}
             >
               {dict.send}
             </button>
           </form>
-          <p className="chat-privacy">
-            {dict.privacy}
+          <p className="chat-privacy" aria-live="polite">
+            {interactive ? dict.verificationPrompt : dict.privacy}
             {whatsappHref && (
               <>
                 {" "}

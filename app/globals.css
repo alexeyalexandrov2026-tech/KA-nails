@@ -3368,6 +3368,7 @@ h2.section-title {
   padding: 0 12px 12px;
 }
 
+.chat-turnstile[data-verified="true"],
 .chat-turnstile:empty {
   display: none;
 }

@@ -233,6 +233,9 @@ export interface LocaleDictionary {
     placeholder: string;
     send: string;
     typing: string;
+    verifying: string;
+    verificationPrompt: string;
+    verificationError: string;
     you: string;
     assistant: string;
     privacy: string;

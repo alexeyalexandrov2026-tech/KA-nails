@@ -58,6 +58,7 @@ jobs:
     steps:
       - name: Check deployment credentials
         id: credentials
+        working-directory: .
         run: |
           if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
             echo "::notice::Worker deployment skipped because CLOUDFLARE_WORKERS_API_TOKEN is unset."
