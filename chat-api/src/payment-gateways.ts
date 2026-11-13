@@ -54,14 +54,33 @@ export function stripeGateway(
   mode: PaymentMode,
   key: string,
   webhook: string,
+  fetchImpl: typeof fetch = fetch,
 ): Gateway {
   const stripe = new Stripe(key, {
     apiVersion: "2026-10-28.endive",
-    httpClient: Stripe.createFetchHttpClient(),
+    httpClient: Stripe.createFetchHttpClient(fetchImpl),
     maxNetworkRetries: 0,
     timeout: 7000,
   });
   const live = mode === "live";
+
+  function refundObservation(
+    d: Deposit,
+    paymentId: string,
+    refund: Stripe.Refund,
+  ): PaymentObservation {
+    if (refund.payment_intent !== paymentId || refund.currency !== "usd")
+      throw new Error("Stripe refund does not match this deposit");
+    const refundId = id(refund.id);
+    if (refund.amount !== d.amount) return { state: "review", paymentId };
+    const state =
+      refund.status === "succeeded"
+        ? "refunded"
+        : refund.status === "pending" || refund.status === "requires_action"
+          ? "refund_pending"
+          : "review";
+    return { state, paymentId, refundId };
+  }
 
   async function inspect(
     d: Deposit,
@@ -136,10 +155,28 @@ export function stripeGateway(
       charge.livemode !== live
     )
       throw new Error("Stripe charge does not match this deposit");
-    if (charge.refunded && charge.amount_refunded === d.amount)
-      return { state: "refunded", paymentId };
-    if (charge.disputed || charge.amount_refunded > 0)
-      return { state: "review", paymentId };
+    if (charge.disputed) return { state: "review", paymentId };
+    if (charge.refunded || charge.amount_refunded > 0) {
+      const refunds = await stripe.refunds.list({
+        payment_intent: paymentId,
+        limit: 20,
+      });
+      if (
+        refunds.data.some(
+          (refund) =>
+            refund.currency !== "usd" || refund.payment_intent !== paymentId,
+        )
+      )
+        throw new Error("Stripe refunds do not match this deposit");
+      const returned = refunds.data
+        .filter((refund) => refund.status === "succeeded")
+        .reduce((total, refund) => total + refund.amount, 0);
+      if (returned === d.amount) return { state: "refunded", paymentId };
+      const full = refunds.data.find((refund) => refund.amount === d.amount);
+      return full
+        ? refundObservation(d, paymentId, full)
+        : { state: "review", paymentId };
+    }
     return {
       state: "paid",
       paymentId,
@@ -196,15 +233,21 @@ export function stripeGateway(
     async refund(d, a, retry) {
       const paymentId = id(a.payment_id);
       const settled = await inspect(d, a, false);
-      if (settled.state !== "paid")
-        return settled.state === "refunded"
-          ? settled
-          : { state: "review", paymentId };
+      if (settled.state !== "paid") {
+        if (settled.state === "refunded" || settled.state === "refund_pending")
+          return settled;
+        return { state: "review", paymentId };
+      }
       const known = a.refund_id
         ? await stripe.refunds.retrieve(id(a.refund_id))
         : (
             await stripe.refunds.list({ payment_intent: paymentId, limit: 20 })
-          ).data.find((item) => item.metadata?.ka_attempt === a.id);
+          ).data.find(
+            (item) =>
+              item.metadata?.ka_attempt === a.id ||
+              item.status === "pending" ||
+              item.status === "requires_action",
+          );
       const refund =
         known ??
         (retry
@@ -218,19 +261,7 @@ export function stripeGateway(
             )
           : null);
       if (!refund) return { state: "review", paymentId };
-      if (
-        refund.payment_intent !== paymentId ||
-        refund.amount !== d.amount ||
-        refund.currency !== "usd"
-      )
-        throw new Error("Stripe refund does not match this deposit");
-      const state =
-        refund.status === "succeeded"
-          ? "refunded"
-          : refund.status === "pending" || refund.status === "requires_action"
-            ? "refund_pending"
-            : "review";
-      return { state, paymentId, refundId: id(refund.id) };
+      return refundObservation(d, paymentId, refund);
     },
     async event(headers, raw) {
       const signature = headers.get("stripe-signature");

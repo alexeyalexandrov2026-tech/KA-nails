@@ -240,3 +240,78 @@ test("Stripe verifies the raw event signature and rejects changed bodies or live
     InvalidWebhook,
   );
 });
+
+test("Stripe waits for a full pending refund and reconciles the settled outcome", async () => {
+  let status = "pending";
+  const stripeAttempt: Attempt = {
+    ...attempt,
+    provider: "stripe",
+    state: "paid",
+    provider_id: "cs_test_pending",
+    payment_id: "pi_pending",
+  };
+  const gateway = stripeGateway(
+    "sandbox",
+    "rk_test_local",
+    "whsec_local_test",
+    async (input, init) => {
+      assert.equal(init?.method, "GET");
+      const url = new URL(String(input));
+      if (url.pathname === "/v1/refunds") {
+        assert.equal(url.searchParams.get("payment_intent"), "pi_pending");
+        return Response.json({
+          data: [
+            {
+              id: "re_pending",
+              payment_intent: "pi_pending",
+              amount: 750,
+              currency: "usd",
+              status,
+            },
+          ],
+        });
+      }
+      assert.equal(url.pathname, "/v1/checkout/sessions/cs_test_pending");
+      return Response.json({
+        id: "cs_test_pending",
+        livemode: false,
+        mode: "payment",
+        amount_total: 750,
+        currency: "usd",
+        status: "complete",
+        payment_status: "paid",
+        client_reference_id: attemptId,
+        metadata: { ka_attempt: attemptId },
+        payment_intent: {
+          id: "pi_pending",
+          livemode: false,
+          amount: 750,
+          currency: "usd",
+          metadata: { ka_attempt: attemptId },
+          status: "succeeded",
+          amount_received: 750,
+          latest_charge: {
+            paid: true,
+            captured: true,
+            amount_captured: 750,
+            currency: "usd",
+            payment_intent: "pi_pending",
+            livemode: false,
+            refunded: true,
+            amount_refunded: 750,
+          },
+        },
+      });
+    },
+  );
+  assert.deepEqual(await gateway.refund(deposit, stripeAttempt, true), {
+    state: "refund_pending",
+    paymentId: "pi_pending",
+    refundId: "re_pending",
+  });
+  status = "succeeded";
+  assert.deepEqual(await gateway.inspect(deposit, stripeAttempt, false), {
+    state: "refunded",
+    paymentId: "pi_pending",
+  });
+});
