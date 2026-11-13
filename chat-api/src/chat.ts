@@ -1,4 +1,3 @@
-import type Anthropic from "@anthropic-ai/sdk";
 import type { StudioFacts } from "../../lib/studio-facts";
 import {
   bookingTool,
@@ -6,7 +5,20 @@ import {
   validateBookingRequest,
   type BookingRequest,
 } from "./booking-request";
-import { utcDay } from "./limits";
+import type {
+  ModelMessage,
+  ModelReply,
+  ModelRequest,
+  TextBlock,
+  ToolResult,
+  ToolUse,
+} from "./model";
+import {
+  prepareBookingContact,
+  renderBookingContact,
+  restoreBookingContact,
+  type BookingContact,
+} from "./booking-contact";
 import {
   notifyAll,
   ownerMessage,
@@ -41,34 +53,25 @@ export interface ChatReply {
 }
 
 export interface RequestStore {
-  saveRequest(
+  beginRequest(
     id: string,
     request: BookingRequest,
     receivedAt: Date,
+  ): Promise<"created" | "delivered" | "pending" | "limit">;
+  finishRequest(
+    id: string,
+    receivedAt: Date,
     delivery: NotifyResult[],
   ): Promise<void>;
-}
-
-/**
- * Shared limits on requests, so a script cannot flood the master's Telegram
- * and email: one request per phone number per UTC day and a daily total.
- */
-export interface RequestGuard {
-  reserve(phone: string, day: string): Promise<"ok" | "duplicate" | "limit">;
-  /** Frees the phone number of a request that was not delivered. */
-  release(phone: string, day: string): Promise<void>;
 }
 
 export interface ChatDeps {
   facts: StudioFacts;
   system: string;
   model: string;
-  createMessage(
-    params: Anthropic.MessageCreateParamsNonStreaming,
-  ): Promise<Anthropic.Message>;
+  createMessage(params: ModelRequest): Promise<ModelReply>;
   store: RequestStore;
   notifiers: Notifier[];
-  requestGuard: RequestGuard;
   now(): Date;
   newId(): string;
   log(message: string, details?: Record<string, unknown>): void;
@@ -82,7 +85,7 @@ export const LIMITS = {
 };
 
 export const FALLBACK: Record<
-  "unavailable" | "refusal" | "deliveryFailed" | "sent",
+  "unavailable" | "refusal" | "deliveryFailed" | "deliveryUnknown" | "sent",
   Record<Language, string>
 > = {
   unavailable: {
@@ -94,8 +97,12 @@ export const FALLBACK: Record<
     ru: "Я могу помочь только с услугами педикюра KA Nails и запросом на запись.",
   },
   deliveryFailed: {
-    en: "The request could not be delivered.",
-    ru: "Заявку не удалось отправить.",
+    en: "The request could not be delivered. Please message the studio on WhatsApp or call.",
+    ru: "Заявку не удалось отправить. Напишите студии в WhatsApp или позвоните.",
+  },
+  deliveryUnknown: {
+    en: "I couldn’t verify that the request reached the studio. Please message the studio on WhatsApp or call to check.",
+    ru: "Не удалось проверить доставку заявки. Напишите студии в WhatsApp или позвоните, чтобы уточнить.",
   },
   sent: {
     en: "Your request has been sent to the master, who will contact you to confirm the time. Nothing is booked yet.",
@@ -154,23 +161,45 @@ export function parseChatBody(raw: unknown): ParsedBody {
   };
 }
 
-function replyText(message: Anthropic.Message): string {
+function replyText(message: ModelReply): string {
   return message.content
-    .filter((block): block is Anthropic.TextBlock => block.type === "text")
+    .filter((block): block is TextBlock => block.type === "text")
     .map((block) => block.text)
     .join("\n")
     .trim();
 }
 
+/** Require the visitor's affirmative reply to a recap before executing a tool. */
+function hasBookingConfirmation(messages: ChatMessage[]): boolean {
+  const recap = messages.at(-2);
+  const answer = messages
+    .at(-1)
+    ?.content.trim()
+    .replace(/[.!?]+$/, "");
+  if (!answer || recap?.role !== "assistant") return false;
+  if (
+    !/(?:\bconfirm\b|should i send|is that correct|подтверд|вс[её] верно|отправить .*заявк)/iu.test(
+      recap.content,
+    )
+  ) {
+    return false;
+  }
+  return /^(?:yes(?:[, ]+please)?(?:[, ]+(?:do|send(?: (?:it|the request))?|that['’]s (?:right|correct)|i confirm))?|i confirm|confirmed|please send (?:it|the request)|да(?:[, ]+(?:пожалуйста|можно))?(?:[, ]+(?:подтверждаю|вс[её] верно|отправьте|отправляйте)(?: (?:е[её]|заявку))?)?|подтверждаю(?: заявку)?|вс[её] верно(?:[, ]+отправьте(?: заявку)?)?|отправьте(?: заявку)?|отправляйте)$/iu.test(
+    answer,
+  );
+}
+
 /** Runs the booking tool for one tool_use block and returns its result. */
 async function runBookingTool(
-  block: Anthropic.ToolUseBlock,
+  block: ToolUse,
   deps: ChatDeps,
-  state: { requestSent: boolean },
+  state: { requestSent: boolean; deliveryReply?: string },
   language: Language,
-): Promise<Anthropic.ToolResultBlockParam> {
-  const result = (content: string, isError = false) => ({
-    type: "tool_result" as const,
+  contact: BookingContact,
+  toolEnabled: boolean,
+): Promise<ToolResult> {
+  const result = (content: string, isError = false): ToolResult => ({
+    type: "tool_result",
     tool_use_id: block.id,
     content,
     ...(isError ? { is_error: true } : {}),
@@ -182,8 +211,14 @@ async function runBookingTool(
       true,
     );
   }
+  if (!toolEnabled) {
+    return result(
+      "Request not sent. Recap the details and ask the visitor whether to send it to the master.",
+      true,
+    );
+  }
   const validation = validateBookingRequest(
-    { ...(block.input as object), language },
+    { ...(restoreBookingContact(block.input, contact) as object), language },
     deps.facts,
   );
   if (!validation.ok) {
@@ -197,46 +232,51 @@ async function runBookingTool(
   }
   const { request } = validation;
   const receivedAt = deps.now();
-  const day = utcDay(receivedAt);
-  let reservation: "ok" | "duplicate" | "limit" = "ok";
+  const id = deps.newId();
+  let reservation: Awaited<ReturnType<RequestStore["beginRequest"]>>;
   try {
-    reservation = await deps.requestGuard.reserve(request.phone, day);
-  } catch (error) {
-    // The limits stop abuse; a storage hiccup must not lose a real request.
-    deps.log("request limits unavailable", {
-      error: String(error).slice(0, 300),
-    });
+    reservation = await deps.store.beginRequest(id, request, receivedAt);
+  } catch {
+    deps.log("request not stored", { id });
+    state.deliveryReply = FALLBACK.deliveryUnknown[language];
+    return result(
+      "Not sent. Ask the visitor to message the studio on WhatsApp or call instead.",
+      true,
+    );
   }
-  if (reservation === "duplicate") {
+  if (reservation === "delivered") {
     state.requestSent = true;
     return result(
       "A request with this phone number already reached the master today. Do not send another; tell the visitor the master will contact them, and offer WhatsApp or a call for changes.",
     );
   }
+  if (reservation === "pending") {
+    state.deliveryReply = FALLBACK.deliveryUnknown[language];
+    return result(
+      "Delivery of the earlier request is unverified. Do not send another or say it was delivered. Offer WhatsApp or a call.",
+      true,
+    );
+  }
   if (reservation === "limit") {
+    state.deliveryReply = FALLBACK.deliveryFailed[language];
     return result(
       "Not sent: the studio takes no more online requests today. Ask the visitor to message the studio on WhatsApp or call instead.",
       true,
     );
   }
 
-  const id = deps.newId();
   const { subject, text } = ownerMessage(request, deps.facts, id, receivedAt);
   const delivery = await notifyAll(deps.notifiers, subject, text);
   try {
-    await deps.store.saveRequest(id, request, receivedAt, delivery);
-  } catch (error) {
-    deps.log("request not stored", { id, error: String(error).slice(0, 300) });
+    await deps.store.finishRequest(id, receivedAt, delivery);
+  } catch {
+    deps.log("request delivery status not stored", { id, delivery });
   }
-  // The table is a record, not an inbox: only a message the master received
-  // counts as sent.
   if (!delivery.some((d) => d.ok)) {
     deps.log("request not delivered", { id, delivery });
-    try {
-      await deps.requestGuard.release(request.phone, day);
-    } catch {
-      // The visitor can still reach the studio on WhatsApp or by phone.
-    }
+    state.deliveryReply = delivery.some((d) => d.error === "delivery-unknown")
+      ? FALLBACK.deliveryUnknown[language]
+      : FALLBACK.deliveryFailed[language];
     return result(
       `${FALLBACK.deliveryFailed.en} Ask the visitor to message the studio on WhatsApp or call instead.`,
       true,
@@ -252,60 +292,64 @@ export async function handleChat(
   body: ChatRequestBody,
   deps: ChatDeps,
 ): Promise<ChatReply> {
-  const state = { requestSent: body.requestSent };
-  const messages: Anthropic.MessageParam[] = body.messages.map((m) => ({
-    role: m.role,
-    content: m.content,
-  }));
-  // The stable rules and facts are cached; the per-conversation note is not.
-  const system: Anthropic.TextBlockParam[] = [
-    { type: "text", text: deps.system, cache_control: { type: "ephemeral" } },
-  ];
+  const state: { requestSent: boolean; deliveryReply?: string } = {
+    requestSent: body.requestSent,
+  };
+  const canSubmit =
+    deps.notifiers.length > 0 && hasBookingConfirmation(body.messages);
+  const prepared = prepareBookingContact(
+    body.messages,
+    [...deps.facts.services, ...deps.facts.addOns].flatMap((offer) => [
+      offer.name.en,
+      offer.name.ru,
+    ]),
+  );
+  const messages: ModelMessage[] = [...prepared.messages];
+  const system = [deps.system];
+  if (deps.notifiers.length === 0) {
+    system.push(
+      "Online request delivery is currently unavailable. Answer studio questions and direct booking requests to the published WhatsApp or phone.",
+    );
+  }
+  if (prepared.instruction) {
+    system.push(prepared.instruction);
+  }
   if (state.requestSent) {
-    system.push({
-      type: "text",
-      text: "A request has already been sent to the master in this conversation. Do not collect or send another one.",
-    });
+    system.push(
+      "A request has already been sent to the master in this conversation. Do not collect or send another one.",
+    );
   }
 
   // The tool stays defined on every call (the API refuses tool blocks in the
   // history without it); once a request is sent the model may not use it.
   const tools = [bookingTool(deps.facts)];
-  // A request sent in this turn is confirmed even if a later step fails.
-  const sentNow = () => state.requestSent && !body.requestSent;
-  const fallback = () =>
-    (sentNow() ? FALLBACK.sent : FALLBACK.unavailable)[body.language];
+  const fallback = () => FALLBACK.unavailable[body.language];
 
   for (let round = 0; round < LIMITS.toolRounds; round++) {
-    let response: Anthropic.Message;
-    try {
-      response = await deps.createMessage({
-        model: deps.model,
-        max_tokens: 1024,
-        system,
-        tools,
-        ...(state.requestSent
-          ? { tool_choice: { type: "none" as const } }
-          : {}),
-        messages,
-      });
-    } catch (error) {
-      if (!sentNow()) throw error;
-      deps.log("reply after a sent request failed", {
-        error: String(error).slice(0, 300),
-      });
-      return { reply: fallback(), requestSent: true };
-    }
+    const response = await deps.createMessage({
+      model: deps.model,
+      max_tokens: 1024,
+      system: system.join("\n\n"),
+      tools,
+      ...(state.requestSent || !canSubmit
+        ? { tool_choice: { type: "none" as const } }
+        : {}),
+      messages,
+    });
 
     if (response.stop_reason === "refusal") {
       return {
-        reply: (sentNow() ? FALLBACK.sent : FALLBACK.refusal)[body.language],
+        reply: FALLBACK.refusal[body.language],
         requestSent: state.requestSent,
       };
     }
     if (response.stop_reason !== "tool_use") {
       const reply = replyText(response);
-      if (reply) return { reply, requestSent: state.requestSent };
+      if (reply)
+        return {
+          reply: renderBookingContact(reply, prepared.contact),
+          requestSent: state.requestSent,
+        };
       // A reasoning model can spend every token before it writes.
       deps.log("empty model reply", { stopReason: response.stop_reason });
       return {
@@ -315,19 +359,29 @@ export async function handleChat(
       };
     }
     const toolUses = response.content.filter(
-      (block): block is Anthropic.ToolUseBlock => block.type === "tool_use",
+      (block): block is ToolUse => block.type === "tool_use",
     );
-    const results: Anthropic.ToolResultBlockParam[] = [];
+    const results: ToolResult[] = [];
     for (const block of toolUses) {
-      results.push(await runBookingTool(block, deps, state, body.language));
+      results.push(
+        await runBookingTool(
+          block,
+          deps,
+          state,
+          body.language,
+          prepared.contact,
+          canSubmit,
+        ),
+      );
+      if (state.requestSent && !body.requestSent) {
+        return { reply: FALLBACK.sent[body.language], requestSent: true };
+      }
+      if (state.deliveryReply)
+        return { reply: state.deliveryReply, requestSent: false };
     }
-    // Only text and tool calls go back: other models may add reasoning
-    // blocks that a later call cannot take.
     messages.push({
       role: "assistant",
-      content: response.content.filter(
-        (block) => block.type === "text" || block.type === "tool_use",
-      ),
+      content: response.content,
     });
     messages.push({ role: "user", content: results });
   }

@@ -51,8 +51,7 @@ Turnstile. The chat API has its own checks:
   rendered by `components/portfolio-image.tsx`.
 - AI receptionist: widget `components/chat/chat-widget.tsx` (on when
   `lib/chat-api-url.ts` approves `NEXT_PUBLIC_CHAT_API_URL`); API `chat-api/`
-  (Azure Functions, own `package.json`, excluded from the root tsconfig and
-  ESLint); Azure resources `infra/azure/` (Bicep plus the Cloud Shell setup script);
+  (Cloudflare Workers AI and Supabase, with its own `package.json`); SQL under `supabase/migrations/`;
   workflow `.github/workflows/chat-api.yml`.
 - Design tokens: `app/globals.css` `:root`; reference in
   `design/KA_NAILS_DESIGN_SYSTEM.md` ("Implemented system").
@@ -168,3 +167,5 @@ entries short and delete any that stop being true.
   types. Don't run the human check and the daily counter in parallel: failed
   checks would then use up the daily cap.
 - Open: no manual screen-reader test yet; WCAG 2.2 AA conformance not established.
+
+- 2026-11-13: The receptionist API moved to Cloudflare Workers with Workers AI and a dedicated Supabase database. See README for deployment and the Azure archive.

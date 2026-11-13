@@ -10,14 +10,17 @@ import type { BookingRequest } from "./booking-request";
 
 export interface Notifier {
   channel: string;
-  send(subject: string, text: string): Promise<void>;
+  send(subject: string, text: string): Promise<string | void>;
 }
 
 export interface NotifyResult {
   channel: string;
   ok: boolean;
-  error?: string;
+  providerId?: string;
+  error?: "provider-rejected" | "delivery-unknown";
 }
+
+export class DeliveryRejected extends Error {}
 
 const FROM_RU = (price: string) => `от ${price}`;
 
@@ -74,13 +77,24 @@ export async function notifyAll(
   const settled = await Promise.allSettled(
     notifiers.map((notifier) => notifier.send(subject, text)),
   );
-  return settled.map((result, i) => ({
-    channel: notifiers[i]!.channel,
-    ok: result.status === "fulfilled",
-    ...(result.status === "rejected"
-      ? { error: String(result.reason).slice(0, 200) }
-      : {}),
-  }));
+  return settled.map((result, i) => {
+    const channel = notifiers[i]!.channel;
+    if (result.status === "fulfilled") {
+      return {
+        channel,
+        ok: true,
+        ...(result.value ? { providerId: result.value } : {}),
+      };
+    }
+    return {
+      channel,
+      ok: false,
+      error:
+        result.reason instanceof DeliveryRejected
+          ? "provider-rejected"
+          : "delivery-unknown",
+    };
+  });
 }
 
 /** Telegram Bot API: the studio's own bot writes to the owner's chat. */
@@ -102,11 +116,72 @@ export function telegramNotifier(
             text,
             disable_web_page_preview: true,
           }),
+          redirect: "manual",
+          signal: AbortSignal.timeout(8_000),
         },
       );
-      if (!response.ok) {
-        throw new Error(`telegram responded ${response.status}`);
+      if (
+        response.status >= 400 &&
+        response.status < 500 &&
+        response.status !== 408
+      )
+        throw new DeliveryRejected("Telegram rejected the message");
+      if (!response.ok)
+        throw new Error("Telegram delivery could not be confirmed");
+      const result = (await response.json()) as {
+        ok?: boolean;
+        result?: { message_id?: number };
+      };
+      if (result.ok === false)
+        throw new DeliveryRejected("Telegram rejected the message");
+      if (
+        result.ok !== true ||
+        !Number.isSafeInteger(result.result?.message_id)
+      )
+        throw new Error("Telegram delivery could not be confirmed");
+      return String(result.result?.message_id);
+    },
+  };
+}
+
+/** Cloudflare Email Sending, configured for the studio's fixed destination. */
+export function emailNotifier(
+  sender: {
+    send(message: {
+      from: string;
+      to: string;
+      subject: string;
+      text: string;
+    }): Promise<{ messageId: string }>;
+  },
+  from: string,
+  to: string,
+): Notifier {
+  return {
+    channel: "email",
+    async send(subject, text) {
+      try {
+        const result = await sender.send({ from, to, subject, text });
+        if (!result.messageId)
+          throw new Error("Email delivery could not be confirmed");
+        return result.messageId;
+      } catch (error) {
+        const code = (error as { code?: unknown } | null)?.code;
+        if (typeof code === "string" && EMAIL_REJECTIONS.has(code))
+          throw new DeliveryRejected("Email provider rejected the message");
+        throw error;
       }
     },
   };
 }
+
+const EMAIL_REJECTIONS = new Set([
+  "E_VALIDATION_ERROR",
+  "E_SENDER_NOT_VERIFIED",
+  "E_RECIPIENT_NOT_ALLOWED",
+  "E_RECIPIENT_SUPPRESSED",
+  "E_SENDER_DOMAIN_NOT_AVAILABLE",
+  "E_DELIVERY_FAILED",
+  "E_RATE_LIMIT_EXCEEDED",
+  "E_DAILY_LIMIT_EXCEEDED",
+]);

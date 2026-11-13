@@ -1,5 +1,5 @@
-import type Anthropic from "@anthropic-ai/sdk";
 import type { StudioFacts } from "../../lib/studio-facts";
+import type { ModelTool } from "./model";
 
 // The one action the receptionist can take: hand a visitor's request to the
 // master. The model only proposes the details; the server checks every field
@@ -18,11 +18,11 @@ export interface BookingRequest {
   language: "en" | "ru";
 }
 
-export function bookingTool(facts: StudioFacts): Anthropic.Tool {
+export function bookingTool(facts: StudioFacts): ModelTool {
   return {
     name: TOOL_NAME,
     description:
-      "Send the visitor's appointment request to the master. Call it once, only after the visitor has confirmed the details. The master then contacts the visitor to confirm the time; this does not book an appointment.",
+      "Send the visitor's appointment request to the master. Use it only after the visitor has explicitly confirmed the details. The master then contacts the visitor to confirm the time.",
     input_schema: {
       type: "object",
       properties: {
@@ -125,7 +125,7 @@ export function validateBookingRequest(
         if (typeof id === "string" && facts.addOns.some((a) => a.id === id)) {
           if (!addOnIds.includes(id)) addOnIds.push(id);
         } else {
-          errors.push(`add-on ${String(id)} is not on the menu`);
+          errors.push("add-on is not on the menu");
         }
       }
     }

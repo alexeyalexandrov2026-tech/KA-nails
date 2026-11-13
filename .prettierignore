@@ -8,3 +8,7 @@ next-env.d.ts
 *.tsbuildinfo
 design
 chat-api/dist
+chat-api/.wrangler
+chat-api/worker-configuration.d.ts
+supabase/.temp
+chat-api/supabase/.temp

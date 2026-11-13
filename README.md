@@ -90,92 +90,88 @@ bytes. The design specification and tokens are in `design/`.
 
 ## AI receptionist
 
-A chat button on every page opens the studio's AI receptionist. It answers
-questions about the pedicure menu, prices and the master in English or Russian,
-and collects a booking request (service, preferred time, name, phone). The request
-goes to the master by Telegram and email and is stored in Azure Table Storage. The
-receptionist never confirms an appointment: the master confirms the time personally.
-It knows only `content/studio-facts.json`, the same data the site shows.
+The existing English and Russian chat widget uses the Cloudflare Worker in
+`chat-api/`. Its public API is `POST /api/chat` and `GET /api/health`. Workers AI
+answers from `content/studio-facts.json` and proposes a request after the visitor
+confirms the recap. The master confirms appointment times personally.
 
-- `chat-api/`: an Azure Functions app (Node 22, TypeScript) with `POST /api/chat`
-  and `GET /api/health`. The model runs on OpenRouter through its
-  Anthropic-compatible Messages endpoint; it is the free NVIDIA Nemotron 3 Ultra
-  (`nvidia/nemotron-3-ultra-550b-a55b:free`; the id without `:free` is a paid
-  endpoint that refuses with 402 while the account has no credits) unless the
-  app setting `OPENROUTER_MODEL` names another model with tool calling. Free
-  OpenRouter models are rate-limited (20 requests a minute, 50 a day until $10
-  of credits is bought, then 1,000), and free providers may log or train on
-  prompts, which include visitors' names and phone numbers. OpenRouter uses
-  such endpoints only while "Enable free endpoints that may train on inputs" is
-  on (openrouter.ai/settings/privacy); otherwise it answers 404.
-  `MODEL_PROVIDER=foundry` switches to Claude Haiku 4.5 in Microsoft
-  Foundry with the app's managed identity, once the subscription has Claude
-  quota. Secrets (the OpenRouter key, Telegram, the Cloudflare Turnstile key)
-  live in Key Vault. Limits: 20 messages per visitor
-  per 10 minutes, 500 per day for the whole site, 30 messages and 1,000
-  characters per message; 20 booking requests a day and one per phone number
-  a day. CORS admits only the site's origins (`ALLOWED_ORIGINS`). The
-  Cloudflare Turnstile human check is required: without its secret the API
-  refuses every message, unless the app setting `HUMAN_CHECK` is `off` (not
-  recommended). A request counts as sent only once Telegram or email has
-  delivered it; otherwise the visitor is asked to write on WhatsApp or call.
-- `components/chat/chat-widget.tsx`: the widget. It is built in only when
-  `NEXT_PUBLIC_CHAT_API_URL` is an https origin (loopback http for tests); without
-  it there is no button and the site works as before. When a message fails, the
-  widget offers WhatsApp. To see why, check the browser console (Turnstile's
-  error code: 110100 a wrong site key, 110200 a domain missing from the
-  widget's hostnames) and the `reason` in the API's 403 response. Spaces pasted
-  into `TURNSTILE_SITE_KEY` are removed at build time. A fallback answer ("the
-  assistant is unavailable") carries a `reason` too: `model-http-402` (a paid
-  model without credits), `model-http-404` (no endpoint, such as a free model
-  blocked by the privacy setting), `model-http-429` (rate limit),
-  `model-empty-max_tokens` (the model wrote no text) or `daily-limit`.
-  Some free providers (the free NVIDIA endpoint) replace names and phone
-  numbers with placeholders such as `[PERSON_NAME]`; the booking tool refuses
-  them, so no request without a real name reaches the master, and the log says
-  "masked contact". The widget asks Turnstile for its token while the visitor
-  types, so sending does not wait for the check; the rest of a reply's time is
-  the model (free reasoning models take seconds) and, after a quiet spell, the
-  Function App's cold start.
-- `infra/azure/chat.bicep` and `infra/azure/setup-chat.sh`: the Azure resources
-  (resource group `rg-kanails-chat`, region `eastus2`) and a one-time setup script
-  for Azure Cloud Shell. Claude in Foundry (`MODEL_PROVIDER=foundry bash
-setup-chat.sh`) needs a pay-as-you-go subscription with Claude quota, which
-  can be 0 even then.
+Supabase stores a request before delivery. The database enforces the shared daily
+quota and one pending or delivered request per phone number per UTC day. The API
+reports a request as sent after an email or Telegram provider accepts it.
+Recognized names and phone numbers stay in the Worker and are replaced with
+placeholders in model prompts. Free-form messages can contain other information.
 
 ```sh
-cd chat-api && npm ci && npm run typecheck && npm test && npm run build
+cd chat-api
+npm ci
+npm run typecheck
+npm test
+npm run build
 ```
 
-Setup, once:
+### Deployment
 
-1. In Telegram, create the studio bot with @BotFather and send it `/start` from
-   the master's account.
-2. In Azure Cloud Shell (shell.azure.com): `git clone` this repository, then
-   `bash KA-nails/infra/azure/setup-chat.sh`. It first asks for the studio
-   email, the website address(es) the chat answers, the OpenRouter model and
-   API key (openrouter.ai → Settings → Keys), the bot token (Enter skips
-   Telegram; you confirm the chat that pressed Start) and the Turnstile secret, and checks each key with its service;
-   then it creates everything, stores the keys and prints the values for
-   GitHub. On a re-run every answer defaults to the last one and Enter keeps a
-   saved key.
-3. Create the Cloudflare Turnstile widget first (Cloudflare dashboard →
-   Turnstile → Add widget, Managed mode, the site's hostnames). Invisible mode
-   would need a privacy policy that references Cloudflare's Turnstile Privacy
-   Addendum, which the site does not have yet. Its secret goes into Key Vault
-   (`turnstile-secret`, asked for by the script; restart the Function App after
-   changing it) and its site key into the variable `TURNSTILE_SITE_KEY`.
-4. Add the values as repository variables (`AZURE_CLIENT_ID`,
-   `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `CHAT_FUNCTION_APP`,
-   `CHAT_API_URL`, `TURNSTILE_SITE_KEY`), run Actions → chat-api → Run
-   workflow, then re-run the latest `main` run of `ci` so the site shows the
-   button.
+1. Apply the SQL under `supabase/migrations/` to the dedicated KA Nails project.
+   The schema is private. The four RPCs are executable by the server role only.
+2. Set `SUPABASE_SECRET_KEY` and `TURNSTILE_SECRET` as Worker secrets. The matching
+   Turnstile widget is in Managed mode and allows the site's hostname.
+3. To send email, verify the studio's destination in Cloudflare Email Service
+   and set `EMAIL_TO` as a Worker secret. The sender domain and binding are
+   configured in `chat-api/wrangler.jsonc`. To enable Telegram, configure the
+   studio's bot and set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` as Worker secrets.
+4. Deploy the Worker with `npm exec -- wrangler deploy` from `chat-api/`. Check
+   `/api/health`, the site's CORS preflight and the bilingual chat before
+   switching the website. Verify a synthetic booking through the configured
+   notification channel before relying on online requests.
+5. Set `CHAT_API_URL` to the Worker origin and `TURNSTILE_SITE_KEY` to the public
+   widget key in GitHub Actions variables. Deploy the existing Cloudflare Pages
+   project and run its live tests. The `chat-api` workflow can deploy updates from
+   `main` using the `CLOUDFLARE_WORKERS_API_TOKEN` secret.
 
-The `chat-api` workflow tests every change to `chat-api/` and, on `main`,
-deploys it with GitHub's OIDC login; until the variables exist it only reports
-that deployment is skipped. CI runs the site's browser tests twice: without the
-chat and with it pointed at a local fake (Turnstile is faked too, under
-Cloudflare's always-pass test site key).
+The Worker allows 10 requests per minute per visitor at each Cloudflare location,
+500 verified chat turns per UTC day and 20 booking attempts per UTC day by default.
+The database stops inference when its shared quota cannot be checked. Health
+reports whether bindings and channels are configured and the database is reachable.
+`bookingReady` reports whether at least one channel is configured. With no
+channel configured, chat answers studio questions and directs requests to
+WhatsApp or a call. A live delivery check verifies the configured channel.
+
+If both notification providers fail, the visitor is directed to WhatsApp or a
+call. An unresolved `pending` row means delivery could be indeterminate. Check
+the provider before retrying or updating it to avoid notifying the master twice.
+
+### Model evaluation
+
+`npm run evaluate` in `chat-api/` compares supported Workers AI models using
+synthetic English and Russian dialogues, the studio's menu and the booking tool.
+Set `KA_CF_ACCOUNT` and `KA_CF_EVAL_TOKEN` in the process environment. The tool
+result is simulated for evaluation. The evaluator never contacts the studio or
+stores a booking. Model and configuration changes can be rolled back to a
+previous Worker version.
+
+On November 13, 2026, the live Workers AI API returned the following results on
+nine scenarios. Latencies are medians per successful API response, excluding
+browser, Turnstile and database time.
+
+| Model           | Scenarios passed | Median |
+| --------------- | ---------------- | ------ |
+| Gemma 4 26B A4B | 9/9              | 0.99 s |
+| Qwen 3.8 27B    | 8/9              | 1.24 s |
+| GPT-OSS 120B    | 6/9              | 1.46 s |
+
+The Worker pins `@cf/google/gemma-4-26b-a4b-it`. The benchmark includes correct
+prices, unpublished address handling and the booking tool in both languages.
+See the [Cloudflare model page](https://developers.cloudflare.com/workers-ai/models/gemma-4-26b-a4b-it/).
+
+### Azure archive
+
+The previous Azure resources were in `rg-kanails-chat`. On November 13, 2026,
+the Azure subscription was disabled and the old Table Storage could not be read.
+Keep the original resources until the historical `requests` table can be exported,
+imported without sending notifications and reconciled. Azure Table rows are keyed
+by UTC date and request ID and contain a delivery summary alongside the booking.
+An account administrator can restore access or provide an existing export through
+an approved private channel. Never put booking data into GitHub.
 
 ## Verification
 
@@ -226,13 +222,10 @@ download the artifact of the `main` run, upload its contents in Cloudflare
 (`ka-nails` → Create deployment → Production), then run the `verify-live` workflow
 (Actions → verify-live → Run workflow) on `main`.
 
-The deployed build reads two repository variables (Settings → Secrets and
+The deployed build reads repository variables (Settings → Secrets and
 variables → Actions → Variables): `SITE_INDEXING=index` opens the site to search
 engines, `SITE_URL` sets the public origin once the studio has its own domain, and
 `CHAT_API_URL` / `TURNSTILE_SITE_KEY` switch on the AI receptionist. After changing
 any of them, re-run the latest `main` run of the `ci` workflow so it is redeployed;
 `verify-live` expects the settings the site was deployed with. When `SITE_URL`
-changes, add the new origin (and its www form) to the chat Function App's
-`ALLOWED_ORIGINS` setting and its platform CORS list too (re-run
-`infra/azure/setup-chat.sh`, which sets both), or the chat refuses visitors on
-the new domain; `verify-live` checks that the chat API admits the site's origin.
+changes, add the new hostname to Turnstile and its origin to the Worker's ALLOWED_ORIGINS. The live test checks that the API accepts the site's origin.

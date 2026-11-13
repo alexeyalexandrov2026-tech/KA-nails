@@ -1,6 +1,6 @@
 /**
  * The AI receptionist's endpoint, from the build setting
- * NEXT_PUBLIC_CHAT_API_URL (the Function App's origin). Without a valid value
+ * NEXT_PUBLIC_CHAT_API_URL (the API origin). Without a valid value
  * the chat button is not rendered. Loopback HTTP is allowed for local tests.
  */
 export function approvedChatApiUrl(value: string | undefined): string | null {

@@ -159,16 +159,21 @@ test.describe("Cloudflare Deployed Production QA - KA Nails", () => {
     const report = (await health.json()) as {
       status: string;
       channels: Record<string, boolean>;
+      bookingReady?: boolean;
       humanCheck: string;
       modelReady?: boolean;
+      provider?: string;
+      databaseReady?: boolean;
     };
     expect(report.status).toBe("ok");
-    // At least one way to reach the master must be switched on.
-    expect(Object.values(report.channels)).toContain(true);
+    expect(report.bookingReady).toBe(
+      Object.values(report.channels).some(Boolean),
+    );
     // Without its Turnstile secret the API refuses every message.
     expect(report.humanCheck).not.toBe("missing");
-    // Without the OpenRouter key every reply is the fallback.
-    expect(report.modelReady).not.toBe(false);
+    expect(report.provider).toBe("workers-ai");
+    expect(report.modelReady).toBe(true);
+    expect(report.databaseReady).toBe(true);
 
     // The API must admit the site's own origin (ALLOWED_ORIGINS follows
     // SITE_URL), or every visitor gets an error.

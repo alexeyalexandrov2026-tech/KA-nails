@@ -1,0 +1,36 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "ka-nails-chat",
+  "main": "src/index.ts",
+  "account_id": "41ae0fe583ca26aa3037b70370838147",
+  "compatibility_date": "2026-11-13",
+  "workers_dev": true,
+  "preview_urls": false,
+  "ai": { "binding": "AI" },
+  "send_email": [
+    {
+      "name": "EMAIL",
+      "allowed_sender_addresses": ["requests@ka-nails-mail.gorgona-one.com"],
+    },
+  ],
+  "ratelimits": [
+    {
+      "name": "VISITOR_LIMIT",
+      "namespace_id": "197204",
+      "simple": { "limit": 10, "period": 60 },
+    },
+  ],
+  "observability": {
+    "enabled": true,
+    "logs": { "enabled": true, "invocation_logs": false },
+    // Telegram includes the bot token in outbound URL paths.
+    "traces": { "enabled": false },
+  },
+  "vars": {
+    "ALLOWED_ORIGINS": "https://ka-nails.pages.dev",
+    "SUPABASE_URL": "https://gmfeaaruoapmexouyhtl.supabase.co",
+    "WORKERS_AI_MODEL": "@cf/google/gemma-4-26b-a4b-it",
+    "EMAIL_SENDER": "requests@ka-nails-mail.gorgona-one.com",
+  },
+  "secrets": { "required": ["SUPABASE_SECRET_KEY", "TURNSTILE_SECRET"] },
+}
