@@ -35,8 +35,16 @@ http
       let file = path.resolve(root, `.${pathname}`);
       if (file !== root && !file.startsWith(root + path.sep))
         throw new Error("Invalid path");
-      if ((await stat(file)).isDirectory())
+      if ((await stat(file)).isDirectory()) {
+        const url = new URL(request.url ?? "/", "http://localhost");
+        if (!url.pathname.endsWith("/")) {
+          response
+            .writeHead(308, { Location: `${url.pathname}/${url.search}` })
+            .end();
+          return;
+        }
         file = path.join(file, "index.html");
+      }
       const content = await readFile(file);
       response.writeHead(200, {
         "Content-Type": types[path.extname(file)] ?? "application/octet-stream",

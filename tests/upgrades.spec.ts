@@ -102,7 +102,7 @@ test.describe("Stage 6 upgrades: sharing, SEO switch, photos, images", () => {
   }) => {
     const response = await request.get("/_headers");
     expect(response.status()).toBe(200);
-    const rules = await response.text();
+    const rules = (await response.text()).replaceAll("\r\n", "\n");
     const block = (path: string) =>
       rules.split(/\n(?=\/)/).find((part) => part.startsWith(`${path}\n`)) ??
       "";

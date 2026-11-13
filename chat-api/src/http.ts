@@ -1,12 +1,9 @@
 import { FALLBACK, handleChat, parseChatBody, type ChatDeps } from "./chat";
-import { utcDay, type DailyCounter, type RateLimiter } from "./limits";
 import type { HumanCheck } from "./turnstile";
-
-// The HTTP contract of POST /api/chat, independent of the Azure runtime so it
-// can be tested directly. CORS allows only the website's own origins.
 
 /** Bodies above this are refused unread; a full conversation is far smaller. */
 export const MAX_BODY_BYTES = 256 * 1024;
+export class BodyTooLarge extends Error {}
 
 export interface HttpInput {
   method: string;
@@ -17,16 +14,6 @@ export interface HttpInput {
   readJson(): Promise<unknown>;
 }
 
-/**
- * The visitor's address for the rate limit: the right-most X-Forwarded-For
- * entry, which the platform's front end appends. Entries to its left come
- * from the client and can be anything. Azure adds the port to IPv4.
- */
-export function forwardedClientIp(header: string | null): string | undefined {
-  const last = header?.split(",").at(-1)?.trim();
-  return last ? last.replace(/^(\d+\.\d+\.\d+\.\d+):\d+$/, "$1") : undefined;
-}
-
 export interface HttpOutput {
   status: number;
   headers: Record<string, string>;
@@ -35,9 +22,8 @@ export interface HttpOutput {
 
 export interface HttpDeps {
   allowedOrigins: string[];
-  rateLimiter: RateLimiter;
-  dailyCounter: DailyCounter;
-  dailyLimit: number;
+  rateLimiter(key: string): Promise<boolean>;
+  allowMessage(): Promise<boolean>;
   verifyHuman(token: string | undefined): Promise<HumanCheck>;
   chat: ChatDeps;
   log(message: string, details?: Record<string, unknown>): void;
@@ -82,8 +68,14 @@ export async function handleChatHttp(
     return json(413, { error: "message too large" });
   }
 
-  const now = deps.chat.now();
-  if (!deps.rateLimiter.allow(input.ip ?? "unknown", now.getTime())) {
+  let withinVisitorLimit: boolean;
+  try {
+    withinVisitorLimit = await deps.rateLimiter(input.ip ?? "unknown");
+  } catch {
+    deps.log("visitor rate limit unavailable");
+    return json(503, { error: "chat unavailable" });
+  }
+  if (!withinVisitorLimit) {
     return json(429, {
       error: "too many messages, try again in a few minutes",
     });
@@ -92,7 +84,9 @@ export async function handleChatHttp(
   let raw: unknown;
   try {
     raw = await input.readJson();
-  } catch {
+  } catch (error) {
+    if (error instanceof BodyTooLarge)
+      return json(413, { error: "message too large" });
     return json(400, { error: "invalid JSON" });
   }
   const parsed = parseChatBody(raw);
@@ -109,17 +103,19 @@ export async function handleChatHttp(
       reason: check.reason,
     });
   }
-  let count = 0;
+  let allowed: boolean;
   try {
-    count = await deps.dailyCounter.increment(utcDay(now));
-  } catch (error) {
-    // The cap is a cost guard; a storage hiccup must not silence the chat.
-    deps.log("daily counter unavailable", {
-      error: String(error).slice(0, 300),
+    allowed = await deps.allowMessage();
+  } catch {
+    deps.log("daily counter unavailable");
+    return json(200, {
+      reply: FALLBACK.unavailable[body.language],
+      requestSent: body.requestSent,
+      reason: "daily-limit-unavailable",
     });
   }
-  if (count > deps.dailyLimit) {
-    deps.log("daily limit reached", { count });
+  if (!allowed) {
+    deps.log("daily limit reached");
     return json(200, {
       reply: FALLBACK.unavailable[body.language],
       requestSent: body.requestSent,
@@ -130,7 +126,7 @@ export async function handleChatHttp(
   try {
     return json(200, await handleChat(body, deps.chat));
   } catch (error) {
-    deps.log("chat failed", { error: String(error).slice(0, 300) });
+    deps.log("chat failed", { reason: failureReason(error) });
     return json(200, {
       reply: FALLBACK.unavailable[body.language],
       requestSent: body.requestSent,
@@ -139,8 +135,6 @@ export async function handleChatHttp(
   }
 }
 
-// The model API's HTTP status (402: no credits for a paid model, 404: no
-// endpoint for the model, 429: rate limit) without the error's details.
 function failureReason(error: unknown): string {
   const status = (error as { status?: unknown } | null)?.status;
   return typeof status === "number" ? `model-http-${status}` : "model-error";

@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import type Anthropic from "@anthropic-ai/sdk";
 import { studioFacts } from "../../lib/studio-facts";
 import {
   bookingTool,
@@ -14,51 +13,51 @@ import {
   parseChatBody,
   type ChatDeps,
   type ChatRequestBody,
-  type RequestGuard,
+  type RequestStore,
 } from "../src/chat";
-import { healthReport, readConfig } from "../src/config";
+import { readConfig } from "../src/config";
 import {
-  forwardedClientIp,
+  BodyTooLarge,
   handleChatHttp,
   MAX_BODY_BYTES,
   type HttpDeps,
 } from "../src/http";
-import { RateLimiter } from "../src/limits";
-import { ownerMessage, telegramNotifier, type Notifier } from "../src/notify";
+import type {
+  ModelReply,
+  ModelRequest,
+  TextBlock,
+  ToolResult,
+  ToolUse,
+} from "../src/model";
+import {
+  DeliveryRejected,
+  ownerMessage,
+  telegramNotifier,
+  type Notifier,
+} from "../src/notify";
 import { buildSystemPrompt } from "../src/prompt";
 import { verifyTurnstile } from "../src/turnstile";
 
-// Claude, Telegram, email and storage are all fakes here: the tests check
+// Inference, Telegram, email and storage are all fakes here: the tests check
 // what the receptionist sends and stores, never a real service.
 
 const FIRST = studioFacts.services[0]!;
 
 function message(
-  content: Anthropic.ContentBlock[],
-  stopReason: Anthropic.Message["stop_reason"],
-): Anthropic.Message {
-  return {
-    id: "msg_test",
-    type: "message",
-    role: "assistant",
-    model: "claude-haiku-4-5",
-    content,
-    stop_reason: stopReason,
-    stop_sequence: null,
-    usage: {} as Anthropic.Usage,
-  } as Anthropic.Message;
+  content: ModelReply["content"],
+  stopReason: ModelReply["stop_reason"],
+): ModelReply {
+  return { content, stop_reason: stopReason };
 }
 
-const text = (value: string) =>
-  ({ type: "text", text: value, citations: null }) as Anthropic.TextBlock;
+const text = (value: string): TextBlock => ({ type: "text", text: value });
 
-const toolUse = (input: Record<string, unknown>) =>
-  ({
-    type: "tool_use",
-    id: "toolu_1",
-    name: TOOL_NAME,
-    input,
-  }) as Anthropic.ToolUseBlock;
+const toolUse = (input: Record<string, unknown>): ToolUse => ({
+  type: "tool_use",
+  id: "toolu_1",
+  name: TOOL_NAME,
+  input,
+});
 
 const GOOD_INPUT = {
   service_id: FIRST.id,
@@ -68,29 +67,38 @@ const GOOD_INPUT = {
   language: "en",
 };
 
-/** The shared request limits, in memory, with the same rules as Azure's. */
-function memoryGuard(limit = 20): RequestGuard {
-  const phones = new Set<string>();
+/** Test double for booking reservation and delivery persistence. */
+function memoryStore(limit = 20, saved: string[] = []): RequestStore {
+  const states = new Map<
+    string,
+    { id: string; state: "pending" | "delivered" | "failed" }
+  >();
   let count = 0;
   return {
-    async reserve(phone, day) {
-      const key = `${day} ${phone}`;
-      if (phones.has(key)) return "duplicate";
-      phones.add(key);
-      if (++count > limit) {
-        phones.delete(key);
-        return "limit";
-      }
-      return "ok";
+    async beginRequest(id, request) {
+      const prior = states.get(request.phone)?.state;
+      if (prior === "pending" || prior === "delivered") return prior;
+      if (count >= limit) return "limit";
+      count++;
+      states.set(request.phone, { id, state: "pending" });
+      saved.push(id);
+      return "created";
     },
-    async release(phone, day) {
-      phones.delete(`${day} ${phone}`);
+    async finishRequest(id, _date, delivery) {
+      for (const booking of states.values()) {
+        if (booking.id === id)
+          booking.state = delivery.some((item) => item.ok)
+            ? "delivered"
+            : delivery.some((item) => item.error === "delivery-unknown")
+              ? "pending"
+              : "failed";
+      }
     },
   };
 }
 
-function fakeDeps(replies: Anthropic.Message[]) {
-  const calls: Anthropic.MessageCreateParamsNonStreaming[] = [];
+function fakeDeps(replies: ModelReply[]) {
+  const calls: ModelRequest[] = [];
   const sent: { channel: string; subject: string; text: string }[] = [];
   const saved: string[] = [];
   const logs: string[] = [];
@@ -104,7 +112,7 @@ function fakeDeps(replies: Anthropic.Message[]) {
   const deps: ChatDeps = {
     facts: studioFacts,
     system: buildSystemPrompt(studioFacts),
-    model: "claude-haiku-4-5",
+    model: "@cf/google/gemma-4-26b-a4b-it",
     async createMessage(params) {
       // Snapshot: the handler keeps appending to the same arrays.
       calls.push(structuredClone(params));
@@ -125,13 +133,8 @@ function fakeDeps(replies: Anthropic.Message[]) {
       if (!reply) throw new Error("no scripted reply left");
       return reply;
     },
-    store: {
-      async saveRequest(id) {
-        saved.push(id);
-      },
-    },
+    store: memoryStore(20, saved),
     notifiers: [notifier("telegram"), notifier("email")],
-    requestGuard: memoryGuard(),
     now: () => new Date("2026-10-04T12:00:00Z"),
     newId: () => "abc12345",
     log: (message) => logs.push(message),
@@ -142,8 +145,8 @@ function fakeDeps(replies: Anthropic.Message[]) {
 const PHONE = "+15615550100";
 const DAY = "2026-10-04";
 
-const lastToolResult = (params: Anthropic.MessageCreateParamsNonStreaming) =>
-  (params.messages.at(-1)!.content as Anthropic.ToolResultBlockParam[])[0]!;
+const lastToolResult = (params: ModelRequest) =>
+  (params.messages.at(-1)!.content as ToolResult[])[0]!;
 
 const body = (overrides: Partial<ChatRequestBody> = {}): ChatRequestBody => ({
   language: "en",
@@ -151,6 +154,29 @@ const body = (overrides: Partial<ChatRequestBody> = {}): ChatRequestBody => ({
   requestSent: false,
   ...overrides,
 });
+
+const confirmedBody = (
+  overrides: Partial<ChatRequestBody> = {},
+): ChatRequestBody =>
+  body({
+    messages: [
+      {
+        role: "user",
+        content: "Classic pedicure, weekday evenings.",
+      },
+      {
+        role: "assistant",
+        content: "Please provide your name and phone number.",
+      },
+      { role: "user", content: "My name is Ann, (561) 555-0100" },
+      {
+        role: "assistant",
+        content: "Should I send this request to the master?",
+      },
+      { role: "user", content: "Yes, send the request." },
+    ],
+    ...overrides,
+  });
 
 describe("system prompt", () => {
   it("lists every published service and add-on with its exact price", () => {
@@ -187,10 +213,9 @@ describe("system prompt", () => {
 
 describe("booking request", () => {
   it("offers only menu ids to the model", () => {
-    const schema = bookingTool(studioFacts).input_schema as {
-      properties: { service_id: { enum: string[] } };
-    };
-    assert.deepEqual(schema.properties.service_id.enum, [
+    const service = bookingTool(studioFacts).input_schema.properties.service_id;
+    assert.ok(service && "enum" in service);
+    assert.deepEqual(service.enum, [
       ...studioFacts.services.map((s) => s.id),
       "not_sure",
     ]);
@@ -234,7 +259,7 @@ describe("booking request", () => {
     );
     assert.ok(!result.ok);
     assert.match(result.errors.join(";"), /service_id is not on the menu/);
-    assert.match(result.errors.join(";"), /free-massage is not on the menu/);
+    assert.match(result.errors.join(";"), /add-on is not on the menu/);
     assert.match(result.errors.join(";"), /phone is not a valid number/);
     assert.match(result.errors.join(";"), /name is missing/);
   });
@@ -302,104 +327,158 @@ describe("chat turn", () => {
     assert.equal(reply.reply, `A Classic Pedicure is $${FIRST.price.amount}.`);
     assert.equal(reply.requestSent, false);
     const params = calls[0]!;
-    assert.equal(params.model, "claude-haiku-4-5");
-    assert.equal(
-      (params.tools?.[0] as Anthropic.Tool | undefined)?.name,
-      TOOL_NAME,
-    );
-    assert.equal(params.tool_choice, undefined);
-    const system = params.system as Anthropic.TextBlockParam[];
-    assert.deepEqual(system[0]!.cache_control, { type: "ephemeral" });
+    assert.equal(params.model, deps.model);
+    assert.equal(params.tools[0]?.name, TOOL_NAME);
+    assert.deepEqual(params.tool_choice, { type: "none" });
+    assert.equal(params.system, deps.system);
   });
 
-  it("sends a confirmed request to every channel, stores it, then lets the model answer", async () => {
+  it("stores a confirmed request before sending it to each channel", async () => {
     const { deps, calls, sent, saved } = fakeDeps([
       message([text("Sending it now."), toolUse(GOOD_INPUT)], "tool_use"),
-      message([text("Done! Karina will contact you.")], "end_turn"),
     ]);
-    const reply = await handleChat(body(), deps);
+    deps.notifiers = deps.notifiers.map((notifier) => ({
+      ...notifier,
+      send: (subject, text) => {
+        assert.deepEqual(saved, ["abc12345"]);
+        return notifier.send(subject, text);
+      },
+    }));
+    const reply = await handleChat(confirmedBody(), deps);
     assert.equal(reply.requestSent, true);
-    assert.equal(reply.reply, "Done! Karina will contact you.");
+    assert.equal(reply.reply, FALLBACK.sent.en);
     assert.deepEqual(
       sent.map((s) => s.channel),
       ["telegram", "email"],
     );
     assert.deepEqual(saved, ["abc12345"]);
-    const second = calls[1]!;
-    const last = second.messages.at(-1)!;
-    assert.equal(last.role, "user");
-    const result = (last.content as Anthropic.ToolResultBlockParam[])[0]!;
-    assert.equal(result.type, "tool_result");
-    assert.equal(result.tool_use_id, "toolu_1");
-    assert.equal(result.is_error, undefined);
-    assert.equal(second.messages.at(-2)!.role, "assistant");
-    // The API refuses tool blocks without tools; the tool may not be used.
-    assert.equal((second.tools?.[0] as Anthropic.Tool).name, TOOL_NAME);
-    assert.deepEqual(second.tool_choice, { type: "none" });
+    assert.equal(calls.length, 1);
   });
 
-  it("sends back only text and tool calls, not another model's reasoning", async () => {
-    const thinking = {
-      type: "thinking",
-      thinking: "The visitor wants a pedicure.",
-      signature: "",
-    } as Anthropic.ThinkingBlock;
-    const { deps, calls } = fakeDeps([
-      message([thinking, text("Sending."), toolUse(GOOD_INPUT)], "tool_use"),
-      message([thinking, text("Sent!")], "end_turn"),
+  it("uses the original contact and never asks the model to confirm delivery", async () => {
+    const { deps, sent, calls } = fakeDeps([
+      message(
+        [
+          toolUse({
+            ...GOOD_INPUT,
+            name: "Invented Name",
+            phone: "+15615550101",
+          }),
+        ],
+        "tool_use",
+      ),
+      message([text("Your appointment is booked.")], "end_turn"),
     ]);
-    const reply = await handleChat(body(), deps);
-    assert.equal(reply.reply, "Sent!");
-    const echoed = calls[1]!.messages.at(-2)!
-      .content as Anthropic.ContentBlockParam[];
-    assert.deepEqual(
-      echoed.map((b) => b.type),
-      ["text", "tool_use"],
-    );
-  });
-
-  it("confirms a sent request even when the reply after it fails", async () => {
-    const { deps, sent, logs } = fakeDeps([
-      message([toolUse(GOOD_INPUT)], "tool_use"),
-      // No scripted second reply: the follow-up call fails.
-    ]);
-    const reply = await handleChat(body({ language: "ru" }), deps);
+    const reply = await handleChat(confirmedBody({ language: "ru" }), deps);
     assert.deepEqual(reply, { reply: FALLBACK.sent.ru, requestSent: true });
     assert.equal(sent.length, 2);
-    assert.deepEqual(logs, ["reply after a sent request failed"]);
+    assert.equal(calls.length, 1);
+    assert.match(sent[0]!.text, /Ann/);
+    assert.ok(!sent[0]!.text.includes("Invented"));
+    assert.ok(sent[0]!.text.replace(/\D/g, "").includes("15615550100"));
   });
 
   it("returns validation errors to the model without sending anything", async () => {
     const { deps, calls, sent, saved } = fakeDeps([
-      message([toolUse({ ...GOOD_INPUT, phone: "123" })], "tool_use"),
+      message([toolUse({ ...GOOD_INPUT, service_id: "unknown" })], "tool_use"),
       message([text("Could you check your phone number?")], "end_turn"),
     ]);
-    const reply = await handleChat(body(), deps);
+    const reply = await handleChat(confirmedBody(), deps);
     assert.equal(reply.requestSent, false);
     assert.equal(sent.length, 0);
     assert.equal(saved.length, 0);
-    const result = (
-      calls[1]!.messages.at(-1)!.content as Anthropic.ToolResultBlockParam[]
-    )[0]!;
+    const result = (calls[1]!.messages.at(-1)!.content as ToolResult[])[0]!;
     assert.equal(result.is_error, true);
-    assert.match(String(result.content), /phone/);
+    assert.match(String(result.content), /service_id/);
   });
 
-  it("never sends a request whose name the provider masked, and logs it", async () => {
-    const { deps, calls, sent, saved, logs } = fakeDeps([
-      message([toolUse({ ...GOOD_INPUT, name: "[ADDRESS]" })], "tool_use"),
+  it("keeps the supplied contact when a provider hides the name after a correction", async () => {
+    const { deps, calls, sent } = fakeDeps([
+      message(
+        [toolUse({ ...GOOD_INPUT, name: "[PERSON_NAME]", phone: "[PHONE]" })],
+        "tool_use",
+      ),
+      message(
+        [text("Your request reached the master; the time is not confirmed.")],
+        "end_turn",
+      ),
+    ]);
+    const reply = await handleChat(
+      body({
+        messages: [
+          {
+            role: "user",
+            content: "I'd like a classic pedicure on weekday evenings.",
+          },
+          {
+            role: "assistant",
+            content: "Please provide your name and phone number.",
+          },
+          { role: "user", content: "Alice +15615550100" },
+          {
+            role: "assistant",
+            content: "Your name was hidden. Please reply with your full name.",
+          },
+          { role: "user", content: "Alice Example" },
+          {
+            role: "assistant",
+            content: "Please confirm the request with those details.",
+          },
+          { role: "user", content: "Yes, send the request." },
+        ],
+      }),
+      deps,
+    );
+    assert.equal(reply.requestSent, true);
+    assert.equal(sent.length, 2);
+    assert.match(sent[0]!.text, /Alice Example/);
+    assert.ok(sent[0]!.text.replace(/\D/g, "").includes("15615550100"));
+    const modelPayload = JSON.stringify(calls);
+    assert.ok(!modelPayload.includes("Alice"));
+    assert.ok(!modelPayload.includes("15615550100"));
+  });
+
+  it("shows supplied contact in confirmation without exposing it to the model", async () => {
+    const { deps, calls, sent } = fakeDeps([
+      message([text("Please confirm [PERSON_NAME], [PHONE].")], "end_turn"),
+    ]);
+    const reply = await handleChat(
+      body({
+        messages: [{ role: "user", content: "Alice Example +15615550100" }],
+      }),
+      deps,
+    );
+    assert.equal(reply.reply, "Please confirm Alice Example, +15615550100.");
+    assert.equal(reply.requestSent, false);
+    assert.equal(sent.length, 0);
+    assert.ok(!JSON.stringify(calls).includes("Alice Example"));
+    assert.ok(!JSON.stringify(calls).includes("15615550100"));
+  });
+
+  it("never sends a request if the visitor has not supplied contact details", async () => {
+    const { deps, calls, sent, saved } = fakeDeps([
+      message([toolUse(GOOD_INPUT)], "tool_use"),
       message([text("Please message the studio on WhatsApp.")], "end_turn"),
     ]);
-    const reply = await handleChat(body(), deps);
+    const reply = await handleChat(
+      confirmedBody({
+        messages: [
+          { role: "user", content: "Classic pedicure on Friday." },
+          {
+            role: "assistant",
+            content: "Should I send this request to the master?",
+          },
+          { role: "user", content: "Yes, send it." },
+        ],
+      }),
+      deps,
+    );
     assert.equal(reply.requestSent, false);
     assert.equal(sent.length, 0);
     assert.equal(saved.length, 0);
-    assert.deepEqual(logs, ["masked contact"]);
-    const result = (
-      calls[1]!.messages.at(-1)!.content as Anthropic.ToolResultBlockParam[]
-    )[0]!;
+    const result = (calls[1]!.messages.at(-1)!.content as ToolResult[])[0]!;
     assert.equal(result.is_error, true);
-    assert.match(String(result.content), /WhatsApp/);
+    assert.match(String(result.content), /phone is missing/);
   });
 
   it("uses the visitor's language from the page, not from the model", async () => {
@@ -407,7 +486,7 @@ describe("chat turn", () => {
       message([toolUse({ ...GOOD_INPUT, language: "en" })], "tool_use"),
       message([text("Готово.")], "end_turn"),
     ]);
-    await handleChat(body({ language: "ru" }), deps);
+    await handleChat(confirmedBody({ language: "ru" }), deps);
     assert.match(sent[0]!.text, /Язык клиента: русский/);
   });
 
@@ -418,8 +497,36 @@ describe("chat turn", () => {
     const reply = await handleChat(body({ requestSent: true }), deps);
     assert.equal(reply.requestSent, true);
     assert.deepEqual(calls[0]!.tool_choice, { type: "none" });
-    assert.equal((calls[0]!.system as Anthropic.TextBlockParam[]).length, 2);
+    assert.match(calls[0]!.system, /already been sent/);
     assert.equal(sent.length, 0);
+  });
+
+  it("ignores an unsolicited tool call before the visitor confirms", async () => {
+    const { deps, calls, sent, saved } = fakeDeps([
+      message([toolUse(GOOD_INPUT)], "tool_use"),
+      message([text("Should I send this request to the master?")], "end_turn"),
+    ]);
+    const reply = await handleChat(body(), deps);
+    assert.equal(reply.requestSent, false);
+    assert.deepEqual(calls[0]!.tool_choice, { type: "none" });
+    assert.match(lastToolResult(calls[1]!).content, /Request not sent/);
+    assert.equal(saved.length, 0);
+    assert.equal(sent.length, 0);
+  });
+
+  it("disables submission when there is no configured delivery channel", async () => {
+    const { deps, calls, saved } = fakeDeps([
+      message([text("Please message the studio on WhatsApp.")], "end_turn"),
+    ]);
+    deps.notifiers = [];
+    deps.system = buildSystemPrompt(studioFacts, false);
+    const reply = await handleChat(confirmedBody(), deps);
+    assert.equal(reply.requestSent, false);
+    assert.deepEqual(calls[0]!.tool_choice, { type: "none" });
+    assert.equal(calls[0]!.tools.length, 0);
+    assert.match(calls[0]!.system, /answers studio questions only/);
+    assert.doesNotMatch(calls[0]!.system, /submit_booking_request/);
+    assert.deepEqual(saved, []);
   });
 
   it("still succeeds when one channel fails", async () => {
@@ -431,7 +538,7 @@ describe("chat turn", () => {
       deps.notifiers[0]!,
       { channel: "email", send: async () => Promise.reject(new Error("down")) },
     ];
-    const reply = await handleChat(body(), deps);
+    const reply = await handleChat(confirmedBody(), deps);
     assert.equal(reply.requestSent, true);
     assert.equal(sent.length, 1);
   });
@@ -447,59 +554,77 @@ describe("chat turn", () => {
         send: async () => Promise.reject(new Error("down")),
       },
     ];
-    deps.store = { saveRequest: async () => Promise.reject(new Error("down")) };
-    const reply = await handleChat(body(), deps);
+    deps.store.beginRequest = async () => Promise.reject(new Error("down"));
+    const reply = await handleChat(confirmedBody(), deps);
     assert.equal(reply.requestSent, false);
-    const result = (
-      calls[1]!.messages.at(-1)!.content as Anthropic.ToolResultBlockParam[]
-    )[0]!;
-    assert.equal(result.is_error, true);
+    assert.equal(reply.reply, FALLBACK.deliveryUnknown.en);
+    assert.equal(calls.length, 1);
   });
 
   it("does not call a stored request sent when no channel delivered it", async () => {
     for (const notifiers of [
-      [] as Notifier[],
-      [{ channel: "telegram", send: () => Promise.reject(new Error("down")) }],
+      [
+        {
+          channel: "telegram",
+          send: () => Promise.reject(new DeliveryRejected("down")),
+        },
+      ],
     ]) {
-      const guard = memoryGuard();
       const { deps, calls, saved, logs } = fakeDeps([
         message([toolUse(GOOD_INPUT)], "tool_use"),
         message([text("Please write on WhatsApp.")], "end_turn"),
       ]);
       deps.notifiers = notifiers;
-      deps.requestGuard = guard;
-      const reply = await handleChat(body(), deps);
+      const reply = await handleChat(confirmedBody(), deps);
       assert.equal(reply.requestSent, false);
       // Kept on record, but the visitor is told to write or call instead.
       assert.deepEqual(saved, ["abc12345"]);
-      assert.equal(lastToolResult(calls[1]!).is_error, true);
+      assert.equal(calls.length, 1);
+      assert.equal(reply.reply, FALLBACK.deliveryFailed.en);
       assert.deepEqual(logs, ["request not delivered"]);
       // The number is free again for a later try.
-      assert.equal(await guard.reserve(PHONE, DAY), "ok");
+      assert.equal(
+        await deps.store.beginRequest(
+          "retry",
+          {
+            serviceId: FIRST.id,
+            addOnIds: [],
+            preferredTime: "weekday evenings",
+            name: "Ann",
+            phone: PHONE,
+            notes: "",
+            language: "en",
+          },
+          new Date(DAY),
+        ),
+        "created",
+      );
     }
   });
 
   it("sends one request per phone number a day, across conversations", async () => {
-    const guard = memoryGuard();
+    const store = memoryStore();
     const first = fakeDeps([
       message([toolUse(GOOD_INPUT)], "tool_use"),
       message([text("Sent.")], "end_turn"),
     ]);
-    first.deps.requestGuard = guard;
-    assert.equal((await handleChat(body(), first.deps)).requestSent, true);
+    first.deps.store = store;
+    assert.equal(
+      (await handleChat(confirmedBody(), first.deps)).requestSent,
+      true,
+    );
 
     // A new conversation (the page says nothing was sent) with the same phone.
     const second = fakeDeps([
       message([toolUse(GOOD_INPUT)], "tool_use"),
       message([text("Karina already has your request.")], "end_turn"),
     ]);
-    second.deps.requestGuard = guard;
-    const reply = await handleChat(body(), second.deps);
+    second.deps.store = store;
+    const reply = await handleChat(confirmedBody(), second.deps);
     assert.equal(reply.requestSent, true);
     assert.equal(second.sent.length, 0);
-    const result = lastToolResult(second.calls[1]!);
-    assert.equal(result.is_error, undefined);
-    assert.match(String(result.content), /already reached the master today/);
+    assert.equal(reply.reply, FALLBACK.sent.en);
+    assert.equal(second.calls.length, 1);
   });
 
   it("stops sending requests after the daily limit", async () => {
@@ -507,29 +632,52 @@ describe("chat turn", () => {
       message([toolUse(GOOD_INPUT)], "tool_use"),
       message([text("Please write on WhatsApp.")], "end_turn"),
     ]);
-    deps.requestGuard = memoryGuard(0);
-    const reply = await handleChat(body(), deps);
+    deps.store = memoryStore(0);
+    const reply = await handleChat(confirmedBody(), deps);
     assert.equal(reply.requestSent, false);
     assert.equal(sent.length, 0);
     assert.equal(saved.length, 0);
-    const result = lastToolResult(calls[1]!);
-    assert.equal(result.is_error, true);
-    assert.match(String(result.content), /no more online requests today/);
+    assert.equal(reply.reply, FALLBACK.deliveryFailed.en);
+    assert.equal(calls.length, 1);
   });
 
-  it("still sends a request when the limits storage is down", async () => {
+  it("keeps an ambiguous provider failure pending across retries", async () => {
+    const { deps, saved, calls } = fakeDeps([
+      message([toolUse(GOOD_INPUT)], "tool_use"),
+      message([toolUse(GOOD_INPUT)], "tool_use"),
+    ]);
+    let attempts = 0;
+    deps.notifiers = [
+      {
+        channel: "email",
+        async send() {
+          attempts++;
+          throw new Error("timeout");
+        },
+      },
+    ];
+    const first = await handleChat(confirmedBody(), deps);
+    const second = await handleChat(confirmedBody(), deps);
+    assert.deepEqual(first, {
+      reply: FALLBACK.deliveryUnknown.en,
+      requestSent: false,
+    });
+    assert.deepEqual(second, first);
+    assert.equal(attempts, 1);
+    assert.equal(saved.length, 1);
+    assert.equal(calls.length, 2);
+  });
+
+  it("does not notify anyone when the booking cannot be persisted", async () => {
     const { deps, sent, logs } = fakeDeps([
       message([toolUse(GOOD_INPUT)], "tool_use"),
       message([text("Sent.")], "end_turn"),
     ]);
-    deps.requestGuard = {
-      reserve: () => Promise.reject(new Error("storage down")),
-      release: async () => {},
-    };
-    const reply = await handleChat(body(), deps);
-    assert.equal(reply.requestSent, true);
-    assert.equal(sent.length, 2);
-    assert.deepEqual(logs, ["request limits unavailable"]);
+    deps.store.beginRequest = () => Promise.reject(new Error("storage down"));
+    const reply = await handleChat(confirmedBody(), deps);
+    assert.equal(reply.requestSent, false);
+    assert.equal(sent.length, 0);
+    assert.deepEqual(logs, ["request not stored"]);
   });
 
   it("answers a refusal with a polite fallback", async () => {
@@ -605,9 +753,8 @@ describe("HTTP endpoint", () => {
     const logs: string[] = [];
     const http: HttpDeps = {
       allowedOrigins: [ORIGIN],
-      rateLimiter: new RateLimiter(2, 60_000),
-      dailyCounter: { increment: async () => ++count },
-      dailyLimit: 100,
+      rateLimiter: async () => ++count <= 2,
+      allowMessage: async () => true,
       verifyHuman: async () => ({ ok: true }),
       chat: deps,
       log: (m) => logs.push(m),
@@ -665,7 +812,7 @@ describe("HTTP endpoint", () => {
   });
 
   it("stops calling the AI after the daily limit", async () => {
-    const { http } = httpDeps({ dailyLimit: 0 });
+    const { http } = httpDeps({ allowMessage: async () => false });
     let called = false;
     http.chat.createMessage = async () => {
       called = true;
@@ -740,14 +887,42 @@ describe("HTTP endpoint", () => {
     assert.equal(read, false);
   });
 
-  it("limits by the address the platform appended, not the client's", () => {
-    assert.equal(forwardedClientIp("203.0.113.7:51234"), "203.0.113.7");
+  it("returns 413 for a chunked body above the limit", async () => {
+    const { http } = httpDeps();
     assert.equal(
-      forwardedClientIp("1.2.3.4, 203.0.113.7:51234"),
-      "203.0.113.7",
+      (
+        await handleChatHttp(
+          {
+            ...post(),
+            readJson: async () => {
+              throw new BodyTooLarge();
+            },
+          },
+          http,
+        )
+      ).status,
+      413,
     );
-    assert.equal(forwardedClientIp("2001:db8::1"), "2001:db8::1");
-    assert.equal(forwardedClientIp(null), undefined);
+  });
+
+  it("stops inference when the daily cost guard is unavailable", async () => {
+    const { http } = httpDeps({
+      allowMessage: async () => {
+        throw new Error("offline");
+      },
+    });
+    let calls = 0;
+    http.chat.createMessage = async () => {
+      calls++;
+      return message([], "end_turn");
+    };
+    const response = await handleChatHttp(post(), http);
+    assert.equal(calls, 0);
+    assert.deepEqual(response.body, {
+      reply: FALLBACK.unavailable.en,
+      requestSent: false,
+      reason: "daily-limit-unavailable",
+    });
   });
 });
 
@@ -756,7 +931,7 @@ describe("outside services", () => {
     const requests: { url: string; body: string }[] = [];
     const fakeFetch = (async (url: string, init: RequestInit) => {
       requests.push({ url, body: String(init.body) });
-      return new Response("{}", { status: 200 });
+      return Response.json({ ok: true, result: { message_id: 12 } });
     }) as unknown as typeof fetch;
     await telegramNotifier("TOKEN", "42", fakeFetch).send("s", "hello");
     assert.equal(
@@ -818,82 +993,38 @@ describe("outside services", () => {
     });
   });
 
-  it("reads settings and reports health without secret values", () => {
-    const config = readConfig({
+  it("validates Workers AI settings and requires a hosted Supabase origin", () => {
+    const base = {
       ALLOWED_ORIGINS: "https://ka-nails.pages.dev, http://127.0.0.1:4173",
-      FOUNDRY_RESOURCE: "kanails-ai",
-      STORAGE_TABLE_ENDPOINT: "https://kanails.table.core.windows.net",
-      TELEGRAM_BOT_TOKEN: "secret-token",
-      TELEGRAM_CHAT_ID: "42",
+      WORKERS_AI_MODEL: "@cf/google/gemma-4-26b-a4b-it",
+      SUPABASE_URL: "https://example.supabase.co",
+    };
+    const config = readConfig({
+      ...base,
+      SUPABASE_SECRET_KEY: "sb_secret_test",
+      TURNSTILE_SECRET: "test",
+      DAILY_REQUEST_LIMIT: "5",
     });
     assert.deepEqual(config.allowedOrigins, [
       "https://ka-nails.pages.dev",
       "http://127.0.0.1:4173",
     ]);
-    // OpenRouter by default; without a key the model is not ready.
-    assert.equal(config.model.provider, "openrouter");
-    // The free endpoint: the id without ":free" is paid.
-    assert.equal(config.model.name, "nvidia/nemotron-3-ultra-550b-a55b:free");
-    assert.equal(healthReport(config).modelReady, false);
-    assert.equal(config.requireHumanCheck, true);
-    assert.equal(config.dailyRequestLimit, 20);
-    const health = healthReport(config);
-    assert.deepEqual(health.channels, { telegram: true, email: false });
-    // Required but without a secret: the chat refuses every message.
-    assert.equal(health.humanCheck, "missing");
-    assert.ok(!JSON.stringify(health).includes("secret-token"));
-    const base = {
-      ALLOWED_ORIGINS: "https://ka-nails.pages.dev",
-      FOUNDRY_RESOURCE: "kanails-ai",
-      STORAGE_TABLE_ENDPOINT: "https://kanails.table.core.windows.net",
-    };
+    assert.equal(config.model, base.WORKERS_AI_MODEL);
+    assert.equal(config.dailyRequestLimit, 5);
+    assert.equal(config.dailyLimit, 500);
+    assert.equal(config.database?.url, base.SUPABASE_URL);
     assert.equal(
-      healthReport(readConfig({ ...base, TURNSTILE_SECRET: "s" })).humanCheck,
-      "on",
+      readConfig({
+        ...base,
+        SUPABASE_URL: "https://example.supabase.co.evil.test",
+        SUPABASE_SECRET_KEY: "test",
+      }).database,
+      undefined,
     );
-    const off = readConfig({ ...base, HUMAN_CHECK: "off" });
-    assert.equal(off.requireHumanCheck, false);
-    assert.equal(healthReport(off).humanCheck, "off");
-    assert.equal(
-      readConfig({ ...base, DAILY_REQUEST_LIMIT: "5" }).dailyRequestLimit,
-      5,
-    );
-    assert.throws(() => readConfig({}), /ALLOWED_ORIGINS/);
-    const routed = readConfig({
-      ...base,
-      OPENROUTER_API_KEY: "sk-or-secret",
-      OPENROUTER_MODEL: "vendor/other-model",
-    });
-    assert.deepEqual(healthReport(routed).model, "vendor/other-model");
-    assert.equal(healthReport(routed).modelReady, true);
-    assert.ok(!JSON.stringify(healthReport(routed)).includes("sk-or-secret"));
-    const foundry = readConfig({ ...base, MODEL_PROVIDER: "foundry" });
-    assert.deepEqual(foundry.model, {
-      provider: "foundry",
-      name: "claude-haiku-4-5",
-      resource: "kanails-ai",
-    });
-    assert.equal(healthReport(foundry).provider, "foundry");
+    assert.equal(readConfig(base).turnstileSecret, undefined);
     assert.throws(
-      () =>
-        readConfig({
-          ALLOWED_ORIGINS: "https://ka-nails.pages.dev",
-          STORAGE_TABLE_ENDPOINT: "https://kanails.table.core.windows.net",
-          MODEL_PROVIDER: "foundry",
-        }),
-      /FOUNDRY_RESOURCE/,
+      () => readConfig({ ...base, WORKERS_AI_MODEL: "other" }),
+      /WORKERS_AI_MODEL/,
     );
-    // Secrets that are not created yet do not switch anything on.
-    const pending = readConfig({
-      ALLOWED_ORIGINS: "https://ka-nails.pages.dev",
-      FOUNDRY_RESOURCE: "kanails-ai",
-      STORAGE_TABLE_ENDPOINT: "https://kanails.table.core.windows.net",
-      TELEGRAM_BOT_TOKEN:
-        "@Microsoft.KeyVault(VaultName=kv;SecretName=telegram-bot-token)",
-      TELEGRAM_CHAT_ID: "42",
-      TURNSTILE_SECRET: "none",
-    });
-    assert.equal(pending.telegram, undefined);
-    assert.equal(pending.turnstileSecret, undefined);
   });
 });

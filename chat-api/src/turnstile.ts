@@ -12,6 +12,7 @@ export async function verifyTurnstile(
   token: string | undefined,
   fetchImpl: typeof fetch = fetch,
   required = true,
+  expectedHostname?: string,
 ): Promise<HumanCheck> {
   if (!secret) {
     return required ? { ok: false, reason: "no-secret" } : { ok: true };
@@ -23,16 +24,21 @@ export async function verifyTurnstile(
   try {
     const response = await fetchImpl(
       "https://challenges.cloudflare.com/turnstile/v0/siteverify",
-      { method: "POST", body: form },
+      { method: "POST", body: form, signal: AbortSignal.timeout(5_000) },
     );
     if (!response.ok) {
       return { ok: false, reason: `siteverify-http-${response.status}` };
     }
     const result = (await response.json()) as {
       success?: boolean;
+      hostname?: string;
       "error-codes"?: string[];
     };
-    if (result.success === true) return { ok: true };
+    if (result.success === true) {
+      return expectedHostname && result.hostname !== expectedHostname
+        ? { ok: false, reason: "hostname-mismatch" }
+        : { ok: true };
+    }
     return {
       ok: false,
       reason: (result["error-codes"] ?? []).join(",") || "rejected",

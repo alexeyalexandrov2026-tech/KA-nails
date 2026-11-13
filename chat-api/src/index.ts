@@ -1,129 +1,163 @@
-import { randomUUID } from "node:crypto";
-import { app, type InvocationContext } from "@azure/functions";
-import { DefaultAzureCredential } from "@azure/identity";
 import { studioFacts } from "../../lib/studio-facts";
-import {
-  emailNotifier,
-  foundryMessages,
-  openRouterMessages,
-  tableDailyCounter,
-  tableRequestGuard,
-  tableRequestStore,
-} from "./azure";
-import { healthReport, readConfig } from "./config";
-import {
-  forwardedClientIp,
-  handleChatHttp,
-  MAX_BODY_BYTES,
-  type HttpDeps,
-} from "./http";
-import { RateLimiter } from "./limits";
-import { telegramNotifier, type Notifier } from "./notify";
+import { readConfig } from "./config";
+import { BodyTooLarge, handleChatHttp, MAX_BODY_BYTES } from "./http";
+import { emailNotifier, telegramNotifier, type Notifier } from "./notify";
 import { buildSystemPrompt } from "./prompt";
+import { SupabaseError, supabaseChat } from "./supabase";
 import { verifyTurnstile } from "./turnstile";
+import { workersAiMessages } from "./workers-ai";
 
-// Azure Functions entry point (Node.js v4 programming model).
-
-const config = readConfig(process.env);
-const credential = new DefaultAzureCredential();
-const notifiers: Notifier[] = [];
-if (config.telegram) {
-  notifiers.push(
-    telegramNotifier(config.telegram.token, config.telegram.chatId),
-  );
-}
-if (config.email) {
-  notifiers.push(
-    emailNotifier(
-      config.email.endpoint,
-      credential,
-      config.email.sender,
-      config.email.to,
-    ),
-  );
-}
-
-const rateLimiter = new RateLimiter(config.ratePerTenMinutes, 10 * 60 * 1000);
-const dailyCounter = tableDailyCounter(config.storageTableEndpoint, credential);
-const store = tableRequestStore(config.storageTableEndpoint, credential);
-const requestGuard = tableRequestGuard(
-  config.storageTableEndpoint,
-  credential,
-  config.dailyRequestLimit,
-);
-const createMessage =
-  config.model.provider === "foundry"
-    ? foundryMessages(config.model.resource, credential)
-    : openRouterMessages(config.model.apiKey);
 const system = buildSystemPrompt(studioFacts);
+const informationOnly = buildSystemPrompt(studioFacts, false);
+const noCache = { "cache-control": "no-store" };
+const log = (message: string, details?: Record<string, unknown>) =>
+  console.warn(JSON.stringify({ message, ...details }));
 
-function deps(context: InvocationContext): HttpDeps {
-  return {
-    allowedOrigins: config.allowedOrigins,
-    rateLimiter,
-    dailyCounter,
-    dailyLimit: config.dailyLimit,
-    verifyHuman: (token) =>
-      verifyTurnstile(
-        config.turnstileSecret,
-        token,
-        fetch,
-        config.requireHumanCheck,
-      ),
-    log: (message, details) => context.warn(message, details ?? {}),
-    chat: {
-      facts: studioFacts,
-      system,
-      model: config.model.name,
-      createMessage,
-      store,
-      notifiers,
-      requestGuard,
-      now: () => new Date(),
-      newId: () => randomUUID().slice(0, 8),
-      log: (message, details) => context.error(message, details ?? {}),
-    },
-  };
+export async function readBoundedJson(request: Request): Promise<unknown> {
+  const reader = request.body?.getReader();
+  if (!reader) throw new Error("Missing body");
+  const decoder = new TextDecoder("utf-8", { fatal: true, ignoreBOM: false });
+  let body = "";
+  let bytes = 0;
+  try {
+    for (;;) {
+      const chunk = await reader.read();
+      if (chunk.done) break;
+      bytes += chunk.value.byteLength;
+      if (bytes > MAX_BODY_BYTES) throw new BodyTooLarge();
+      body += decoder.decode(chunk.value, { stream: true });
+    }
+    return JSON.parse(body + decoder.decode());
+  } catch (error) {
+    void reader.cancel().catch(() => {});
+    throw error;
+  } finally {
+    reader.releaseLock();
+  }
 }
 
-app.http("chat", {
-  methods: ["POST", "OPTIONS"],
-  authLevel: "anonymous",
-  route: "chat",
-  handler: async (request, context) => {
+export default {
+  async fetch(request, env): Promise<Response> {
+    const path = new URL(request.url).pathname;
+    if (path !== "/api/chat" && path !== "/api/health")
+      return new Response(null, { status: 404 });
+    const config = readConfig(env);
+    const database =
+      config.database &&
+      supabaseChat(
+        config.database.url,
+        config.database.secret,
+        config.dailyRequestLimit,
+      );
+    const channels = {
+      telegram: Boolean(config.telegram),
+      email: Boolean(config.email && env.EMAIL),
+    };
+    const configured = Boolean(
+      env.AI &&
+      config.turnstileSecret &&
+      config.allowedOrigins.length &&
+      database,
+    );
+
+    if (path === "/api/health") {
+      if (request.method !== "GET")
+        return new Response(null, { status: 405, headers: { Allow: "GET" } });
+      const databaseReady =
+        (await database?.ready().catch((error: unknown) => {
+          log("database readiness check failed", {
+            reason:
+              error instanceof SupabaseError
+                ? `http-${error.status}`
+                : "connection",
+          });
+          return false;
+        })) ?? false;
+      const ready = configured && databaseReady;
+      return Response.json(
+        {
+          status: ready ? "ok" : "degraded",
+          provider: "workers-ai",
+          model: config.model,
+          modelReady: Boolean(env.AI),
+          databaseReady,
+          bookingReady: ready && (channels.telegram || channels.email),
+          channels,
+          humanCheck: config.turnstileSecret ? "on" : "missing",
+        },
+        { status: ready ? 200 : 503, headers: noCache },
+      );
+    }
+
+    const origin = request.headers.get("origin");
+    if (!database || !configured) {
+      return Response.json(
+        { error: "chat unavailable" },
+        {
+          status: 503,
+          headers: {
+            ...noCache,
+            vary: "Origin",
+            ...(origin && config.allowedOrigins.includes(origin)
+              ? { "access-control-allow-origin": origin }
+              : {}),
+          },
+        },
+      );
+    }
+    const notifiers: Notifier[] = [];
+    if (config.telegram)
+      notifiers.push(
+        telegramNotifier(config.telegram.token, config.telegram.chatId),
+      );
+    if (config.email && env.EMAIL)
+      notifiers.push(
+        emailNotifier(env.EMAIL, config.email.from, config.email.to),
+      );
+
     const length = request.headers.get("content-length");
     const output = await handleChatHttp(
       {
         method: request.method,
-        origin: request.headers.get("origin"),
-        ip: forwardedClientIp(request.headers.get("x-forwarded-for")),
+        origin,
+        ip: request.headers.get("cf-connecting-ip") ?? "unknown",
         contentLength: length === null ? null : Number(length),
-        readJson: async () => {
-          const text = await request.text();
-          // Chunked bodies have no Content-Length; refuse big ones here.
-          if (Buffer.byteLength(text) > MAX_BODY_BYTES) {
-            throw new Error("body too large");
-          }
-          return JSON.parse(text);
+        readJson: () => readBoundedJson(request),
+      },
+      {
+        allowedOrigins: config.allowedOrigins,
+        rateLimiter: async (key) =>
+          (await env.VISITOR_LIMIT.limit({ key })).success,
+        allowMessage: () => database.allowMessage(config.dailyLimit),
+        verifyHuman: (token) =>
+          verifyTurnstile(
+            config.turnstileSecret,
+            token,
+            fetch,
+            true,
+            origin ? new URL(origin).hostname : undefined,
+          ),
+        log,
+        chat: {
+          facts: studioFacts,
+          system: notifiers.length > 0 ? system : informationOnly,
+          model: config.model,
+          createMessage: workersAiMessages((model, input) =>
+            env.AI.run(model, input),
+          ),
+          store: database.store,
+          notifiers,
+          now: () => new Date(),
+          newId: () => crypto.randomUUID(),
+          log,
         },
       },
-      deps(context),
     );
-    return {
-      status: output.status,
-      headers: output.headers,
-      ...(output.body === undefined ? {} : { jsonBody: output.body }),
-    };
+    return output.body === undefined
+      ? new Response(null, { status: output.status, headers: output.headers })
+      : Response.json(output.body, {
+          status: output.status,
+          headers: output.headers,
+        });
   },
-});
-
-app.http("health", {
-  methods: ["GET"],
-  authLevel: "anonymous",
-  route: "health",
-  handler: async () => ({
-    status: 200,
-    headers: { "cache-control": "no-store" },
-    jsonBody: healthReport(config),
-  }),
-});
+} satisfies ExportedHandler<Env>;

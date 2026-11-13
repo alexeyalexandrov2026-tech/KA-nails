@@ -1,112 +1,64 @@
-// Settings come from the Function App's application settings (Bicep in
-// infra/azure/chat.bicep). Secrets are Key Vault references there, so they
-// never appear in code, in the repository or in CI.
+import { isWorkersModel, type WorkersModel } from "./workers-ai";
 
 export interface ChatConfig {
   allowedOrigins: string[];
-  /** Where the model runs: OpenRouter (an API key) or Microsoft Foundry. */
-  model:
-    | { provider: "openrouter"; name: string; apiKey?: string }
-    | { provider: "foundry"; name: string; resource: string };
-  storageTableEndpoint: string;
+  model: WorkersModel;
+  database?: { url: string; secret: string };
   telegram?: { token: string; chatId: string };
-  email?: { endpoint: string; sender: string; to: string };
+  email?: { from: string; to: string };
   turnstileSecret?: string;
-  /** False only with HUMAN_CHECK=off; otherwise no secret means no chat. */
-  requireHumanCheck: boolean;
   dailyLimit: number;
   dailyRequestLimit: number;
-  ratePerTenMinutes: number;
 }
 
-/**
- * A setting that is unset, "none", or a Key Vault reference Azure could not
- * resolve (the secret does not exist yet) counts as not configured.
- */
-function optional(value: string | undefined): string | undefined {
-  const clean = value?.trim();
-  if (!clean || clean === "none" || clean.startsWith("@Microsoft.KeyVault(")) {
-    return undefined;
-  }
-  return clean;
+function configured(value: unknown) {
+  return typeof value === "string" ? value.trim() || undefined : undefined;
 }
 
-/**
- * NVIDIA Nemotron 3 Ultra on OpenRouter's free endpoint (the owner's choice).
- * The id without ":free" is a paid endpoint: without credits it answers 402.
- */
-export const DEFAULT_OPENROUTER_MODEL =
-  "nvidia/nemotron-3-ultra-550b-a55b:free";
-
-function number(value: string | undefined, fallback: number): number {
+function positiveInteger(value: unknown, fallback: number) {
   const parsed = Number(value);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+  return Number.isSafeInteger(parsed) && parsed > 0 && parsed <= 10_000
+    ? parsed
+    : fallback;
 }
 
-export function readConfig(env: NodeJS.ProcessEnv): ChatConfig {
-  const required = (name: string) => {
-    const value = env[name]?.trim();
-    if (!value) throw new Error(`missing setting ${name}`);
-    return value;
-  };
-  const telegramToken = optional(env.TELEGRAM_BOT_TOKEN);
-  const telegramChat = optional(env.TELEGRAM_CHAT_ID);
-  const emailEndpoint = optional(env.ACS_ENDPOINT);
-  const emailSender = optional(env.EMAIL_SENDER);
-  const emailTo = optional(env.EMAIL_TO);
-  return {
-    allowedOrigins: required("ALLOWED_ORIGINS")
-      .split(",")
-      .map((origin) => origin.trim())
-      .filter(Boolean),
-    model:
-      env.MODEL_PROVIDER?.trim().toLowerCase() === "foundry"
-        ? {
-            provider: "foundry",
-            name: env.FOUNDRY_DEPLOYMENT?.trim() || "claude-haiku-4-5",
-            resource: required("FOUNDRY_RESOURCE"),
-          }
-        : {
-            provider: "openrouter",
-            name: env.OPENROUTER_MODEL?.trim() || DEFAULT_OPENROUTER_MODEL,
-            apiKey: optional(env.OPENROUTER_API_KEY),
-          },
-    storageTableEndpoint: required("STORAGE_TABLE_ENDPOINT"),
-    telegram:
-      telegramToken && telegramChat
-        ? { token: telegramToken, chatId: telegramChat }
-        : undefined,
-    email:
-      emailEndpoint && emailSender && emailTo
-        ? { endpoint: emailEndpoint, sender: emailSender, to: emailTo }
-        : undefined,
-    turnstileSecret: optional(env.TURNSTILE_SECRET),
-    requireHumanCheck: env.HUMAN_CHECK?.trim().toLowerCase() !== "off",
-    dailyLimit: number(env.DAILY_MESSAGE_LIMIT, 500),
-    dailyRequestLimit: number(env.DAILY_REQUEST_LIMIT, 20),
-    ratePerTenMinutes: number(env.RATE_LIMIT_PER_10_MIN, 20),
-  };
-}
+type Setting =
+  | "ALLOWED_ORIGINS"
+  | "WORKERS_AI_MODEL"
+  | "SUPABASE_URL"
+  | "SUPABASE_SECRET_KEY"
+  | "TELEGRAM_BOT_TOKEN"
+  | "TELEGRAM_CHAT_ID"
+  | "EMAIL_SENDER"
+  | "EMAIL_TO"
+  | "TURNSTILE_SECRET"
+  | "DAILY_MESSAGE_LIMIT"
+  | "DAILY_REQUEST_LIMIT";
 
-/** What /api/health reports: which parts are switched on, never the values. */
-export function healthReport(config: ChatConfig) {
+export function readConfig(env: Partial<Record<Setting, unknown>>): ChatConfig {
+  const origins = (configured(env.ALLOWED_ORIGINS) ?? "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  const model = configured(env.WORKERS_AI_MODEL) ?? "";
+  if (!isWorkersModel(model)) throw new Error("Invalid WORKERS_AI_MODEL");
+  const url = configured(env.SUPABASE_URL);
+  const secret = configured(env.SUPABASE_SECRET_KEY);
+  const token = configured(env.TELEGRAM_BOT_TOKEN);
+  const chatId = configured(env.TELEGRAM_CHAT_ID);
+  const from = configured(env.EMAIL_SENDER);
+  const to = configured(env.EMAIL_TO);
   return {
-    status: "ok",
-    provider: config.model.provider,
-    model: config.model.name,
-    // False: OpenRouter has no API key yet, so every reply is the fallback.
-    modelReady:
-      config.model.provider === "foundry" || Boolean(config.model.apiKey),
-    channels: {
-      telegram: Boolean(config.telegram),
-      email: Boolean(config.email),
-    },
-    // "missing": the check is required but has no secret, so every message
-    // is refused until turnstile-secret is set in Key Vault.
-    humanCheck: config.turnstileSecret
-      ? "on"
-      : config.requireHumanCheck
-        ? "missing"
-        : "off",
+    allowedOrigins: origins,
+    model,
+    database:
+      url && /^https:\/\/[a-z0-9]+\.supabase\.co$/.test(url) && secret
+        ? { url, secret }
+        : undefined,
+    telegram: token && chatId ? { token, chatId } : undefined,
+    email: from && to ? { from, to } : undefined,
+    turnstileSecret: configured(env.TURNSTILE_SECRET),
+    dailyLimit: positiveInteger(env.DAILY_MESSAGE_LIMIT, 500),
+    dailyRequestLimit: positiveInteger(env.DAILY_REQUEST_LIMIT, 20),
   };
 }
