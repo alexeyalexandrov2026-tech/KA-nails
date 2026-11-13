@@ -39,6 +39,9 @@ const FAKE_TURNSTILE = `(() => {
         size: options.size,
         appearance: options.appearance,
         execution: options.execution,
+        language: options.language,
+        retry: options.retry,
+        refreshTimeout: options["refresh-timeout"],
       });
       return id;
     },
@@ -53,6 +56,14 @@ const FAKE_TURNSTILE = `(() => {
         throw new Error("Turnstile: the widget is gone");
       }
       const error = window.__turnstileError;
+      if (window.__turnstileInteractive) {
+        widget.options["before-interactive-callback"]?.();
+        window.__completeTurnstile = () => {
+          widget.options["after-interactive-callback"]?.();
+          widget.options.callback("token-" + ++tokens);
+        };
+        return;
+      }
       setTimeout(() => {
         if (error) widget.options["error-callback"](error);
         else widget.options.callback("token-" + ++tokens);
@@ -260,6 +271,9 @@ test.describe("AI receptionist", () => {
         size: "compact",
         appearance: "interaction-only",
         execution: "execute",
+        language: "en",
+        retry: "never",
+        refreshTimeout: "never",
       };
       expect(
         await page.evaluate(
@@ -304,7 +318,75 @@ test.describe("AI receptionist", () => {
       ]);
     });
 
-    test("a failed human check names Cloudflare's code in the console", async ({
+    test("the Russian chat identifies an interactive verification while the message waits", async ({
+      page,
+    }) => {
+      test.skip(!TURNSTILE, "build without NEXT_PUBLIC_TURNSTILE_SITE_KEY");
+      await page.addInitScript(() => {
+        (
+          window as typeof window & { __turnstileInteractive?: boolean }
+        ).__turnstileInteractive = true;
+      });
+      const sent = await fakeApi(page, (_body, route) =>
+        answer(route, "Классический педикюр стоит 75 $."),
+      );
+      await page.goto("/ru/book/");
+      await page.locator(".chat-launcher").click();
+      const input = page.getByLabel("Ваше сообщение");
+      await input.fill("Сколько стоит классический педикюр?");
+      await input.press("Enter");
+      await expect(
+        page.getByText(/Завершите проверку Cloudflare/),
+      ).toBeVisible();
+      expect(sent).toHaveLength(0);
+      await page.evaluate(() => {
+        (
+          window as typeof window & { __completeTurnstile?: () => void }
+        ).__completeTurnstile?.();
+      });
+      await expect(
+        page.getByText("Классический педикюр стоит 75 $."),
+      ).toBeVisible();
+      expect(
+        sent.map(({ language, turnstileToken }) => [language, turnstileToken]),
+      ).toEqual([["ru", "token-1"]]);
+    });
+
+    test("a rejected token prompts another verification and preserves the draft", async ({
+      page,
+    }) => {
+      test.skip(!TURNSTILE, "build without NEXT_PUBLIC_TURNSTILE_SITE_KEY");
+      let attempts = 0;
+      const sent = await fakeApi(page, (_body, route) =>
+        ++attempts === 1
+          ? route.fulfill({
+              status: 403,
+              json: {
+                error: "verification failed, reload the page",
+                reason: "timeout-or-duplicate",
+              },
+            })
+          : answer(route, "A classic pedicure is $75."),
+      );
+      await page.goto("/book/");
+      await page.locator(".chat-launcher").click();
+      const input = page.getByLabel("Your message");
+      await input.fill("How much is a classic pedicure?");
+      await input.press("Enter");
+      await expect(page.locator(".chat-message-notice")).toContainText(
+        "Cloudflare could not verify your browser",
+      );
+      await expect(input).toHaveValue("How much is a classic pedicure?");
+      await input.press("Enter");
+      await expect(page.getByText("A classic pedicure is $75.")).toBeVisible();
+      expect(sent.map(({ turnstileToken }) => turnstileToken)).toEqual([
+        "token-1",
+        "token-2",
+      ]);
+      expect(sent[1]?.messages).toEqual(sent[0]?.messages);
+    });
+
+    test("a failed human check names Cloudflare's code and sends no unverified message", async ({
       page,
     }) => {
       test.skip(!TURNSTILE, "build without NEXT_PUBLIC_TURNSTILE_SITE_KEY");
@@ -312,7 +394,7 @@ test.describe("AI receptionist", () => {
       page.on("console", (message) => {
         if (message.type() === "warning") warnings.push(message.text());
       });
-      // Like the live API, refuse a message that comes without a token.
+      // The server would still reject a tokenless message.
       const sent = await fakeApi(page, (_body, route) =>
         route.fulfill({ status: 403, json: { reason: "no-token" } }),
       );
@@ -325,9 +407,9 @@ test.describe("AI receptionist", () => {
       await page.getByLabel("Your message").fill("Hi");
       await page.getByLabel("Your message").press("Enter");
       await expect(page.locator(".chat-message-notice")).toContainText(
-        "The message was not sent",
+        "Cloudflare could not verify your browser",
       );
-      expect(sent[0]!.turnstileToken).toBeUndefined();
+      expect(sent).toHaveLength(0);
       expect(warnings).toContain("Turnstile error 110200");
     });
 

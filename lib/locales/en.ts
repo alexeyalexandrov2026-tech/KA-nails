@@ -276,11 +276,16 @@ export const enLocale: LocaleDictionary = {
     title: "KA Nails assistant",
     close: "Close chat",
     greeting:
-      "Hello! I can tell you about our pedicures and prices and pass an appointment request to the master. How can I help?",
+      "Hello! Ask me about our pedicures, prices, or how to request an appointment.",
     inputLabel: "Your message",
     placeholder: "Ask about services or request a time…",
     send: "Send",
     typing: "The assistant is writing…",
+    verifying: "Verifying your browser…",
+    verificationPrompt:
+      "Complete the Cloudflare verification below to send your message.",
+    verificationError:
+      "Cloudflare could not verify your browser. Press Send to retry, or reopen the chat if the check does not appear.",
     you: "You",
     assistant: "Assistant",
     privacy:
