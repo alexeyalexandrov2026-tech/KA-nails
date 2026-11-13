@@ -59,11 +59,18 @@ on an emulator without release keys, sign it locally with the debug key:
 `connectedDebugAndroidTest` uninstalls the app when it finishes; install the
 APK again before checking by hand.
 
+## Owner decisions
+
+- The application ID is `com.ka_nails_miami.app`, from the studio's domain
+  `ka-nails-miami.com`; it cannot change after the first Play upload. The code
+  namespace stays `com.kanails.app`.
+- Headings use Cormorant Garamond from the variable TTF in `res/font/`
+  (google/fonts, SIL OFL 1.1; the license ships in
+  `assets/licenses/cormorant-garamond-OFL.txt`).
+- The app will be published from the studio's organization account in Play
+  Console (needs a D-U-N-S number).
+
 ## Not decided yet
 
-- The application ID `com.kanails.app` is a placeholder until the owner
-  confirms it; it cannot change after the first Play upload.
-- Headings use the system serif: the site's Cormorant Garamond ships only as
-  WOFF2, which Android cannot load.
 - Release signing, the Play Console listing, the data safety form and
   publishing belong to a separate release.

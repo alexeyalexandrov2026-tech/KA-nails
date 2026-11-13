@@ -5,8 +5,11 @@ import androidx.compose.material3.Typography
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
+import com.kanails.app.R
 
 /** Brand colours from app/globals.css (:root, "brand luxe"). */
 object KaColors {
@@ -44,10 +47,20 @@ private val colors = lightColorScheme(
     outlineVariant = KaColors.Hairline,
 )
 
-// The site sets headings in Cormorant Garamond; its fonts ship as WOFF2,
-// which Android cannot load, so headings use the system serif.
+// Headings use Cormorant Garamond like the site: the variable TTF from
+// google/fonts (SIL OFL 1.1, assets/licenses/cormorant-garamond-OFL.txt).
+private fun cormorant(weight: FontWeight) = Font(
+    R.font.cormorant_garamond,
+    weight = weight,
+    variationSettings = FontVariation.Settings(FontVariation.weight(weight.weight)),
+)
+
 private val base = Typography()
-private val serif = FontFamily.Serif
+private val serif = FontFamily(
+    cormorant(FontWeight.Normal),
+    cormorant(FontWeight.Medium),
+    cormorant(FontWeight.SemiBold),
+)
 private val typography = base.copy(
     displaySmall = base.displaySmall.copy(fontFamily = serif),
     headlineLarge = base.headlineLarge.copy(fontFamily = serif),

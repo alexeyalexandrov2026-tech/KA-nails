@@ -62,8 +62,9 @@ android {
     compileSdk = 37
 
     defaultConfig {
-        // Not final: confirm the application ID before the first Play upload.
-        applicationId = "com.kanails.app"
+        // From the studio's domain ka-nails-miami.com (owner, 2026-11-13); hyphens
+        // become underscores. It cannot change after the first Play upload.
+        applicationId = "com.ka_nails_miami.app"
         minSdk = 26
         targetSdk = 36
         versionCode = 1
