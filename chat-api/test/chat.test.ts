@@ -944,8 +944,6 @@ describe("HTTP endpoint", () => {
   });
 
   it("names the model's HTTP status when it refuses", async () => {
-    // Like the SDK's APIError: OpenRouter answers 402 for a paid model
-    // without credits.
     const { http } = httpDeps();
     http.chat.createMessage = async () => {
       throw Object.assign(new Error("402 Insufficient credits"), {
@@ -1067,7 +1065,7 @@ describe("outside services", () => {
       reason: "no-token",
     });
     assert.deepEqual(await verifyTurnstile("s", "t", yes), { ok: true });
-    // The visitor's IP is not sent: Azure and Cloudflare can see different ones.
+    // Siteverify can validate the token without a visitor IP.
     assert.equal(sent.at(-1), "secret=s&response=t");
     // Cloudflare's reasons reach the caller.
     assert.deepEqual(

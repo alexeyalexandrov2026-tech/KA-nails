@@ -217,16 +217,6 @@ The Worker pins `@cf/google/gemma-4-26b-a4b-it`. The benchmark includes correct
 prices, unpublished address handling and the booking tool in both languages.
 See the [Cloudflare model page](https://developers.cloudflare.com/workers-ai/models/gemma-4-26b-a4b-it/).
 
-### Azure archive
-
-The previous Azure resources were in `rg-kanails-chat`. On November 13, 2026,
-the Azure subscription was disabled and the old Table Storage could not be read.
-Keep the original resources until the historical `requests` table can be exported,
-imported without sending notifications and reconciled. Azure Table rows are keyed
-by UTC date and request ID and contain a delivery summary alongside the booking.
-An account administrator can restore access or provide an existing export through
-an approved private channel. Never put booking data into GitHub.
-
 ## Verification
 
 For an unconfigured export:
@@ -236,9 +226,8 @@ npm run build
 npm run test:e2e -- --grep "website|unsafe|unconfigured"
 ```
 
-Real integration uses only public configuration and HTTP/browser behaviour. This
-repository never imports platform code or connects to a database. The site's own
-suite reads:
+The public site integrates with the platform wizard over HTTP. The chat Worker
+uses Supabase for request storage. The site's own suite reads:
 
 - `NEXT_PUBLIC_GORGONA_BOOKING_URL` (build time) and `KA_BOOKING_TEST_URL`: the
   hosted `/book/` wizard of a disposable booking host with a FAKE tenant;

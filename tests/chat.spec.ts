@@ -4,10 +4,8 @@ import { approvedChatApiUrl } from "../lib/chat-api-url";
 import { channelHref, studioFacts } from "../lib/studio-facts";
 import { turnstileSiteKey } from "../lib/turnstile-site-key";
 
-// The AI receptionist widget. The Cloudflare Worker is replaced by a
-// fake here: these tests check what the page sends and shows. They need a
-// build made with NEXT_PUBLIC_CHAT_API_URL (CI's second pass sets it to the
-// preview origin); without it only the "no button" check applies.
+// These tests use a fake chat Worker. CI's second build sets
+// NEXT_PUBLIC_CHAT_API_URL to the local preview origin.
 
 const CHAT = approvedChatApiUrl(process.env.NEXT_PUBLIC_CHAT_API_URL);
 // CI's chat pass also sets a Turnstile site key; the script itself is faked.
@@ -97,14 +95,14 @@ const answer = (route: Route, reply: string, requestSent = false) =>
 test.describe("AI receptionist", () => {
   test("the chat address must be an approved https origin", () => {
     expect(approvedChatApiUrl(undefined)).toBeNull();
-    expect(approvedChatApiUrl("https://kanails-chat.azurewebsites.net")).toBe(
-      "https://kanails-chat.azurewebsites.net/api/chat",
-    );
+    expect(
+      approvedChatApiUrl("https://ka-nails-chat.example.workers.dev"),
+    ).toBe("https://ka-nails-chat.example.workers.dev/api/chat");
     expect(approvedChatApiUrl("http://127.0.0.1:4173")).toBe(
       "http://127.0.0.1:4173/api/chat",
     );
     for (const bad of [
-      "http://kanails-chat.azurewebsites.net",
+      "http://ka-nails-chat.example.workers.dev",
       "https://x.example/api/chat",
       "https://x.example/?tenant=1",
       "https://user:pass@x.example",
