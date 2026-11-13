@@ -15,6 +15,7 @@ export interface BookingContact {
 const PHONE = /(?<![\p{L}\p{N}])\+?\(?\d[\d() .-]{5,24}\d\)?(?![\p{L}\p{N}])/gu;
 const NAME =
   /^[\p{L}\p{M}][\p{L}\p{M}'’.-]*(?:\s+[\p{L}\p{M}][\p{L}\p{M}'’.-]*){0,5}$/u;
+const CONTACT_CONJUNCTION = /(?:^|\s)(?:and|и)(?:\s|$)/iu;
 const NAME_PREFIX =
   /^(?:my\s+(?:full\s+)?name\s+is|name\s*:|меня\s+зовут|мо[её]\s+имя\s*:?)\s*/iu;
 const NAME_QUESTION =
@@ -23,6 +24,11 @@ const PHONE_INTRO =
   /^(?:(?:my\s+)?(?:phone|telephone|mobile|tel)(?:\s+number)?(?:\s+is)?|(?:мой\s+)?(?:телефон|номер(?:\s+телефона)?)|(?:you\s+can\s+)?(?:call|reach|contact|text)\s+me\s+(?:at|on))$/iu;
 const PHONE_PREFIX =
   /^(?:(?:my\s+)?(?:phone|telephone|mobile|tel)(?:\s+number)?(?:\s+is)?|(?:мой\s+)?(?:телефон|номер(?:\s+телефона)?))(?:\s*:\s*|\s+)/iu;
+const OWN_NAME_CLAUSE =
+  /(?:^|[.!?;,\r\n]\s*)(?:my\s+(?:full\s+)?name\s+is|меня\s+зовут|мо[её]\s+имя\s*:?)\s*([^.!?;,\r\n]+)$/iu;
+const OWN_PHONE_LABEL =
+  /(?:[.!?;,\r\n]\s*(?:(?:and|и)\s+)?|\s+(?:and|и)\s+)(?:my\s+(?:phone|telephone|mobile|tel)(?:\s+number)?(?:\s+is)?|мой\s+(?:телефон|номер(?:\s+телефона)?))(?:\s*:\s*|\s+)/iu;
+const PHONE_CLAUSE_END = /^(?:[ \t]*$|[ \t]*[.!?;](?:\s|$)|[ \t]*[\r\n])/u;
 const PHONE_QUESTION =
   /(?:what(?:['’]s|\s+is)\s+your\s+(?:phone|telephone|mobile)|(?:provide|share|enter|tell\s+me|let\s+me\s+know|reply\s+with|give\s+me)\s+(?:your\s+)?(?:phone|telephone|mobile)|(?:укажите|напишите|сообщите)\s+(?:ваш\s+)?(?:телефон|номер))/iu;
 const NOT_NAME =
@@ -43,6 +49,28 @@ function nameValue(
     : undefined;
 }
 
+function embeddedSelfContact(
+  content: string,
+  phone: RegExpMatchArray | undefined,
+  excludedNames: readonly string[],
+): { name: string; phone: string | null } | undefined {
+  const phoneLabel = OWN_PHONE_LABEL.exec(content);
+  if (!phoneLabel) return undefined;
+  const rawName = OWN_NAME_CLAUSE.exec(content.slice(0, phoneLabel.index))?.[1];
+  const name = rawName && nameValue(rawName, excludedNames);
+  if (!name || CONTACT_CONJUNCTION.test(name)) return undefined;
+
+  const startsAt = phoneLabel.index + phoneLabel[0].length;
+  // A qualifier after the number may disclaim ownership. Require it to end
+  // the clause before storing it as the visitor's phone.
+  const number =
+    phone?.index === startsAt &&
+    PHONE_CLAUSE_END.test(content.slice(startsAt + phone[0].length))
+      ? normalizePhone(phone[0])
+      : null;
+  return { name, phone: number };
+}
+
 export function prepareBookingContact(
   history: ChatMessage[],
   excludedNames: readonly string[] = [],
@@ -59,10 +87,22 @@ export function prepareBookingContact(
     const found = [...message.content.matchAll(PHONE)].filter((match) =>
       normalizePhone(match[0]),
     );
+    const embedded = embeddedSelfContact(
+      message.content,
+      found[0],
+      excludedNames,
+    );
+    if (embedded) names.add(embedded.name);
     // Do not mix one person's name with another person's number.
     if (found.length > 1) {
       delete contact.name;
       delete contact.phone;
+      continue;
+    }
+    if (embedded) {
+      contact.name = embedded.name;
+      if (embedded.phone) contact.phone = embedded.phone;
+      else delete contact.phone;
       continue;
     }
     let candidate: string | undefined;
@@ -81,8 +121,9 @@ export function prepareBookingContact(
       delete contact.phone;
     }
     if (found.length === 1) {
+      const phoneMatch = found[0]!;
       const rawWithoutPhone = message.content
-        .replace(found[0]![0], "")
+        .replace(phoneMatch[0], "")
         .trim()
         .replace(/[,;:]\s*$/, "")
         .trim();
@@ -97,14 +138,15 @@ export function prepareBookingContact(
       if (!phoneOnly) candidate = nameValue(withoutPhone, excludedNames);
       if (
         candidate &&
-        !nameRequested &&
-        !NAME_PREFIX.test(withoutPhone) &&
-        !candidate.split(/\s+/).every((word) => /^\p{Lu}/u.test(word))
+        (CONTACT_CONJUNCTION.test(candidate) ||
+          (!nameRequested &&
+            !NAME_PREFIX.test(withoutPhone) &&
+            !candidate.split(/\s+/).every((word) => /^\p{Lu}/u.test(word))))
       ) {
         candidate = undefined;
       }
       if (phoneOnly || candidate) {
-        contact.phone = normalizePhone(found[0]![0])!;
+        contact.phone = normalizePhone(phoneMatch[0])!;
       } else {
         // Free-form sentences may refer to another person. Do not attach the
         // number to a previous contact or infer a name from sentence text.
