@@ -306,11 +306,6 @@ export async function handleChat(
   );
   const messages: ModelMessage[] = [...prepared.messages];
   const system = [deps.system];
-  if (deps.notifiers.length === 0) {
-    system.push(
-      "Online request delivery is currently unavailable. Answer studio questions and direct booking requests to the published WhatsApp or phone.",
-    );
-  }
   if (prepared.instruction) {
     system.push(prepared.instruction);
   }
@@ -322,7 +317,7 @@ export async function handleChat(
 
   // The tool stays defined on every call (the API refuses tool blocks in the
   // history without it); once a request is sent the model may not use it.
-  const tools = [bookingTool(deps.facts)];
+  const tools = deps.notifiers.length > 0 ? [bookingTool(deps.facts)] : [];
   const fallback = () => FALLBACK.unavailable[body.language];
 
   for (let round = 0; round < LIMITS.toolRounds; round++) {
@@ -357,6 +352,9 @@ export async function handleChat(
         requestSent: state.requestSent,
         reason: `model-empty-${response.stop_reason ?? "none"}`,
       };
+    }
+    if (tools.length === 0) {
+      return { reply: FALLBACK.unavailable[body.language], requestSent: false };
     }
     const toolUses = response.content.filter(
       (block): block is ToolUse => block.type === "tool_use",

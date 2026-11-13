@@ -8,6 +8,7 @@ import { verifyTurnstile } from "./turnstile";
 import { workersAiMessages } from "./workers-ai";
 
 const system = buildSystemPrompt(studioFacts);
+const informationOnly = buildSystemPrompt(studioFacts, false);
 const noCache = { "cache-control": "no-store" };
 const log = (message: string, details?: Record<string, unknown>) =>
   console.warn(JSON.stringify({ message, ...details }));
@@ -139,7 +140,7 @@ export default {
         log,
         chat: {
           facts: studioFacts,
-          system,
+          system: notifiers.length > 0 ? system : informationOnly,
           model: config.model,
           createMessage: workersAiMessages((model, input) =>
             env.AI.run(model, input),

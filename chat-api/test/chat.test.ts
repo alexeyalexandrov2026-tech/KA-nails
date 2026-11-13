@@ -519,10 +519,13 @@ describe("chat turn", () => {
       message([text("Please message the studio on WhatsApp.")], "end_turn"),
     ]);
     deps.notifiers = [];
+    deps.system = buildSystemPrompt(studioFacts, false);
     const reply = await handleChat(confirmedBody(), deps);
     assert.equal(reply.requestSent, false);
     assert.deepEqual(calls[0]!.tool_choice, { type: "none" });
-    assert.match(calls[0]!.system, /delivery is currently unavailable/);
+    assert.equal(calls[0]!.tools.length, 0);
+    assert.match(calls[0]!.system, /answers studio questions only/);
+    assert.doesNotMatch(calls[0]!.system, /submit_booking_request/);
     assert.deepEqual(saved, []);
   });
 

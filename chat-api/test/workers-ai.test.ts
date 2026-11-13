@@ -63,7 +63,7 @@ it("reads Gemma tool calls and sends correlated tool results without reasoning",
       },
     ],
   });
-  assert.equal(inputs[0]?.tools[0]?.function.name, TOOL_NAME);
+  assert.equal(inputs[0]?.tools?.[0]?.function.name, TOOL_NAME);
   assert.equal(inputs[0]?.store, false);
   await run({
     ...base,

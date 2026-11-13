@@ -19,7 +19,7 @@ type Message =
 
 export interface WorkersAiInput {
   messages: Message[];
-  tools: {
+  tools?: {
     type: "function";
     function: {
       name: string;
@@ -27,7 +27,7 @@ export interface WorkersAiInput {
       parameters: Record<string, unknown>;
     };
   }[];
-  tool_choice: "auto" | "none";
+  tool_choice?: "auto" | "none";
   max_completion_tokens: number;
   temperature?: number;
   chat_template_kwargs?: { enable_thinking: boolean };
@@ -83,15 +83,19 @@ function inputFor(params: ModelRequest, model: WorkersModel): WorkersAiInput {
   }
   return {
     messages,
-    tools: params.tools.map((tool) => ({
-      type: "function",
-      function: {
-        name: tool.name,
-        description: tool.description,
-        parameters: { ...tool.input_schema, additionalProperties: false },
-      },
-    })),
-    tool_choice: params.tool_choice ? "none" : "auto",
+    ...(params.tools.length > 0
+      ? {
+          tools: params.tools.map((tool) => ({
+            type: "function" as const,
+            function: {
+              name: tool.name,
+              description: tool.description,
+              parameters: { ...tool.input_schema, additionalProperties: false },
+            },
+          })),
+          tool_choice: params.tool_choice ? "none" : "auto",
+        }
+      : {}),
     max_completion_tokens: params.max_tokens,
     ...(model === "@cf/openai/gpt-oss-120b"
       ? { reasoning_effort: "low" as const }
