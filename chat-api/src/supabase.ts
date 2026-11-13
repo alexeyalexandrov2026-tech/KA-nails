@@ -21,7 +21,17 @@ export function supabaseRpc(
       cache: "no-store",
       signal: AbortSignal.timeout(5_000),
     });
-    if (!response.ok) throw new SupabaseError(response.status);
+    if (!response.ok) {
+      const problem: unknown = await response.json().catch(() => null);
+      const code =
+        problem &&
+        typeof problem === "object" &&
+        "code" in problem &&
+        typeof problem.code === "string"
+          ? problem.code
+          : undefined;
+      throw new SupabaseError(response.status, code);
+    }
     return response.status === 204 ? null : response.json();
   };
 }
@@ -36,24 +46,42 @@ export function supabaseChat(
 
   const store: RequestStore = {
     async beginRequest(id, request, receivedAt, accessHash) {
-      const result = await rpc(
-        accessHash ? "chat_begin_request_with_access" : "chat_begin_request",
-        {
-          p_id: id,
-          p_received_at: receivedAt.toISOString(),
-          p_service_id: request.serviceId,
-          p_add_on_ids: request.addOnIds,
-          p_preferred_time: request.preferredTime,
-          p_name: request.name,
-          p_phone: request.phone,
-          p_notes: request.notes,
-          p_language: request.language,
-          p_limit: requestLimit,
-          ...(accessHash ? { p_access_hash: accessHash } : {}),
-        },
-      );
+      const args = {
+        p_id: id,
+        p_received_at: receivedAt.toISOString(),
+        p_service_id: request.serviceId,
+        p_add_on_ids: request.addOnIds,
+        p_preferred_time: request.preferredTime,
+        p_name: request.name,
+        p_phone: request.phone,
+        p_notes: request.notes,
+        p_language: request.language,
+        p_limit: requestLimit,
+      };
+      let storedWithoutAccess = false;
+      let result: unknown;
+      try {
+        result = accessHash
+          ? await rpc("chat_begin_request_with_access", {
+              ...args,
+              p_access_hash: accessHash,
+            })
+          : await rpc("chat_begin_request", args);
+      } catch (error) {
+        if (
+          !accessHash ||
+          !(error instanceof SupabaseError) ||
+          error.status !== 404 ||
+          error.code !== "PGRST202"
+        )
+          throw error;
+        // PostgREST did not resolve the new RPC. No reservation was attempted.
+        result = await rpc("chat_begin_request", args);
+        storedWithoutAccess = true;
+      }
+      if (result === "created")
+        return storedWithoutAccess ? "created-without-access" : result;
       if (
-        result === "created" ||
         result === "delivered" ||
         result === "pending" ||
         result === "limit"
@@ -87,7 +115,10 @@ export function supabaseChat(
 }
 
 export class SupabaseError extends Error {
-  constructor(readonly status: number) {
+  constructor(
+    readonly status: number,
+    readonly code?: string,
+  ) {
     super("Supabase rejected the request");
   }
 }

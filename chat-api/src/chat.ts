@@ -59,7 +59,9 @@ export interface RequestStore {
     request: BookingRequest,
     receivedAt: Date,
     accessHash?: string,
-  ): Promise<"created" | "delivered" | "pending" | "limit">;
+  ): Promise<
+    "created" | "created-without-access" | "delivered" | "pending" | "limit"
+  >;
   finishRequest(
     id: string,
     receivedAt: Date,
@@ -299,7 +301,7 @@ async function runBookingTool(
     );
   }
   state.requestSent = true;
-  state.depositAccess = access?.token;
+  state.depositAccess = reservation === "created" ? access?.token : undefined;
   return result(
     "Sent to the master. Tell the visitor the master will contact them to confirm the time; nothing is booked yet.",
   );

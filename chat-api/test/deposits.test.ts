@@ -35,8 +35,14 @@ const store = depositStore(
           : (result.rows[0]?.value ?? null),
       );
     } catch (error) {
-      if ((error as { code?: string }).code?.startsWith("23"))
-        return new Response(null, { status: 409 });
+      const code = (error as { code?: string }).code;
+      if (code?.startsWith("23")) {
+        // PostgREST only maps foreign key and uniqueness errors to 409.
+        return Response.json(
+          { code },
+          { status: code === "23503" || code === "23505" ? 409 : 400 },
+        );
+      }
       throw error;
     }
   },
@@ -486,4 +492,47 @@ test("staff route requires the expected Access audience and exact identity", asy
       .status,
     422,
   );
+});
+
+test("the staff form reports an overlapping appointment as occupied", async () => {
+  const local = new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "America/New_York",
+    dateStyle: "short",
+    timeStyle: "short",
+  });
+  const time = (minutes: number) =>
+    local.format(new Date(iso(minutes))).replace(" ", "T");
+  await offer(1500);
+  const url = "https://worker.example.test/staff/deposits";
+  const response = await handleDepositAdmin(
+    new Request(url, {
+      method: "POST",
+      headers: { origin: new URL(url).origin },
+      body: new URLSearchParams({
+        action: "offer",
+        label: "Classic Pedicure",
+        total: "75.00",
+        start: time(1530),
+        end: time(1590),
+        hold: time(1450),
+      }),
+    }),
+    {
+      aud: "test",
+      async getIdentity() {
+        return { email: staff };
+      },
+    },
+    store,
+    {
+      audience: "test",
+      emails: [staff],
+      siteOrigin: "https://site.example.test",
+      mode: "sandbox",
+      canOffer: true,
+      async reconcile() {},
+    },
+  );
+  assert.equal(response.status, 422);
+  assert.match(await response.text(), /время занято/);
 });

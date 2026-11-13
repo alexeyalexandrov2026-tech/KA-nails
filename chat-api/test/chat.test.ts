@@ -36,6 +36,7 @@ import {
   type Notifier,
 } from "../src/notify";
 import { buildSystemPrompt } from "../src/prompt";
+import { supabaseChat } from "../src/supabase";
 import { verifyTurnstile } from "../src/turnstile";
 
 // Inference, Telegram, email and storage are all fakes here: the tests check
@@ -383,6 +384,73 @@ describe("chat turn", () => {
     );
     assert.ok(pasted.ok);
     assert.equal(pasted.body.messages[0]?.content, "My link /pay/#[PRIVATE]");
+  });
+
+  it("delivers an ordinary request when the deposit RPC is missing", async () => {
+    const { deps, sent } = fakeDeps([
+      message([toolUse(GOOD_INPUT)], "tool_use"),
+    ]);
+    deps.newDepositAccess = async () => ({
+      token: "a".repeat(64),
+      hash: "b".repeat(64),
+    });
+    const calls: string[] = [];
+    deps.store = supabaseChat(
+      "https://test.supabase.co",
+      "test-key",
+      20,
+      async (input, init) => {
+        const rpc = new URL(String(input)).pathname.split("/").at(-1)!;
+        calls.push(rpc);
+        switch (rpc) {
+          case "ka_nails_chat_begin_request_with_access":
+            return Response.json({ code: "PGRST202" }, { status: 404 });
+          case "ka_nails_chat_begin_request":
+            assert.ok(!("p_access_hash" in JSON.parse(String(init?.body))));
+            return Response.json("created");
+          case "ka_nails_chat_finish_request":
+            return Response.json(true);
+          default:
+            assert.fail(`Unexpected RPC ${rpc}`);
+        }
+      },
+    ).store;
+    assert.deepEqual(await handleChat(confirmedBody(), deps), {
+      reply: FALLBACK.sent.en,
+      requestSent: true,
+    });
+    assert.deepEqual(calls, [
+      "ka_nails_chat_begin_request_with_access",
+      "ka_nails_chat_begin_request",
+      "ka_nails_chat_finish_request",
+    ]);
+    assert.equal(sent.length, 2);
+  });
+
+  it("does not retry booking on an uncertain response from the deposit RPC", async () => {
+    const { deps, sent } = fakeDeps([
+      message([toolUse(GOOD_INPUT)], "tool_use"),
+    ]);
+    deps.newDepositAccess = async () => ({
+      token: "a".repeat(64),
+      hash: "b".repeat(64),
+    });
+    let calls = 0;
+    deps.store = supabaseChat(
+      "https://test.supabase.co",
+      "test-key",
+      20,
+      async () => {
+        calls++;
+        return Response.json({ code: "PGRST003" }, { status: 504 });
+      },
+    ).store;
+    assert.deepEqual(await handleChat(confirmedBody(), deps), {
+      reply: FALLBACK.deliveryUnknown.en,
+      requestSent: false,
+    });
+    assert.equal(calls, 1);
+    assert.equal(sent.length, 0);
   });
 
   it("uses the original contact and never asks the model to confirm delivery", async () => {

@@ -349,7 +349,10 @@ export async function handleDepositAdmin(
         })
       : error("Эта операция недоступна для текущего состояния записи.");
   } catch (cause) {
-    if (cause instanceof SupabaseError && cause.status === 409) {
+    if (
+      cause instanceof SupabaseError &&
+      (cause.status === 409 || cause.code === "23P01")
+    ) {
       return error("Запись уже существует или это время занято.");
     }
     if (cause instanceof SupabaseError && cause.status === 400) return error();
