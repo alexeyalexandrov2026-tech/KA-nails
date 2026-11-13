@@ -271,6 +271,46 @@ export const enLocale: LocaleDictionary = {
     lookOnWhatsAppAria: (title) => `Book ${title} on WhatsApp`,
     sendLooks: "Send these looks on WhatsApp",
   },
+  deposit: {
+    heading: "Appointment deposit",
+    linkRequired: "Open the personal link from the studio or the assistant.",
+    loading: "Checking your appointment…",
+    error: "We couldn’t check your deposit. Try again or contact the studio.",
+    checkoutError:
+      "Checkout did not open. Check the payment status before trying again.",
+    visit: "Appointment",
+    timeZone: "New York time",
+    deadline: "Pay by",
+    total: "Total",
+    amount: "10% deposit",
+    balance: "Due at the appointment",
+    policy:
+      "The deposit secures your time and counts toward your total. It carries over when the studio agrees to reschedule. The studio refunds it in full if you cancel at least 60 minutes before the visit or if the studio cancels. The studio keeps it for a later cancellation or a no-show.",
+    providerDetails:
+      "Enter payment details only on the PayPal or Stripe checkout page.",
+    accept: "I agree to the deposit terms.",
+    paypal: "Pay with PayPal",
+    stripe: "Pay by card via Stripe",
+    refresh: "Check payment status",
+    action: "Pay appointment deposit",
+    status: {
+      waiting: "The studio is reviewing your request.",
+      payable: "Pay the deposit to secure your appointment.",
+      processing:
+        "We’re checking the payment. Check the status before trying again.",
+      booked: "Deposit received. Your appointment is confirmed.",
+      expired:
+        "The payment window has expired. Contact the studio for a new time.",
+      cancelled: "Your appointment was cancelled.",
+      retained:
+        "Your appointment was cancelled and the studio kept the deposit.",
+      refund_due: "The studio will issue a full deposit refund.",
+      refund_pending: "Your deposit refund is processing.",
+      refunded: "Your deposit was refunded.",
+      review:
+        "The studio is reviewing the payment. Contact the studio for an update.",
+    },
+  },
   chat: {
     launcher: "Ask or book",
     title: "KA Nails assistant",

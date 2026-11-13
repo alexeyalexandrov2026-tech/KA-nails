@@ -1,3 +1,5 @@
+import type { DepositView } from "../deposit";
+
 export type Locale = "en" | "ru";
 
 export interface LocaleDictionary {
@@ -200,6 +202,27 @@ export interface LocaleDictionary {
     lookOnWhatsApp: string;
     lookOnWhatsAppAria: (title: string) => string;
     sendLooks: string;
+  };
+  deposit: {
+    heading: string;
+    linkRequired: string;
+    loading: string;
+    error: string;
+    checkoutError: string;
+    visit: string;
+    timeZone: string;
+    deadline: string;
+    total: string;
+    amount: string;
+    balance: string;
+    policy: string;
+    providerDetails: string;
+    accept: string;
+    paypal: string;
+    stripe: string;
+    refresh: string;
+    action: string;
+    status: Record<DepositView["status"], string>;
   };
   chat: {
     launcher: string;

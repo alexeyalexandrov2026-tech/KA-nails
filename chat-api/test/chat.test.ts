@@ -355,6 +355,36 @@ describe("chat turn", () => {
     assert.equal(calls.length, 1);
   });
 
+  it("returns deposit access only for the new delivered request and keeps it out of inference", async () => {
+    const { deps, calls, sent } = fakeDeps([
+      message([toolUse(GOOD_INPUT)], "tool_use"),
+      message([toolUse(GOOD_INPUT)], "tool_use"),
+    ]);
+    const token = "a".repeat(64);
+    const hash = "b".repeat(64);
+    deps.newDepositAccess = async () => ({ token, hash });
+    const begin = deps.store.beginRequest;
+    deps.store.beginRequest = (id, booking, at, access) => {
+      assert.equal(access, hash);
+      return begin(id, booking, at, access);
+    };
+    assert.equal(
+      (await handleChat(confirmedBody(), deps)).depositAccess,
+      token,
+    );
+    assert.equal(
+      (await handleChat(confirmedBody(), deps)).depositAccess,
+      undefined,
+    );
+    assert.equal(JSON.stringify({ calls, sent }).includes(token), false);
+    assert.equal(JSON.stringify({ calls, sent }).includes(hash), false);
+    const pasted = parseChatBody(
+      body({ messages: [{ role: "user", content: `My link /pay/#${token}` }] }),
+    );
+    assert.ok(pasted.ok);
+    assert.equal(pasted.body.messages[0]?.content, "My link /pay/#[PRIVATE]");
+  });
+
   it("uses the original contact and never asks the model to confirm delivery", async () => {
     const { deps, sent, calls } = fakeDeps([
       message(

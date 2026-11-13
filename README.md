@@ -112,7 +112,7 @@ npm run build
 ### Deployment
 
 1. Apply the SQL under `supabase/migrations/` to the dedicated KA Nails project.
-   The schema is private. The four RPCs are executable by the server role only.
+   The schema is private. The RPCs are executable by the server role only.
 2. Set `SUPABASE_SECRET_KEY` and `TURNSTILE_SECRET` as Worker secrets. The matching
    Turnstile widget is in Managed mode and allows the site's hostname.
 3. To send email, verify the studio's destination in Cloudflare Email Service
@@ -139,6 +139,60 @@ WhatsApp or a call. A live delivery check verifies the configured channel.
 If both notification providers fail, the visitor is directed to WhatsApp or a
 call. An unresolved `pending` row means delivery could be indeterminate. Check
 the provider before retrying or updating it to avoid notifying the master twice.
+
+### Appointment deposits
+
+The master agrees on the time and total price, then creates an offer at
+`/staff/deposits` on the Worker. The server calculates 10% in USD cents.
+Only a confirmed payment secures the time. The studio credits the deposit at
+the visit or carries it to a mutually agreed new date. The studio refunds the
+deposit for cancellation at least 60 minutes before the appointment or for a
+studio cancellation. The studio retains it for later cancellation or no-show.
+Record when the studio received the notice. Staff confirms a refund before the
+Worker submits it to the original provider.
+
+Use a separate sandbox Worker and database with synthetic records. Set
+`PAYMENTS_MODE=sandbox`, `PAYMENTS_SITE_ORIGIN` to the sandbox site's HTTPS
+origin in `ALLOWED_ORIGINS`, and `PAYMENTS_CHECKOUT=on` when ready to test.
+Apply the deposit migration before enabling checkout. On the production Worker,
+checkout is disabled when `PAYMENTS_CHECKOUT` is unset. The dashboard variables
+survive deployment through Wrangler's `keep_vars` setting.
+
+- Configure Cloudflare Access on the Worker hostname's exact `/staff/deposits`
+  path. Set `PAYMENTS_STAFF_AUDIENCE` to that application's audience and
+  `PAYMENTS_STAFF_EMAILS` to the comma-separated approved email addresses.
+  The Worker also checks both the audience and the email. [Cloudflare Access](https://developers.cloudflare.com/workers/configuration/cloudflare-access/)
+- Configure `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_MERCHANT_ID`,
+  and `PAYPAL_WEBHOOK_ID` for the same merchant and environment. Send
+  `CHECKOUT.ORDER.APPROVED`, `CHECKOUT.PAYMENT-APPROVAL.REVERSED`,
+  `PAYMENT.CAPTURE.{PENDING,COMPLETED,DENIED,REFUNDED,REVERSED}` and
+  `CUSTOMER.DISPUTE.{CREATED,RESOLVED}` to `/webhooks/paypal`.
+  [PayPal webhooks](https://developer.paypal.com/api/rest/webhooks/rest/)
+- Configure a restricted `STRIPE_KEY` for Checkout Sessions, expanded
+  PaymentIntents/Charges, and Refunds. The temporary CLI key format
+  `rkcs_test_` is accepted only in sandbox. Set `STRIPE_WEBHOOK_SECRET`
+  for `/webhooks/stripe` with Stripe API version `2026-10-28.endive`.
+  Subscribe to `checkout.session.{completed,expired,async_payment_succeeded,async_payment_failed}`,
+  `refund.{created,updated,failed}`, `charge.refunded`, and
+  `charge.dispute.{created,updated,closed}`.
+  [Stripe webhook events](https://docs.stripe.com/api/events/types)
+
+Store provider credentials and signing secrets as Worker secrets. Run a
+bilingual site and chat checkout for each sandbox provider and verify the
+signed payment and refund delivery before enabling the production Worker in
+live mode. Offers are bound to the mode in which staff created them.
+The health endpoint reports whether deposits are configured and checkout is
+enabled and can reach the deposit schema. Verify actual provider connectivity
+with the sandbox flow.
+
+To pause new deposits, set `PAYMENTS_CHECKOUT=off`. Keep the deployed
+reconciliation, webhooks, database, credentials and mode available for
+already-open payments and refunds. The Worker polls pending operations every
+two minutes. If the provider's outcome remains unknown, use **Сверить с
+платёжной системой** in the staff panel and check the provider's transaction
+record before releasing an uncertain booking. Record a refund through the
+original provider and reconcile its result. A dispute or partial refund is
+shown for staff review.
 
 ### Model evaluation
 

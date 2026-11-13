@@ -1,6 +1,8 @@
 import { studioFacts } from "../../lib/studio-facts";
 import { readConfig } from "./config";
-import { BodyTooLarge, handleChatHttp, MAX_BODY_BYTES } from "./http";
+import { handleChatHttp, readBoundedText } from "./http";
+import { depositRuntime, handleDepositHttp } from "./deposit-http";
+import { hashDepositToken, newDepositToken } from "./deposit-store";
 import { emailNotifier, telegramNotifier, type Notifier } from "./notify";
 import { buildSystemPrompt } from "./prompt";
 import { SupabaseError, supabaseChat } from "./supabase";
@@ -14,34 +16,22 @@ const log = (message: string, details?: Record<string, unknown>) =>
   console.warn(JSON.stringify({ message, ...details }));
 
 export async function readBoundedJson(request: Request): Promise<unknown> {
-  const reader = request.body?.getReader();
-  if (!reader) throw new Error("Missing body");
-  const decoder = new TextDecoder("utf-8", { fatal: true, ignoreBOM: false });
-  let body = "";
-  let bytes = 0;
-  try {
-    for (;;) {
-      const chunk = await reader.read();
-      if (chunk.done) break;
-      bytes += chunk.value.byteLength;
-      if (bytes > MAX_BODY_BYTES) throw new BodyTooLarge();
-      body += decoder.decode(chunk.value, { stream: true });
-    }
-    return JSON.parse(body + decoder.decode());
-  } catch (error) {
-    void reader.cancel().catch(() => {});
-    throw error;
-  } finally {
-    reader.releaseLock();
-  }
+  return JSON.parse(await readBoundedText(request));
 }
 
 export default {
-  async fetch(request, env): Promise<Response> {
+  async fetch(request, env, ctx): Promise<Response> {
     const path = new URL(request.url).pathname;
-    if (path !== "/api/chat" && path !== "/api/health")
+    const isPaymentPath =
+      path.startsWith("/api/deposit/") ||
+      path.startsWith("/webhooks/") ||
+      path.startsWith("/staff/");
+    if (!isPaymentPath && path !== "/api/chat" && path !== "/api/health")
       return new Response(null, { status: 404 });
     const config = readConfig(env);
+    const deposits = depositRuntime(env, config, log);
+    if (isPaymentPath)
+      return handleDepositHttp(request, env, config, ctx, deposits, log);
     const database =
       config.database &&
       supabaseChat(
@@ -74,6 +64,9 @@ export default {
           return false;
         })) ?? false;
       const ready = configured && databaseReady;
+      const depositSchemaReady = deposits
+        ? await deposits.store.ready().catch(() => false)
+        : false;
       return Response.json(
         {
           status: ready ? "ok" : "degraded",
@@ -83,6 +76,9 @@ export default {
           databaseReady,
           bookingReady: ready && (channels.telegram || channels.email),
           channels,
+          depositsConfigured: Boolean(deposits),
+          depositSchemaReady,
+          depositCheckout: depositSchemaReady && Boolean(deposits?.enabled),
           humanCheck: config.turnstileSecret ? "on" : "missing",
         },
         { status: ready ? 200 : 503, headers: noCache },
@@ -146,6 +142,12 @@ export default {
             env.AI.run(model, input),
           ),
           store: database.store,
+          newDepositAccess: deposits?.enabled
+            ? async () => {
+                const token = newDepositToken();
+                return { token, hash: await hashDepositToken(token) };
+              }
+            : undefined,
           notifiers,
           now: () => new Date(),
           newId: () => crypto.randomUUID(),
@@ -159,5 +161,9 @@ export default {
           status: output.status,
           headers: output.headers,
         });
+  },
+  async scheduled(_event, env) {
+    const runtime = depositRuntime(env, readConfig(env), log);
+    await runtime?.service.scheduled();
   },
 } satisfies ExportedHandler<Env>;

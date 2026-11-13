@@ -6,6 +6,8 @@
   "compatibility_date": "2026-11-13",
   "workers_dev": true,
   "preview_urls": false,
+  "keep_vars": true,
+  "triggers": { "crons": ["*/2 * * * *"] },
   "ai": { "binding": "AI" },
   "send_email": [
     {

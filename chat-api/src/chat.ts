@@ -48,6 +48,7 @@ export interface ChatRequestBody {
 export interface ChatReply {
   reply: string;
   requestSent: boolean;
+  depositAccess?: string;
   /** Why the reply is a fallback; shows in the browser's network panel. */
   reason?: string;
 }
@@ -57,6 +58,7 @@ export interface RequestStore {
     id: string,
     request: BookingRequest,
     receivedAt: Date,
+    accessHash?: string,
   ): Promise<"created" | "delivered" | "pending" | "limit">;
   finishRequest(
     id: string,
@@ -74,6 +76,7 @@ export interface ChatDeps {
   notifiers: Notifier[];
   now(): Date;
   newId(): string;
+  newDepositAccess?(): Promise<{ token: string; hash: string }>;
   log(message: string, details?: Record<string, unknown>): void;
 }
 
@@ -142,7 +145,10 @@ export function parseChatBody(raw: unknown): ParsedBody {
     if (content === "" || content.length > max) {
       return { ok: false, error: `messages[${i}] has an invalid length` };
     }
-    messages.push({ role, content });
+    messages.push({
+      role,
+      content: content.replace(/(\/pay\/#)[0-9a-f]{64}\b/gi, "$1[PRIVATE]"),
+    });
   }
   if (messages.at(-1)!.role !== "user") {
     return { ok: false, error: "the last message must be the visitor's" };
@@ -193,7 +199,11 @@ function hasBookingConfirmation(messages: ChatMessage[]): boolean {
 async function runBookingTool(
   block: ToolUse,
   deps: ChatDeps,
-  state: { requestSent: boolean; deliveryReply?: string },
+  state: {
+    requestSent: boolean;
+    deliveryReply?: string;
+    depositAccess?: string;
+  },
   language: Language,
   contact: BookingContact,
   toolEnabled: boolean,
@@ -233,9 +243,15 @@ async function runBookingTool(
   const { request } = validation;
   const receivedAt = deps.now();
   const id = deps.newId();
+  const access = await deps.newDepositAccess?.();
   let reservation: Awaited<ReturnType<RequestStore["beginRequest"]>>;
   try {
-    reservation = await deps.store.beginRequest(id, request, receivedAt);
+    reservation = await deps.store.beginRequest(
+      id,
+      request,
+      receivedAt,
+      access?.hash,
+    );
   } catch {
     deps.log("request not stored", { id });
     state.deliveryReply = FALLBACK.deliveryUnknown[language];
@@ -283,6 +299,7 @@ async function runBookingTool(
     );
   }
   state.requestSent = true;
+  state.depositAccess = access?.token;
   return result(
     "Sent to the master. Tell the visitor the master will contact them to confirm the time; nothing is booked yet.",
   );
@@ -292,7 +309,11 @@ export async function handleChat(
   body: ChatRequestBody,
   deps: ChatDeps,
 ): Promise<ChatReply> {
-  const state: { requestSent: boolean; deliveryReply?: string } = {
+  const state: {
+    requestSent: boolean;
+    deliveryReply?: string;
+    depositAccess?: string;
+  } = {
     requestSent: body.requestSent,
   };
   const canSubmit =
@@ -306,6 +327,11 @@ export async function handleChat(
   );
   const messages: ModelMessage[] = [...prepared.messages];
   const system = [deps.system];
+  if (deps.newDepositAccess) {
+    system.push(
+      "When asked, explain that once the master agrees on the time and total, a 10% USD deposit secures the appointment after verified payment. A move agreed with the studio carries the deposit. Cancellation at least 60 minutes before the visit, or cancellation by the studio, entitles the client to a full refund. Later cancellation or a no-show forfeits the deposit. The website displays a payment link when it is ready. Never invent a link or payment status. Direct visitors to enter payment details only at PayPal or Stripe.",
+    );
+  }
   if (prepared.instruction) {
     system.push(prepared.instruction);
   }
@@ -372,7 +398,13 @@ export async function handleChat(
         ),
       );
       if (state.requestSent && !body.requestSent) {
-        return { reply: FALLBACK.sent[body.language], requestSent: true };
+        return {
+          reply: FALLBACK.sent[body.language],
+          requestSent: true,
+          ...(state.depositAccess
+            ? { depositAccess: state.depositAccess }
+            : {}),
+        };
       }
       if (state.deliveryReply)
         return { reply: state.deliveryReply, requestSent: false };
