@@ -27,7 +27,7 @@
     "traces": { "enabled": false },
   },
   "vars": {
-    "ALLOWED_ORIGINS": "https://ka-nails.pages.dev",
+    "ALLOWED_ORIGINS": "https://ka-nails.pages.dev,https://ka-nails-miami.com",
     "SUPABASE_URL": "https://gmfeaaruoapmexouyhtl.supabase.co",
     "WORKERS_AI_MODEL": "@cf/google/gemma-4-26b-a4b-it",
     "EMAIL_SENDER": "requests@ka-nails-mail.gorgona-one.com",
