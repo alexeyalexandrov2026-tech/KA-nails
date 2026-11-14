@@ -379,7 +379,8 @@ private fun OfferCard(offer: Offer) {
                 Spacer(Modifier.width(12.dp))
                 Text(
                     offer.price,
-                    style = MaterialTheme.typography.titleMedium,
+                    // Like the site: Cormorant's default old-style figures read poorly in prices.
+                    style = MaterialTheme.typography.titleMedium.copy(fontFeatureSettings = "lnum, tnum"),
                     fontWeight = FontWeight.Bold,
                 )
             }
