@@ -135,6 +135,7 @@ entries short and delete any that stop being true.
   links to it). Owner confirmed: KA Nails (Karina Mamedova) is responsible for
   site and chat data, Gorgona One AI publishes the Android app, privacy requests
   go to the studio phone/WhatsApp, chat requests are kept up to 12 months
-  (deleted by hand; no cleanup job yet), effective 2026-11-14. Update the policy
+  (hourly pg_cron job from the retention migration, once it is applied to
+  Supabase), effective 2026-11-14. Update the policy
   in both locales whenever data handling changes, e.g. when online booking opens.
 - Open: no manual screen-reader test yet; WCAG 2.2 AA conformance not established.
