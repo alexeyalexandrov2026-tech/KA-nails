@@ -110,7 +110,6 @@ androidComponents {
                 siteRootDir.dir("lib"),
                 siteRootDir.dir("public/photos"),
                 siteRootDir.file("public/assets/ka-nails-logo-320.webp"),
-                siteRootDir.file("public/icons/icon-192.png"),
                 siteRootDir.file("node_modules/typescript/package.json"),
             )
             node.set(nodeExecutable)

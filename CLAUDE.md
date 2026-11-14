@@ -87,7 +87,8 @@ and `verify-live`. Without the `CLOUDFLARE_API_TOKEN` secret, deploy is skipped 
 the tested `out/` is uploaded as artifact `ka-nails-out-<sha>` for a manual upload;
 `verify-live.yml` can then be run by hand. Treat a push to `main` as a production
 release. The `android` job runs beside `web` (unit tests, lint, debug and release
-builds of `android/`) and keeps the debug APK as `ka-nails-android-debug-<sha>`;
+builds and the unsigned AAB of `android/`) and keeps the debug APK as
+`ka-nails-android-debug-<sha>`;
 it does not gate `deploy`.
 
 ## Keeping this memory

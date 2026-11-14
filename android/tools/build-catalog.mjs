@@ -246,12 +246,9 @@ writeFileSync(
   `${JSON.stringify(catalog, null, 2)}\n`,
 );
 
-const iconDir = path.join(resDir, "mipmap-xxxhdpi");
-mkdirSync(iconDir, { recursive: true });
-copyFileSync(
-  path.join(site, "public/icons/icon-192.png"),
-  path.join(iconDir, "ic_launcher.png"),
-);
+// The launcher icon is an adaptive icon in res/ (tools/make-launcher-icons.mjs);
+// this directory stays for generated resources and is empty for now.
+mkdirSync(resDir, { recursive: true });
 
 console.log(
   `KA Nails catalog: ${en.services.length} services, ${en.addOns.length} add-ons, ` +

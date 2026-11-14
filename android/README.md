@@ -17,7 +17,9 @@ TypeScript and writes the catalog into generated assets:
 - the 19 works from `getGalleryItems("en" | "ru")` in `lib/gallery-data.ts`,
   with their WebP thumbnails and medium images from `public/photos/`;
 - copy from `lib/locales/{en,ru}.ts` and the site address from `lib/site.ts`;
-- the launcher icon from `public/icons/icon-192.png`.
+- nothing else: the launcher icon is an adaptive icon committed in `res/`,
+  made from `public/assets/ka-nails-logo.png` by `tools/make-launcher-icons.mjs`
+  (run it from the repository root after the logo changes).
 
 Edit the site, rebuild the app. Unit tests compare the generated catalog with
 `content/studio-facts.json` and check every packaged image.
@@ -43,8 +45,10 @@ $env:ANDROID_SERIAL = 'emulator-5568'
 The debug APK is `app/build/outputs/apk/debug/app-debug.apk`.
 
 CI (the `android` job in `.github/workflows/ci.yml`) runs the same unit tests,
-lint and both builds on every push, and keeps the debug APK for 14 days as the
-artifact `ka-nails-android-debug-<commit>`.
+lint and both builds on every push, also builds the unsigned App Bundle
+(`:app:bundleRelease`, `app/build/outputs/bundle/release/app-release.aab`), and
+keeps the debug APK for 14 days as the artifact
+`ka-nails-android-debug-<commit>`.
 
 Judge start-up speed on a release build: release uses R8, and a debug build
 spends several times longer composing its first frame. To try a release build

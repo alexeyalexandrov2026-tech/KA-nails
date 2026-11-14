@@ -103,8 +103,9 @@ jobs:
       # Also validates the checksum of gradle/wrapper/gradle-wrapper.jar.
       - uses: gradle/actions/setup-gradle@v4
 
+      # bundleRelease builds the unsigned App Bundle (AAB) that Play needs.
       - name: Unit tests, lint and builds
-        run: ./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug :app:assembleRelease
+        run: ./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug :app:assembleRelease :app:bundleRelease
 
       # The debug APK installs on any phone with USB debugging (adb install).
       - name: Upload debug APK
