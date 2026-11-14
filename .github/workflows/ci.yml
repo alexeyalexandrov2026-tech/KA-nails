@@ -105,6 +105,8 @@ jobs:
 
       # bundleRelease builds the unsigned App Bundle (AAB) that Play needs.
       - name: Unit tests, lint and builds
+        env:
+          NEXT_PUBLIC_SITE_URL: ${{ vars.SITE_URL }}
         run: ./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug :app:assembleRelease :app:bundleRelease
 
       # The debug APK installs on any phone with USB debugging (adb install).
@@ -113,6 +115,14 @@ jobs:
         with:
           name: ka-nails-android-debug-${{ github.sha }}
           path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Upload unsigned App Bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: ka-nails-android-unsigned-${{ github.sha }}
+          path: android/app/build/outputs/bundle/release/app-release.aab
           retention-days: 14
           if-no-files-found: error
 

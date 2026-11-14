@@ -45,10 +45,22 @@ $env:ANDROID_SERIAL = 'emulator-5568'
 The debug APK is `app/build/outputs/apk/debug/app-debug.apk`.
 
 CI (the `android` job in `.github/workflows/ci.yml`) runs the same unit tests,
-lint and both builds on every push, also builds the unsigned App Bundle
-(`:app:bundleRelease`, `app/build/outputs/bundle/release/app-release.aab`), and
-keeps the debug APK for 14 days as the artifact
-`ka-nails-android-debug-<commit>`.
+lint and both builds. It uses the same GitHub Actions `SITE_URL` variable as
+Cloudflare Pages. The debug APK and unsigned App Bundle are available for
+14 days as `ka-nails-android-debug-<commit>` and
+`ka-nails-android-unsigned-<commit>`.
+
+For a local release build, set the production site address explicitly before
+building the unsigned bundle:
+
+```powershell
+$env:NEXT_PUBLIC_SITE_URL = 'https://ka-nails-miami.com'
+.\gradlew.bat :app:bundleRelease
+```
+
+The output is `app/build/outputs/bundle/release/app-release.aab`. Sign a copy
+with the KA Nails Google Play upload key. Keep the key and password outside
+the checkout and CI artifacts.
 
 Judge start-up speed on a release build: release uses R8, and a debug build
 spends several times longer composing its first frame. To try a release build

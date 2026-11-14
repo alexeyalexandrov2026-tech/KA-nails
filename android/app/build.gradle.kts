@@ -41,6 +41,7 @@ abstract class GenerateKaCatalog : DefaultTask() {
         val site = siteRoot.get().asFile
         execOperations.exec {
             workingDir = site
+            environment("NEXT_PUBLIC_SITE_URL", siteUrlOverride.getOrElse(""))
             commandLine(
                 node.get(),
                 site.resolve("android/tools/build-catalog.mjs").absolutePath,

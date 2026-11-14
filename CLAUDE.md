@@ -87,9 +87,10 @@ and `verify-live`. Without the `CLOUDFLARE_API_TOKEN` secret, deploy is skipped 
 the tested `out/` is uploaded as artifact `ka-nails-out-<sha>` for a manual upload;
 `verify-live.yml` can then be run by hand. Treat a push to `main` as a production
 release. The `android` job runs beside `web` (unit tests, lint, debug and release
-builds and the unsigned AAB of `android/`) and keeps the debug APK as
-`ka-nails-android-debug-<sha>`;
-it does not gate `deploy`.
+builds and the unsigned AAB of `android/`), uses the same `SITE_URL` as Pages,
+and uploads the debug APK and unsigned AAB as `ka-nails-android-debug-<sha>`
+and `ka-nails-android-unsigned-<sha>`. Android runs independently of the
+Cloudflare Pages deployment.
 
 ## Keeping this memory
 
@@ -136,8 +137,8 @@ entries short and delete any that stop being true.
   and Worker `ALLOWED_ORIGINS`. Live checks verify the CORS preflight.
 - 2026-11-13: CI job `android` checks the Android client on every push; a site
   change that breaks its generated catalog fails there, not in `web`.
-- 2026-11-13: Owner bought the domain `ka-nails-miami.com` on Cloudflare (not yet
-  `SITE_URL`). Android: application ID `com.ka_nails_miami.app`, Cormorant
-  Garamond TTF bundled, Play publishing from the Gorgona One AI organization
-  account (Play shows it as the developer).
+- 2026-11-13: Cloudflare Pages serves the canonical domain
+  `ka-nails-miami.com` from `SITE_URL`. Android: application ID
+  `com.ka_nails_miami.app`, Cormorant Garamond TTF bundled, Play publishing
+  from the Gorgona One AI organization account (Play shows it as the developer).
 - Open: no manual screen-reader test yet; WCAG 2.2 AA conformance not established.
