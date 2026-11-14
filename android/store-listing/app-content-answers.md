@@ -56,7 +56,7 @@ pedicure work only.
 
 | Section                        | Draft answer                                                             |
 | ------------------------------ | ------------------------------------------------------------------------ |
-| Privacy policy                 | Owner decision, see `README.md`; required for every app                  |
+| Privacy policy                 | `https://ka-nails-miami.com/privacy/` once that page is published        |
 | App access                     | All functionality is available without special access                    |
 | Ads                            | No, the app contains no ads                                              |
 | Advertising ID                 | No, the app does not use the advertising ID                              |
@@ -67,5 +67,5 @@ pedicure work only.
 | Government app                 | No                                                                       |
 | Data deletion                  | Not applicable: no accounts                                              |
 | Price and in-app purchases     | Free, no in-app purchases                                                |
-| Countries                      | Owner decision; the studio's prices are in US dollars                    |
+| Countries                      | United States only (owner decision, 2026-11-14)                          |
 | Android developer verification | Check whether `com.ka_nails_miami.app` must be registered before release |

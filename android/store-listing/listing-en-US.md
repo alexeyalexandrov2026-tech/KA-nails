@@ -47,12 +47,13 @@ PRIVATE BY DESIGN
 
 ## Other fields
 
-| Field            | Draft value                                    |
-| ---------------- | ---------------------------------------------- |
-| App or game      | App                                            |
-| Category         | Beauty                                         |
-| Tags             | Up to five from Play's list; suggested: Beauty |
-| Website          | `https://ka-nails-miami.com`                   |
-| Email (required) | Owner decision: see `README.md`                |
-| Phone (optional) | `+1 561 382 8779`, if the owner wants it shown |
-| Privacy policy   | Owner decision: see `README.md`                |
+| Field            | Draft value                                     |
+| ---------------- | ----------------------------------------------- |
+| App or game      | App                                             |
+| Category         | Beauty                                          |
+| Tags             | Up to five from Play's list; suggested: Beauty  |
+| Website          | `https://ka-nails-miami.com`                    |
+| Email (required) | Contact address of the Gorgona One AI account   |
+| Phone (optional) | `+1 561 382 8779`, if the owner wants it shown  |
+| Privacy policy   | `https://ka-nails-miami.com/privacy/` (planned) |
+| Countries        | United States only                              |

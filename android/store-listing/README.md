@@ -51,16 +51,27 @@ adb shell settings put global sysui_demo_allowed 0
 adb shell wm size reset
 ```
 
-## Owner decisions still open
+## Owner decisions
 
-1. **Privacy policy URL.** Play requires one for every app. It should cover the
-   app (no data collected, only the chosen language stored) and the website the
-   app opens (the chat and the WhatsApp booking request).
-2. **Launch while online booking is unavailable.** The site's `/book/` says
+Decided on 2026-11-14:
+
+1. **Privacy policy** goes on the site as `/privacy/` and `/ru/privacy/` on
+   `ka-nails-miami.com`, through a separate site PR. It should cover the app
+   (no data collected, only the chosen language stored) and the website the app
+   opens (the chat and the WhatsApp booking request). The pages do not exist
+   yet; Play needs the URL before review.
+2. **Launch straight to production**, although the site's `/book/` still says
    "Online booking is not available yet" and offers a request via WhatsApp.
-3. **Contact email** for the listing (required) and whether to show the phone.
-4. **Countries** where the app is offered.
-5. **Data safety reading** of the website chat; see `app-content-answers.md`.
+3. **Contact email**: the contact address of the Gorgona One AI developer
+   account.
+4. **Countries**: the United States only.
 
-Decided since the stage 3 handoff: `ka-nails-miami.com` serves the site
-(PR #24), and the release build links to it.
+Decided earlier: `ka-nails-miami.com` serves the site (PR #24), and the release
+build links to it.
+
+Still open:
+
+- Whether to show the studio phone on the listing.
+- The Data safety reading of the website chat; see `app-content-answers.md`.
+- Release signing (upload key, Play App Signing) and every save or upload in
+  Play Console, each only after the owner's explicit yes.
