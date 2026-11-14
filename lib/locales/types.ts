@@ -5,7 +5,7 @@ export interface LocaleDictionary {
   meta: {
     /** Title (home: the full title) and description of every page. */
     pages: Record<
-      "home" | "services" | "gallery" | "contact" | "book",
+      "home" | "services" | "gallery" | "contact" | "book" | "privacy",
       { title: string; description: string }
     >;
     /** Services page description once the menu from studio facts is published. */
@@ -32,6 +32,7 @@ export interface LocaleDictionary {
     gallery: string;
     book: string;
     contact: string;
+    privacy: string;
     logoAlt: string;
     navAriaLabel: string;
     worksAriaLabel: string;
@@ -140,6 +141,16 @@ export interface LocaleDictionary {
     heading: string;
     noticeTitle: string;
     noticeText: string;
+  };
+  privacyPage: {
+    eyebrow: string;
+    heading: string;
+    /** Effective date line shown under the heading. */
+    effective: string;
+    lead: string;
+    sections: { id: string; title: string; paragraphs: string[] }[];
+    /** Last section: how to reach the studio; links come from studio facts. */
+    contact: { id: string; title: string; text: string };
   };
   bookPage: {
     eyebrow: string;

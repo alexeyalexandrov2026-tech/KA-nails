@@ -3378,3 +3378,52 @@ h2.section-title {
     height: calc(100dvh - 96px);
   }
 }
+
+/* Privacy policy: long-form text at a readable measure */
+.privacy-page .page-intro h1 {
+  /* "Политика конфиденциальности" must not split mid-word beside the photo. */
+  font-size: clamp(32px, 4.6vw, var(--text-section-heading));
+  hyphens: auto;
+}
+
+.privacy-effective {
+  margin: 12px 0 0;
+  color: var(--accent-text);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.privacy-policy {
+  max-width: 72ch;
+  margin: 56px 0 0;
+}
+
+.privacy-policy section + section {
+  margin-top: 40px;
+}
+
+.privacy-policy h2 {
+  font-size: clamp(26px, 3vw, 36px);
+  margin: 0 0 12px;
+}
+
+.privacy-policy p {
+  margin: 0 0 14px;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+
+.privacy-contact {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+
+.privacy-contact a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--ink);
+  text-underline-offset: 3px;
+  overflow-wrap: anywhere;
+}

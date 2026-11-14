@@ -2,7 +2,14 @@ import { expect, test } from "@playwright/test";
 import { SALON_PHOTOS } from "../lib/photo-inventory";
 
 const SITE = "https://ka-nails.pages.dev";
-const PAGES = ["/", "/services/", "/gallery/", "/contact/", "/book/"];
+const PAGES = [
+  "/",
+  "/services/",
+  "/gallery/",
+  "/contact/",
+  "/book/",
+  "/privacy/",
+];
 const ROUTES = [...PAGES, ...PAGES.map((path) => `/ru${path}`)];
 
 const enPath = (route: string) => route.replace(/^\/ru\//, "/");

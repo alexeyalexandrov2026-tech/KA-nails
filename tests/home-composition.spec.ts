@@ -154,7 +154,7 @@ test.describe("Home composition (stage 4)", () => {
       await page.goto(url);
       const footer = page.locator("footer");
       await expect(footer.locator('img[alt="KA Nails"]')).toHaveCount(1);
-      await expect(footer.locator("nav.footer-links a")).toHaveCount(4);
+      await expect(footer.locator("nav.footer-links a")).toHaveCount(5);
       const mosaic = footer.locator(".footer-mosaic a");
       await expect(mosaic).toHaveCount(4);
       for (const link of await mosaic.all()) {
