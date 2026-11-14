@@ -2,14 +2,12 @@ import { createHash } from "node:crypto";
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { approvedChatApiUrl } from "../lib/chat-api-url";
+import { SITE_URL } from "../lib/site";
 import { studioFacts } from "../lib/studio-facts";
 
-const BASE_URL = "https://ka-nails.pages.dev";
+const SITE_ORIGIN = new URL(SITE_URL).origin;
 const LIVE_INDEXING = process.env.NEXT_PUBLIC_SITE_INDEXING === "index";
 const LIVE_CHAT = approvedChatApiUrl(process.env.NEXT_PUBLIC_CHAT_API_URL);
-// The site's public origin (SITE_URL once it has its own domain).
-const SITE_ORIGIN = new URL(process.env.NEXT_PUBLIC_SITE_URL || BASE_URL)
-  .origin;
 
 test.describe("Cloudflare Deployed Production QA - KA Nails", () => {
   test("Home page loads over HTTPS with 0 blocking console errors, 0 axe violations, and responsive layout", async ({
@@ -19,7 +17,9 @@ test.describe("Cloudflare Deployed Production QA - KA Nails", () => {
     const pageErrors: Error[] = [];
     page.on("pageerror", (err) => pageErrors.push(err));
 
-    const logoResp = await request.get(`${BASE_URL}/assets/ka-nails-logo.png`);
+    const logoResp = await request.get(
+      `${SITE_ORIGIN}/assets/ka-nails-logo.png`,
+    );
     expect(logoResp.ok()).toBe(true);
     const logoHash = createHash("sha256")
       .update(await logoResp.body())
@@ -28,8 +28,13 @@ test.describe("Cloudflare Deployed Production QA - KA Nails", () => {
       "bb2fe1c05eb7183b8b8f55eee861b06d80256cf5349b2958e1432fa3b83fbf53",
     );
 
-    await page.goto(`${BASE_URL}/`);
+    await page.goto(`${SITE_ORIGIN}/`);
+    await expect(page).toHaveURL(`${SITE_ORIGIN}/`);
     await expect(page).toHaveTitle("KA Nails");
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+      "href",
+      `${SITE_ORIGIN}/`,
+    );
     // Search engines see the site only when it was deployed with SITE_INDEXING=index.
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
       "content",
@@ -69,7 +74,7 @@ test.describe("Cloudflare Deployed Production QA - KA Nails", () => {
     const pageErrors: Error[] = [];
     page.on("pageerror", (err) => pageErrors.push(err));
 
-    await page.goto(`${BASE_URL}/services/`);
+    await page.goto(`${SITE_ORIGIN}/services/`);
     await expect(
       page.getByRole("heading", {
         name: "Online booking is not available yet.",
@@ -92,7 +97,7 @@ test.describe("Cloudflare Deployed Production QA - KA Nails", () => {
     const pageErrors: Error[] = [];
     page.on("pageerror", (err) => pageErrors.push(err));
 
-    await page.goto(`${BASE_URL}/contact/`);
+    await page.goto(`${SITE_ORIGIN}/contact/`);
     await expect(
       page.getByRole("heading", { name: "Studio details are coming soon." }),
     ).toBeVisible();
@@ -103,22 +108,32 @@ test.describe("Cloudflare Deployed Production QA - KA Nails", () => {
     const pageErrors: Error[] = [];
     page.on("pageerror", (err) => pageErrors.push(err));
 
-    await page.goto(`${BASE_URL}/book/`);
+    await page.goto(`${SITE_ORIGIN}/book/`);
     await expect(
       page.getByRole("heading", {
         name: "Online booking is not available yet.",
       }),
     ).toBeVisible();
+    await page.goto(`${SITE_ORIGIN}/ru/book/`);
+    await expect(page).toHaveURL(`${SITE_ORIGIN}/ru/book/`);
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+      "href",
+      `${SITE_ORIGIN}/ru/book/`,
+    );
     expect(pageErrors).toEqual([]);
   });
 
   test("robots.txt and the sitemap match the indexing switch", async ({
     request,
   }) => {
-    const robots = await (await request.get(`${BASE_URL}/robots.txt`)).text();
-    const sitemap = await (await request.get(`${BASE_URL}/sitemap.xml`)).text();
+    const robots = await (
+      await request.get(`${SITE_ORIGIN}/robots.txt`)
+    ).text();
+    const sitemap = await (
+      await request.get(`${SITE_ORIGIN}/sitemap.xml`)
+    ).text();
     if (LIVE_INDEXING) {
-      expect(robots).toMatch(/^Sitemap: https:\/\/\S+\/sitemap\.xml$/m);
+      expect(robots).toContain(`Sitemap: ${SITE_ORIGIN}/sitemap.xml`);
       expect(sitemap.match(/<url>/g)?.length).toBe(10);
     } else {
       expect(robots).not.toContain("Sitemap:");
@@ -129,7 +144,7 @@ test.describe("Cloudflare Deployed Production QA - KA Nails", () => {
   test("Live pages carry the security and cache headers from public/_headers", async ({
     request,
   }) => {
-    const home = await request.get(`${BASE_URL}/`);
+    const home = await request.get(`${SITE_ORIGIN}/`);
     expect(home.ok()).toBe(true);
     const headers = home.headers();
     expect(headers["x-content-type-options"]).toBe("nosniff");
@@ -140,7 +155,7 @@ test.describe("Cloudflare Deployed Production QA - KA Nails", () => {
     );
 
     const font = await request.get(
-      `${BASE_URL}/fonts/inter-latin-wght-normal.woff2`,
+      `${SITE_ORIGIN}/fonts/inter-latin-wght-normal.woff2`,
     );
     expect(font.ok()).toBe(true);
     expect(font.headers()["cache-control"]).toContain("max-age=2592000");
@@ -150,7 +165,7 @@ test.describe("Cloudflare Deployed Production QA - KA Nails", () => {
     page,
     request,
   }) => {
-    await page.goto(`${BASE_URL}/`);
+    await page.goto(`${SITE_ORIGIN}/`);
     await expect(page.locator(".chat-launcher")).toHaveCount(LIVE_CHAT ? 1 : 0);
     if (!LIVE_CHAT) return;
 
