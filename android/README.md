@@ -88,5 +88,7 @@ APK again before checking by hand.
 
 ## Not decided yet
 
-- Release signing, the Play Console listing, the data safety form and
-  publishing belong to a separate release.
+- Release signing and publishing belong to a separate release.
+- Drafts of the Play listing (texts, icon, feature graphic, screenshots) and of
+  the App content answers are in [`store-listing/`](store-listing/README.md);
+  its open owner decisions are listed there.
