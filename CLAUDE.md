@@ -137,5 +137,6 @@ entries short and delete any that stop being true.
   change that breaks its generated catalog fails there, not in `web`.
 - 2026-11-13: Owner bought the domain `ka-nails-miami.com` on Cloudflare (not yet
   `SITE_URL`). Android: application ID `com.ka_nails_miami.app`, Cormorant
-  Garamond TTF bundled, Play publishing from the studio's organization account.
+  Garamond TTF bundled, Play publishing from the Gorgona One AI organization
+  account (Play shows it as the developer).
 - Open: no manual screen-reader test yet; WCAG 2.2 AA conformance not established.

@@ -67,8 +67,8 @@ APK again before checking by hand.
 - Headings use Cormorant Garamond from the variable TTF in `res/font/`
   (google/fonts, SIL OFL 1.1; the license ships in
   `assets/licenses/cormorant-garamond-OFL.txt`).
-- The app will be published from the studio's organization account in Play
-  Console (needs a D-U-N-S number).
+- The app is published from the Gorgona One AI organization account in Play
+  Console, so Google Play shows Gorgona One AI as the developer.
 
 ## Not decided yet
 
