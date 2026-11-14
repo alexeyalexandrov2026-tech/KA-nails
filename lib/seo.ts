@@ -3,7 +3,8 @@ import { getDictionary, getLocalizedPath, type Locale } from "./locales";
 import { SITE_URL, absoluteUrl } from "./site";
 import { studioFacts } from "./studio-facts";
 
-export type PageKey = "home" | "services" | "gallery" | "contact" | "book";
+export type PageKey =
+  "home" | "services" | "gallery" | "contact" | "book" | "privacy";
 
 const PAGE_PATHS: Record<PageKey, string> = {
   home: "/",
@@ -11,6 +12,7 @@ const PAGE_PATHS: Record<PageKey, string> = {
   gallery: "/gallery/",
   contact: "/contact/",
   book: "/book/",
+  privacy: "/privacy/",
 };
 
 export const PAGE_KEYS = Object.keys(PAGE_PATHS) as PageKey[];

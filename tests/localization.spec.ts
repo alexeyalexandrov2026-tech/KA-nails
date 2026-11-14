@@ -3,17 +3,25 @@ import AxeBuilder from "@axe-core/playwright";
 import { SALON_PHOTOS } from "../lib/photo-inventory";
 import { RU_PHOTO_LOCALES } from "../lib/gallery-data";
 
-const EN_ROUTES = ["/", "/services/", "/gallery/", "/contact/", "/book/"];
+const EN_ROUTES = [
+  "/",
+  "/services/",
+  "/gallery/",
+  "/contact/",
+  "/book/",
+  "/privacy/",
+];
 const RU_ROUTES = [
   "/ru/",
   "/ru/services/",
   "/ru/gallery/",
   "/ru/contact/",
   "/ru/book/",
+  "/ru/privacy/",
 ];
 
 test.describe("KA Nails Bilingual English + Russian Test Suite", () => {
-  // Gate 1: All 10 static routes return HTTP 200 with correct html lang
+  // Gate 1: All 12 static routes return HTTP 200 with correct html lang
   for (const route of EN_ROUTES) {
     test(`English route ${route} returns 200 and renders html lang="en"`, async ({
       page,

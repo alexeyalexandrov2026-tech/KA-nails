@@ -57,6 +57,7 @@ export function SiteLayout({ locale, children }: SiteLayoutProps) {
   const galleryHref = getLocalizedPath("/gallery/", locale);
   const contactHref = getLocalizedPath("/contact/", locale);
   const bookHref = getLocalizedPath("/book/", locale);
+  const privacyHref = getLocalizedPath("/privacy/", locale);
   const mosaic = getGalleryItems(locale).filter((item) =>
     FOOTER_WORKS.includes(item.id),
   );
@@ -125,6 +126,7 @@ export function SiteLayout({ locale, children }: SiteLayoutProps) {
               <Link href={galleryHref}>{dict.footer.gallery}</Link>
               <Link href={bookHref}>{dict.footer.book}</Link>
               <Link href={contactHref}>{dict.footer.contact}</Link>
+              <Link href={privacyHref}>{dict.footer.privacy}</Link>
             </nav>
 
             <ul

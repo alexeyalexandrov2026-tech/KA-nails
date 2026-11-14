@@ -113,6 +113,11 @@ npm run build
 
 1. Apply the SQL under `supabase/migrations/` to the dedicated KA Nails project.
    The schema is private. The four RPCs are executable by the server role only.
+   The retention migration enables `pg_cron` and schedules
+   `ka-nails-delete-expired-booking-requests`, which deletes booking requests
+   older than 12 months every hour, as the privacy policy says. Check it with
+   `select jobname, schedule, active from cron.job;` and its runs in
+   `cron.job_run_details`.
 2. Set `SUPABASE_SECRET_KEY` and `TURNSTILE_SECRET` as Worker secrets. The matching
    Turnstile widget is in Managed mode and allows the site's hostname.
 3. Enable Cloudflare Email Sending on the sender domain configured in

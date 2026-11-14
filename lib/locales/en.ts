@@ -29,6 +29,11 @@ export const enLocale: LocaleDictionary = {
         description:
           "Explore services and check appointment availability for KA Nails.",
       },
+      privacy: {
+        title: "Privacy policy",
+        description:
+          "How KA Nails handles information on its website, in the AI assistant and in the KA Nails Android app.",
+      },
     },
     servicesDescriptionWithMenu: "Pedicure services and prices at KA Nails.",
     ogLocale: "en_US",
@@ -53,6 +58,7 @@ export const enLocale: LocaleDictionary = {
     gallery: "Gallery",
     book: "Book Appointment",
     contact: "Studio information",
+    privacy: "Privacy",
     logoAlt: "KA Nails",
     navAriaLabel: "Footer",
     worksAriaLabel: "Works from the studio portfolio",
@@ -203,6 +209,91 @@ export const enLocale: LocaleDictionary = {
     noticeTitle: "Studio details are coming soon.",
     noticeText:
       "The studio’s address and opening hours will appear here once they are confirmed.",
+  },
+  privacyPage: {
+    eyebrow: "KA Nails / Privacy",
+    heading: "Privacy policy",
+    effective: "Effective November 14, 2026",
+    lead: "This policy explains what information the KA Nails website, its AI assistant and the KA Nails Android app handle, why, and for how long.",
+    sections: [
+      {
+        id: "who",
+        title: "Who is responsible",
+        paragraphs: [
+          "KA Nails, the pedicure studio of Karina Mamedova, is responsible for the information described in this policy.",
+          "The KA Nails Android app (com.ka_nails_miami.app) is published on Google Play by its developer, Gorgona One AI. The app itself collects no personal information.",
+        ],
+      },
+      {
+        id: "app",
+        title: "The KA Nails Android app",
+        paragraphs: [
+          "The app does not collect, send or share personal information. It does not request internet access and contains no analytics, advertising, crash reporting or sign-in tools.",
+          "The app saves one setting on your device: the language you choose. This setting is left out of device backups and transfers, and it is removed when you clear the app’s data or uninstall the app.",
+          "Booking and the chat open the KA Nails website in your browser, where the sections below about the website apply. The phone and WhatsApp buttons open your phone app or WhatsApp, and nothing is sent until you place the call or send the message.",
+        ],
+      },
+      {
+        id: "website",
+        title: "Visiting the website",
+        paragraphs: [
+          "The website has no accounts, advertising or analytics, and it sets no cookies of its own.",
+          "The website is hosted on Cloudflare Pages. To deliver pages and protect the site, Cloudflare processes technical information such as your IP address and browser details under its own privacy policy.",
+        ],
+      },
+      {
+        id: "request-form",
+        title: "The appointment request form",
+        paragraphs: [
+          "The request form on the booking page stays in your browser. The website does not store or send it.",
+          "When you press the send button, WhatsApp or another messaging app opens with a ready message. Nothing is sent until you press send there. Your message then reaches the studio through that service, under that service’s own privacy policy.",
+        ],
+      },
+      {
+        id: "assistant",
+        title: "The AI assistant",
+        paragraphs: [
+          "Messages you write to the assistant go to the KA Nails chat service on Cloudflare Workers, and the replies are written by an AI model that runs on Cloudflare Workers AI. The conversation itself is not saved.",
+          "Before a message is sent, Cloudflare Turnstile checks that it comes from a person; Cloudflare processes information about your browser and device for this check. The chat service also uses your IP address briefly to limit how many messages can be sent per minute, and does not save it.",
+          "If you ask the assistant to request an appointment, the details you confirm are saved: your name, phone number, the chosen service and add-ons, your preferred time, your comment and the language of the conversation. They are kept in a private Supabase database used only by KA Nails and sent to the studio by email through Cloudflare and, where the studio has turned it on, as a Telegram message to the studio’s own chat.",
+        ],
+      },
+      {
+        id: "use",
+        title: "How information is used and shared",
+        paragraphs: [
+          "KA Nails uses this information only to answer you and arrange your appointment. It is not sold and not used for advertising.",
+          "It is handled only by the services named in this policy: Cloudflare (hosting, the chat service, AI replies, the human check and email delivery), Supabase (the database of appointment requests) and Telegram (studio notifications, where turned on). Google Play distributes the app under Google’s privacy policy.",
+        ],
+      },
+      {
+        id: "retention",
+        title: "How long information is kept",
+        paragraphs: [
+          "Appointment requests sent through the assistant are kept for up to 12 months and then deleted, or earlier if you ask.",
+          "Messages you send to the studio directly by phone, WhatsApp or another messenger stay in that service’s history.",
+        ],
+      },
+      {
+        id: "security",
+        title: "Security",
+        paragraphs: [
+          "The website and the chat service use encrypted connections (HTTPS). The database of appointment requests is closed to the public; only the chat service can write to it.",
+        ],
+      },
+      {
+        id: "changes",
+        title: "Changes to this policy",
+        paragraphs: [
+          "If this policy changes, this page and its effective date will be updated.",
+        ],
+      },
+    ],
+    contact: {
+      id: "contact",
+      title: "Your requests and contact",
+      text: "To see, correct or delete the information KA Nails holds about you, or to ask about this policy, contact the studio:",
+    },
   },
   bookPage: {
     eyebrow: "Your studio appointment",

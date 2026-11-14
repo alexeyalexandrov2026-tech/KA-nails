@@ -198,7 +198,7 @@ test.describe("WCAG 2.2 Accessibility Remediation Gates", () => {
     }
   });
 
-  test("Axe-core automated accessibility scan passes on all 10 localized static routes", async ({
+  test("Axe-core automated accessibility scan passes on all 12 localized static routes", async ({
     page,
   }) => {
     const routes = [
@@ -207,11 +207,13 @@ test.describe("WCAG 2.2 Accessibility Remediation Gates", () => {
       "/gallery/",
       "/contact/",
       "/book/",
+      "/privacy/",
       "/ru/",
       "/ru/services/",
       "/ru/gallery/",
       "/ru/contact/",
       "/ru/book/",
+      "/ru/privacy/",
     ];
 
     for (const route of routes) {
@@ -320,6 +322,8 @@ test.describe("WCAG 2.2 Accessibility Remediation Gates", () => {
       "/ru/gallery/",
       "/book/",
       "/ru/book/",
+      "/privacy/",
+      "/ru/privacy/",
     ];
 
     for (const vp of viewports) {
@@ -516,6 +520,8 @@ test.describe("WCAG 2.2 Accessibility Remediation Gates", () => {
       "/ru/book/",
       "/contact/",
       "/ru/contact/",
+      "/privacy/",
+      "/ru/privacy/",
     ];
 
     for (const vp of viewports) {

@@ -134,7 +134,7 @@ test.describe("Cloudflare Deployed Production QA - KA Nails", () => {
     ).text();
     if (LIVE_INDEXING) {
       expect(robots).toContain(`Sitemap: ${SITE_ORIGIN}/sitemap.xml`);
-      expect(sitemap.match(/<url>/g)?.length).toBe(10);
+      expect(sitemap.match(/<url>/g)?.length).toBe(12);
     } else {
       expect(robots).not.toContain("Sitemap:");
       expect(sitemap).not.toContain("<url>");
