@@ -9,3 +9,9 @@ playwright-report/
 raw-photos/
 supabase/.temp/
 motion-study/
+
+# Android (android/)
+android/.gradle/
+android/.kotlin/
+android/**/build/
+android/local.properties

@@ -70,6 +70,73 @@ jobs:
           NEXT_PUBLIC_TURNSTILE_SITE_KEY: 1x00000000000000000000AA
         run: npx playwright test --grep-invert "Cloudflare Deployed Production QA"
 
+  # The Android client in android/. Its offline catalog is generated from the
+  # site's sources before every build, so site changes are checked here too.
+  android:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      # The catalog generator only needs node_modules/typescript.
+      - name: Install dependencies
+        working-directory: .
+        run: npm ci --ignore-scripts
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      # compileSdk 37; the runner image may not ship this platform yet.
+      - name: Install Android SDK packages
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "platforms;android-37.0" "build-tools;36.0.0"
+
+      # Also validates the checksum of gradle/wrapper/gradle-wrapper.jar.
+      - uses: gradle/actions/setup-gradle@v4
+
+      # bundleRelease builds the unsigned App Bundle (AAB) that Play needs.
+      - name: Unit tests, lint and builds
+        env:
+          NEXT_PUBLIC_SITE_URL: ${{ vars.SITE_URL }}
+        run: ./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug :app:assembleRelease :app:bundleRelease
+
+      # The debug APK installs on any phone with USB debugging (adb install).
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ka-nails-android-debug-${{ github.sha }}
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Upload unsigned App Bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: ka-nails-android-unsigned-${{ github.sha }}
+          path: android/app/build/outputs/bundle/release/app-release.aab
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Upload test and lint reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ka-nails-android-reports-${{ github.sha }}
+          path: |
+            android/app/build/reports/
+            android/app/build/test-results/
+          retention-days: 14
+          if-no-files-found: ignore
+
   deploy:
     needs: web
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'

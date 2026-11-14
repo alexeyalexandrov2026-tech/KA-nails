@@ -12,3 +12,6 @@ chat-api/.wrangler
 chat-api/worker-configuration.d.ts
 supabase/.temp
 chat-api/supabase/.temp
+android/.gradle
+android/.kotlin
+android/**/build
